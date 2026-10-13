@@ -69,6 +69,13 @@ jobs:
         run: |
           ./upstream/recompiler/build/armv5te_decode_test
           ./upstream/recompiler/build/interpreter_cycle_test
+      - name: Upload Linux native recompiler utility
+        uses: actions/upload-artifact@v4
+        with:
+          name: nds-recompiler-linux-x64
+          path: upstream/recompiler/build/nds_recompile
+          if-no-files-found: error
+          retention-days: 14
       - name: Validate Dusk bank generator against real recompiler with synthetic ARM
         env:
           NDS_RECOMPILER: ./upstream/recompiler/build/nds_recompile

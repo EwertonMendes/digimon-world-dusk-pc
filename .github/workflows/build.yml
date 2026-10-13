@@ -360,8 +360,13 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-ui.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-screen-swap.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-screen-swap.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-30hz.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz.patch
       - name: Build ROM-free geometry and touch tests
         run: |
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_screen_swap.cpp -o native_screen_swap
           ./native_screen_swap
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
+          ./native_30hz_pacing

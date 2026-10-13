@@ -80,3 +80,23 @@ game banks, derived images or personal saves.
 When furnishing a private runner binary, include or make available its
 corresponding GPL-3.0-or-later combined-work source and compatible upstream
 notices. Third-party game code and artwork retain their own rights.
+
+## Windows native runner feasibility — CI diagnosis
+
+The compiler itself builds on Windows with LLVM/Clang and Ninja. The
+**NDSRecomp hardware runner** does not yet pass the ROM-free Windows build.
+With the diagnostic FreeBIOS path, progress reached the networking layer,
+where `runner/vendor/melonds/net/Net_Slirp.h` includes POSIX `poll.h`;
+MSVC/Clang Windows toolchains do not provide that header. Earlier
+portability issues involved `libslirp` CRT file descriptors and Winsock
+socket close semantics.
+
+Avoid replacing missing interfaces with fake shims or disabling essential
+features to claim compatibility. The Windows hardware-runtime feasibility
+job now runs manually (`workflow_dispatch`) rather than gating the
+well-validated, ROM-free C++ and NDSRecomp recompiler CI jobs.
+
+**Only the Linux x64 runner has successfully executed Dusk through the story
+intro**. The Windows `dusk_pc.exe` published by GitHub remains a synthetic
+presentation test. The WSL2/browser native preview is the current real-game
+interactive testing path and remains without sound and saves.

@@ -26,7 +26,7 @@ const (
 	magic      = "DUSKPACKv1!!"
 	footerSize = 52
 	romSHA256  = "df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb"
-	appVersion = "v0.6"
+	appVersion = "v0.7"
 )
 
 // readPayload rejects unknown files and untrusted/unbounded sizes.
@@ -112,9 +112,13 @@ func launch(path string) error {
 	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil { return err }
 	defer file.Close()
+	diagDir := filepath.Join(path, "diagnostics")
+	if err := os.MkdirAll(diagDir, 0700); err != nil { return err }
 	args := []string{path, "--rom", filepath.Join(path, "game.nds"),
 		"--interactive", "--boot", "direct", "--generated-firmware", "--freebios",
-		"--network", "off", "--no-save", "--screen-layout", "stacked", "--fullscreen", "off"}
+		"--network", "off", "--no-save", "--screen-layout", "stacked", "--fullscreen", "off",
+		"--diagnostics", "on", "--diagnostics-dir", diagDir,
+		"--diagnostics-interval-ms", "1000"}
 	cmd := exec.Command(filepath.Join(path, "runner.exe"), args...)
 	cmd.Dir = path
 	cmd.Stdout, cmd.Stderr = file, file
@@ -133,7 +137,7 @@ func main() {
 	files, err := readPayload(exe)
 	if err != nil { fatal(err) }
 	if len(os.Args)==2 && strings.EqualFold(os.Args[1],"--verify-bundle") {
-		fmt.Println("Pacote privado Dusk v0.6 íntegro")
+		fmt.Println("Pacote privado Dusk v0.7 íntegro")
 		return
 	}
 	path, err := userDir()

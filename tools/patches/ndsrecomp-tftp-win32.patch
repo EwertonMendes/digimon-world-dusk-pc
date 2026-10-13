@@ -1,6 +1,6 @@
 --- a/runner/vendor/melonds/net/libslirp/src/tftp.c
 +++ b/runner/vendor/melonds/net/libslirp/src/tftp.c
-@@ -27,6 +27,14 @@
+@@ -27,6 +27,15 @@
  #include <sys/stat.h>
  #include <fcntl.h>
  

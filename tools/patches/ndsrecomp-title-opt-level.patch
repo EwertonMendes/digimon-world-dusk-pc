@@ -1,0 +1,27 @@
+--- a/runner/CMakeLists.txt
++++ b/runner/CMakeLists.txt
+@@ -250,14 +250,17 @@
+         PROPERTIES COMPILE_OPTIONS "-w;-O2;-g0")
+ endif()
+ if(TITLE_BANK_SOURCES AND NOT MSVC)
+-    if(NDS_DIAGNOSTIC_FREEBIOS_ONLY)
+-        # Fast code-generation diagnostics only: not a performant production build.
+-        set_source_files_properties(${TITLE_BANK_SOURCES}
+-            PROPERTIES COMPILE_OPTIONS "-w;-O0;-g0")
+-    else()
+-        set_source_files_properties(${TITLE_BANK_SOURCES}
+-            PROPERTIES COMPILE_OPTIONS "-w;-O2;-g0")
++    # The hardware BIOS selection must not dictate the optimization level of
++    # the game code. In particular a direct-boot FreeBIOS build runs the same
++    # verified ARM9/ARM7 code as the production path.
++    set(NDS_TITLE_BANK_OPT_LEVEL "1" CACHE STRING
++        "Generated title bank optimization: 0 (debug), 1 (fast), 2 (release)")
++    set_property(CACHE NDS_TITLE_BANK_OPT_LEVEL PROPERTY STRINGS 0 1 2)
++    if(NOT NDS_TITLE_BANK_OPT_LEVEL MATCHES "^[012]$")
++        message(FATAL_ERROR "NDS_TITLE_BANK_OPT_LEVEL must be 0, 1 or 2")
+     endif()
++    set_source_files_properties(${TITLE_BANK_SOURCES}
++        PROPERTIES COMPILE_OPTIONS "-w;-O${NDS_TITLE_BANK_OPT_LEVEL};-g0")
+ endif()
+ 
+ # Every immutable bank is CPU-specific even though both use one runtime ABI.

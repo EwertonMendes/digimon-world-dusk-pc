@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Digimon World Dusk — Windows Native Preview</title>
+<style>
+:root{font-family:system-ui,Segoe UI,Arial,sans-serif;color:#e9edf8;background:#101019}*{box-sizing:border-box}
+body{margin:0;height:100vh;overflow:hidden}header{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#161622;border-bottom:1px solid #39384e;gap:12px}
+header strong{font-size:15px}header small{font-size:11px;color:#a4aac0}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button,select{border:1px solid #59596b;border-radius:7px;padding:7px 10px;color:#f1f2fa;background:#252538;cursor:pointer;font-size:12px}button:hover{background:#33354e}
+main{height:calc(100vh - 52px);display:flex;align-items:stretch;justify-content:center;padding:18px;gap:14px;position:relative}main:fullscreen{background:#0a0b12}
+.screen{position:relative;aspect-ratio:4/3;background:#090b14;border:2px solid #353a61;border-radius:9px;min-width:0;overflow:hidden;box-shadow:0 14px 35px #0009;touch-action:none}.screen img{width:100%;height:100%;display:block;object-fit:fill;image-rendering:pixelated;pointer-events:none}.screen label{position:absolute;top:6px;left:8px;color:white;text-shadow:0 2px 5px #000;font-size:11px;opacity:.65;pointer-events:none}
+#primary{width:min(70vw,calc((100vh - 94px)*4/3));height:auto;max-height:100%;align-self:center}#secondary{width:min(22vw,calc((100vh - 94px)*.45));height:auto;align-self:center}
+main.classic{flex-direction:column;align-items:center;gap:5px} main.classic .screen{height:calc((100vh - 116px)/2);width:auto;max-width:100%}main.classic #secondary{order:-1}
+main.side{flex-direction:row}main.side .screen{width:min(44vw,calc((100vh - 94px)*4/3));align-self:center}
+main.only #secondary{display:none}main.only #primary{width:min(90vw,calc((100vh - 94px)*4/3))}
+main.overlay{display:flex}main.overlay #primary{width:min(90vw,calc((100vh - 94px)*4/3))}main.overlay #secondary{position:absolute;top:35px;right:5%;width:min(25vw,310px);z-index:3;background:#16162b;cursor:move;touch-action:none;border-color:#9493d2}
+#info{position:fixed;bottom:8px;left:15px;right:15px;text-align:center;font-size:11px;pointer-events:none;color:#bdc4da;text-shadow:0 2px 4px #000}
+@media(max-width:680px){header{height:auto;min-height:52px;padding:8px;flex-wrap:wrap}main{height:calc(100vh - 100px);padding:8px;gap:5px}main:not(.classic):not(.overlay) #primary{width:70vw}main:not(.classic):not(.overlay) #secondary{width:25vw}#info{font-size:9px}}
+</style></head><body>
+<header><div><strong>Digimon World Dusk PC</strong><small> &nbsp;·&nbsp; teste do código recompilado (Windows nativo)</small></div>
+<div class="controls"><select id="layout" aria-label="Disposição"><option value="modern">PC moderno</option><option value="overlay">Segunda tela flutuante</option><option value="side">Duas telas lado a lado</option><option value="classic">DS clássico</option><option value="only">Só tela principal</option></select><button id="toggle">Tela 2 (Tab)</button><button id="fast">Acelerar: não</button><button id="full">⛶ Tela cheia</button></div></header>
+<main id="stage" class="modern"><div class="screen" id="primary"><img id="imageB" alt="Tela de baixo do Nintendo DS" /><label>Tela principal · toque/click</label></div><div class="screen" id="secondary"><img id="imageA" alt="Tela de cima do Nintendo DS"/><label>Tela complementar</label></div></main>
+<div id="info">Z = A · X = B · Enter = START · Setas/WASD = Direcional · Q/E = L/R · Tab = Tela 2 · F = acelerar · Clique = toque <span id="status">· Conectando…</span></div>
+<script>
+'use strict';
+const stage=document.getElementById('stage'), screen2=document.getElementById('secondary'), screen1=document.getElementById('primary');
+const layout=document.getElementById('layout'), imgA=document.getElementById('imageA'), imgB=document.getElementById('imageB'), status=document.getElementById('status');
+const keys=new Set(); let touch=null, fast=false, secondaryVisible=true, active=true, updating=false, frame=0, inputPending=false;
+const keyMap={z:0,x:1,Shift:2,Enter:3,ArrowRight:4,d:4,ArrowLeft:5,a:5,ArrowUp:6,w:6,ArrowDown:7,s:7,e:8,q:9,v:10,c:11};
+function mask(){let n=4095;for(const bit of keys)n &=~(1<<bit);return n;}
+function setLayout(val){stage.className=val;layout.value=val;localStorage.setItem('dusk-layout',val);screen2.style.display=secondaryVisible && val!=='only'?'':'none';}
+setLayout(localStorage.getItem('dusk-layout')||'modern');layout.addEventListener('change',()=>setLayout(layout.value));
+function toggleScreen(){secondaryVisible=!secondaryVisible;screen2.style.display=secondaryVisible && layout.value!=='only'?'':'none';}
+document.getElementById('toggle').onclick=toggleScreen;
+function toggleFast(){fast=!fast;document.getElementById('fast').textContent='Acelerar: '+(fast?'sim':'não');}
+document.getElementById('fast').onclick=toggleFast;
+document.getElementById('full').onclick=()=>stage.requestFullscreen?.();
+async function sendInput(){if(inputPending)return;inputPending=true;try{await fetch('/api/input',{method:'POST',headers:{'Content-Type':'application/json','X-Dusk-Token':'{{TOKEN}}'},body:JSON.stringify({mask:mask(),touch})});}catch(e){status.textContent=' · Sem conexão: '+e.message;}finally{inputPending=false;}}
+const heldCodes=new Set();
+window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+if(e.key==='Tab'){e.preventDefault();if(!e.repeat)toggleScreen();return;}
+if(e.key==='f'&&!e.repeat){toggleFast();return;}
+if(e.key==='F11'){e.preventDefault();if(!e.repeat)stage.requestFullscreen?.();return;}
+const bit=keyMap[e.key];if(bit===undefined)return;e.preventDefault();if(!heldCodes.has(e.code)){heldCodes.add(e.code);keys.add(bit);sendInput();}});
+window.addEventListener('keyup',e=>{const bit=keyMap[e.key];if(bit===undefined)return;e.preventDefault();heldCodes.delete(e.code);if(![...heldCodes].some(code=>keyMapCode(code)===bit)){keys.delete(bit);}sendInput();});
+function keyMapCode(c){return keyMap[({KeyZ:'z',KeyX:'x',ShiftLeft:'Shift',ShiftRight:'Shift',Enter:'Enter',ArrowRight:'ArrowRight',KeyD:'d',ArrowLeft:'ArrowLeft',KeyA:'a',ArrowUp:'ArrowUp',KeyW:'w',ArrowDown:'ArrowDown',KeyS:'s',KeyE:'e',KeyQ:'q',KeyV:'v',KeyC:'c'})[c]];}
+window.addEventListener('blur',()=>{heldCodes.clear();keys.clear();touch=null;sendInput()});
+function pointer(e, down){let r=screen1.getBoundingClientRect();let x=Math.max(0,Math.min(255,Math.floor((e.clientX-r.left)/r.width*256)));let y=Math.max(0,Math.min(191,Math.floor((e.clientY-r.top)/r.height*192)));touch=down?{x,y,down:true}:null;sendInput()}
+screen1.addEventListener('pointerdown',e=>{screen1.setPointerCapture(e.pointerId);pointer(e,true)});
+screen1.addEventListener('pointermove',e=>{if(touch)pointer(e,true)});
+screen1.addEventListener('pointerup',e=>pointer(e,false));screen1.addEventListener('pointercancel',e=>pointer(e,false));
+let drag=null;screen2.addEventListener('pointerdown',e=>{if(layout.value!=='overlay')return;drag={x:e.clientX,y:e.clientY,left:screen2.offsetLeft,top:screen2.offsetTop};screen2.setPointerCapture(e.pointerId)});
+screen2.addEventListener('pointermove',e=>{if(!drag)return;let left=Math.max(0,Math.min(stage.clientWidth-screen2.offsetWidth,drag.left+e.clientX-drag.x));let top=Math.max(0,Math.min(stage.clientHeight-screen2.offsetHeight,drag.top+e.clientY-drag.y));screen2.style.left=left+'px';screen2.style.top=top+'px';screen2.style.right='auto'});
+screen2.addEventListener('pointerup',()=>drag=null);
+async function frameLoop(){if(updating||!active)return;updating=true;try{const res=await fetch('/api/frame?frames='+(fast?12:2),{cache:'no-store',headers:{'X-Dusk-Token':'{{TOKEN}}'}});const data=await res.json();if(!res.ok)throw Error(data.error||res.status);imgA.src='data:image/png;base64,'+data.A;imgB.src='data:image/png;base64,'+data.B;frame=data.frame;status.textContent=' · frame '+frame;}catch(e){status.textContent=' · Erro: '+e.message;active=false;}finally{updating=false;}if(active)setTimeout(frameLoop,fast?20:45)}
+frameLoop();
+</script></body></html>

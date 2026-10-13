@@ -256,3 +256,29 @@ jobs:
           path: DuskPC-Launcher-Windows-x64.exe
           if-no-files-found: error
           retention-days: 14
+
+  sdl3-native-windows-sdk:
+    name: Native SDL3 Windows GNU SDK (ROM-free)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Retrieve pinned SDL3 Windows SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output sdl3-mingw.zip \
+            https://www.libsdl.org/release/SDL3-devel-3.2.20-mingw.zip
+          unzip -t sdl3-mingw.zip | tail -n 2
+          sha256sum sdl3-mingw.zip | tee sdk-sha256.txt
+          unzip -q sdl3-mingw.zip -d sdk
+          find sdk -name SDL3Config.cmake -o -name SDL3.dll -o -name libSDL3.dll.a
+      - name: Upload redistributable Windows native graphics toolkit
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdl3-3.2.20-windows-gnu-sdk
+          path: |
+            sdl3-mingw.zip
+            sdk-sha256.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -47,3 +47,25 @@ jobs:
           path: build/dusk_rom_info
           if-no-files-found: error
           retention-days: 14
+
+  upstream-recompiler:
+    name: NDSRecomp decode and cycle tests (pinned)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pinned upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
+          git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
+          git -C upstream submodule update --init --recursive
+      - name: Build the standalone upstream recompiler (no game files)
+        run: |
+          cmake -S upstream/recompiler -B upstream/recompiler/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build upstream/recompiler/build --parallel 2
+      - name: Run ARM instruction and cycle tests
+        run: |
+          ./upstream/recompiler/build/armv5te_decode_test
+          ./upstream/recompiler/build/interpreter_cycle_test

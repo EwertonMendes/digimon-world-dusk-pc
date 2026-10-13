@@ -222,3 +222,36 @@ jobs:
           path: zig.tar.xz
           if-no-files-found: error
           retention-days: 2
+
+  portable-launcher:
+    name: Windows one-click launcher (ROM-free source build)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Go native launcher
+        shell: pwsh
+        run: |
+          cd native-launcher
+          go test ./...
+          if ($LASTEXITCODE -ne 0) { throw "Native launcher tests failed" }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { throw "Native launcher vet failed" }
+      - name: Produce ROM-free Windows x64 launcher template
+        shell: pwsh
+        run: |
+          cd native-launcher
+          $env:GOOS = "windows"
+          $env:GOARCH = "amd64"
+          $env:CGO_ENABLED = "0"
+          go build -trimpath -ldflags="-s -w" -o ../DuskPC-Launcher-Windows-x64.exe .
+          if ($LASTEXITCODE -ne 0) { throw "Windows launcher build failed" }
+          & ../DuskPC-Launcher-Windows-x64.exe --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Launcher smoke check failed" }
+      - name: Upload Windows launcher template (contains NO game)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-windows-one-click-launcher-rom-free
+          path: DuskPC-Launcher-Windows-x64.exe
+          if-no-files-found: error
+          retention-days: 14

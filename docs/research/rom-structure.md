@@ -29,3 +29,11 @@ External research starting points:
 - <https://github.com/joaomlsantos/Digimon-World-Dawn-Dusk-Research-Notes>
 - <https://github.com/joaomlsantos/DigimonNDSRomEditor>
 - <https://github.com/pedro-javierf/NTRGhidra>
+
+## ARM bank research update
+
+- Original ROM SHA-1: `de1a1915e07288ffad654f3f9f2eb730a0fd1d9c`.
+- ARM9 verified header entry `0x02000800`; first `0x800` bytes of ARM9 image are the protected secure region and are excluded from the initial recompiler bank (remaining 1,247,384 bytes).
+- ARM7 header entry and load address `0x02380000`; initial bank 166,336 bytes.
+- All 18 ARM9 overlay FAT byte lengths match declared RAM sizes; their static initializer tables contain zero at the start in the verified image. This does **not** establish their dynamic entrypoints.
+- This is structural validation only; execution of title code remains unverified.

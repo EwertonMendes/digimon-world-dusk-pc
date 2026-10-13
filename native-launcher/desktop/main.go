@@ -26,7 +26,7 @@ const (
 	magic      = "DUSKPACKv1!!"
 	footerSize = 52
 	romSHA256  = "df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb"
-	appVersion = "v0.5"
+	appVersion = "v0.6"
 )
 
 // readPayload rejects unknown files and untrusted/unbounded sizes.
@@ -118,7 +118,7 @@ func launch(path string) error {
 	cmd := exec.Command(filepath.Join(path, "runner.exe"), args...)
 	cmd.Dir = path
 	cmd.Stdout, cmd.Stderr = file, file
-	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0")
+	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0", "NDS_DUSK_NATIVE_UI=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW: SDL window remains visible
 	if err := cmd.Start(); err != nil { return err }
 	if err := cmd.Wait(); err != nil {
@@ -133,7 +133,7 @@ func main() {
 	files, err := readPayload(exe)
 	if err != nil { fatal(err) }
 	if len(os.Args)==2 && strings.EqualFold(os.Args[1],"--verify-bundle") {
-		fmt.Println("Pacote privado Dusk v0.5 íntegro")
+		fmt.Println("Pacote privado Dusk v0.6 íntegro")
 		return
 	}
 	path, err := userDir()

@@ -31,3 +31,57 @@ The packer refuses wrong ROM hashes, non-Windows binaries, a runtime not linked 
 The native SDL runner maps Z=A, X=B, Enter=Start, arrow keys=D-pad, Q/E=L/R, and mouse clicks on the touch screen. The initial SDL preview uses the classic stacked screens; floating/asymmetric secondary display will be implemented in the native SDL3 compositor, not HTML.
 
 Saves are disabled until integrity and persistence are tested. Battles, complete gameplay, audio and long sessions are not validated. The EXE was built for Windows x64 and the embedded payload and DLL imports were verified; actual GUI execution and FPS on a Windows PC still require the user's test. macOS/Linux can use SDL3-native builds; Android requires a separate toolchain and app lifecycle.
+
+## Native Dusk-specific SDL3 experience — v0.6
+
+Source: `tools/patches/ndsrecomp-dusk-native-ui.patch` (applied to pinned
+NDSRecomp only for the Dusk build); ROM-free geometry in the new header
+`runner/src/dusk_native_ui.h`. The launcher now sets
+`NDS_DUSK_NATIVE_UI=1` and uses its own per-user `v0.6` directory.
+Other NDSRecomp titles retain the existing frontend when this opt-in flag
+is absent.
+
+Five presentation modes in a resizable native Windows application:
+
+- **Modern** (default): lower/touch game screen large, upper screen in a side panel.
+- **Floating**: maximized lower screen with upper overlay; drag upper screen
+  by holding the left mouse button, or use F7 for preset corners.
+- **Classic**: original vertical stacked dual screens.
+- **Side by side**: equal-scale horizontal dual screens.
+- **Main only**: large game screen and instant toggle to reveal secondary.
+
+Toolbar buttons: MODE, AUX, FULLSCREEN and HELP. Keyboard: F4 cycles
+layouts, F5 toggles auxiliary screen, F6 changes floating scale, F7
+changes corner, F11/Alt+Enter toggles fullscreen, F1 toggles hints.
+Window resizing recalculates presentation live, maintaining per-screen
+4:3 proportions without stretching the game. Touch coordinates are
+inverse-mapped from the transformed lower screen into original
+DS 256x192 points; clicks outside the actual lower screen are ignored.
+Floating drag and toolbar gestures do not become touches.
+
+Layout, auxiliary visibility, floating scale/corner/position and help
+visibility persist via `SDL_GetPrefPath("DuskPC","DigimonWorldDusk")`
+in `native-layout.cfg`. Invalid/out-of-range values fall back to defaults.
+Guest RAM, scheduler, DSP and framebuffers are not modified by layout changes.
+
+Performance: the previous client already ran near 58-60 FPS in the
+user's title/intro screenshots. There are scene-transition dips.
+The new presenter keeps the same optimized ARM banks and native SDL3
+rendering; it adds one rate-limited `[dusk-perf]` line for CPU
+execution frames exceeding 70 ms. This is instrumentation,
+**not a guaranteed fix for stutters**. The user should provide
+`%LOCALAPPDATA%\DuskNativePC\v0.6\native-performance.log` if needed.
+
+ROM-free regression gate: `tests/native_layout_geometry.cpp` verifies
+layouts, aspect ratio, bounds, keyboard-independent touchscreen mappings
+on 240 combinations of window sizes/layouts/visibility. The CI verifies
+the public upstream patch applies against the pinned NDSRecomp revision.
+
+Private artifact: a one-click Windows GUI EXE created with
+`tools/pack_native_private.py`, with the owner's locally supplied Dusk
+USA ROM and SDL3 DLL. **Never upload that binary or any game-derived
+code/assets to the public GitHub Actions artifact store**.
+
+Windows native build is cross-compiled and independently checked for
+correct PE/DLL linkage, SHA-256 of ROM payload and overlay integrity.
+Live Windows graphical behavior is **pending user validation**.

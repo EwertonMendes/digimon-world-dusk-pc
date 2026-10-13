@@ -142,6 +142,8 @@ def main() -> int:
         if args.recompiler:
             executable=str(args.recompiler.resolve())
             output=args.out.resolve()
+            if args.emit:
+                (output/"generated").mkdir(parents=True,exist_ok=True)
             for bank in report["banks"]:
                 if not bank["verifiedEntry"]:
                     print("SKIP overlay with unverified entry:",bank["bank"])
@@ -152,6 +154,8 @@ def main() -> int:
                 cmd+=["--out",str(output/"generated"),"--bank",name] if args.emit else ["--audit"]
                 print("Running",name,"in",("emit" if args.emit else "audit"),"mode",flush=True)
                 subprocess.run(cmd,check=True)
+                if args.emit and not (output/"generated"/(name+"_dispatch.c")).is_file():
+                    raise ValueError(f"NDSRecomp did not emit dispatch source for {name}")
     except (ValueError,OSError,subprocess.CalledProcessError) as e:
         print("ERROR:",e,file=sys.stderr)
         return 1

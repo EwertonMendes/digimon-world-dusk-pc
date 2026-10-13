@@ -282,3 +282,30 @@ jobs:
             sdk-sha256.txt
           if-no-files-found: error
           retention-days: 14
+
+  native-desktop-launcher:
+    name: Native Windows GUI launcher (no browser, ROM-free)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: native-launcher/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Go unit tests (synthetic fixtures)
+        shell: pwsh
+        run: go test ./... -count=1 -v
+      - name: Compile Windows GUI launcher (private payload added only locally)
+        shell: pwsh
+        run: go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../build-native/Dusk-PC-Native-Launcher-ROM-Free.exe .
+      - name: Upload source-only GUI launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-pc-native-gui-launcher-windows-x64-ROM-FREE
+          path: build-native/Dusk-PC-Native-Launcher-ROM-Free.exe
+          if-no-files-found: error
+          retention-days: 14

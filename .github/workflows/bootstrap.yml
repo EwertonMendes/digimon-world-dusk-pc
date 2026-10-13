@@ -1,31 +1,35 @@
-name: One-time source import
+name: One-time import of ROM-free Windows native launcher sources
 on:
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  import:
+  import-native-launcher:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/initial-native-foundation
           persist-credentials: true
-      - name: Expand known ROM-free source files
+      - name: Verify and expand ROM-free Go launcher sources
         shell: bash
         run: |
           set -euo pipefail
-          cat bootstrap/native-source.part* | base64 --decode > /tmp/native-source.tar.xz
-          echo "980efc7a5e7ad6918849e3c84bdf86c0ca8866a91639935c5ae06f1517c5fd0c  /tmp/native-source.tar.xz" | sha256sum -c -
-          tar -tJf /tmp/native-source.tar.xz | while read -r path; do
-            case "$path" in /*|*..*|*.nds|*.bin|*.rom|*.sav) exit 1;; esac
-          done
-          tar -xJf /tmp/native-source.tar.xz -C .
-          rm .github/workflows/build.yml
-          rm bootstrap/native-source.part*
+          base64 --decode bootstrap/native-launcher-source.tar.xz.b64 >/tmp/dusk-go-source.tar.xz
+          echo '48a10f0fd18dca3953b226d7d1a718198c5bf9f9e940b163a5566c527608074e  /tmp/dusk-go-source.tar.xz' | sha256sum -c -
+          mkdir -p native-launcher
+          tar -xJf /tmp/dusk-go-source.tar.xz -C native-launcher
+          test -f native-launcher/main.go && test -f native-launcher/tools/pack_private.py
+          rm bootstrap/native-launcher-source.tar.xz.b64
           rmdir bootstrap
+      - name: Verify Go sources and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd native-launcher && go test ./... && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o /tmp/dusk-launcher-smoke.exe .
+          cd ..
           git add -A
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "feat: add native foundation sources and Windows CI"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: reproducible standalone Windows Dusk launcher and private bundle packer'
           git push origin HEAD:feature/initial-native-foundation

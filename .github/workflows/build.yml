@@ -22,6 +22,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
+      - name: Validate Python research tooling syntax
+        if: runner.os == 'Linux'
+        run: python3 -m py_compile tools/test_dusk_native_story.py tools/prepare_dusk_recomp.py
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON

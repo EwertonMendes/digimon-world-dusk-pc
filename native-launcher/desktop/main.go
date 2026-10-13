@@ -1,3 +1,5 @@
+//go:build windows
+
 // Digimon World Dusk PC native desktop launcher.
 // No HTTP server, browser, WSL, external emulator, or build tools at runtime.
 // A private ROM-owner build appends a SHA256-authenticated ZIP and fixed footer.

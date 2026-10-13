@@ -75,6 +75,55 @@ class Tier3SpanTests(unittest.TestCase):
             {(7,addr):[p]}, {9:set(),7:set()})
         self.assertEqual(out["selected_by_bank"]["dusk_arm7_main"],1)
 
+    def test_same_page_generation_unions_roots_across_sessions(self):
+        import json
+        content=bytes((i*7)%256 for i in range(8192))
+        a,_=page(9,BASE,content[:4096],BASE+64)
+        b,_=page(9,BASE,content[:4096],BASE+128)
+        sample=lambda p: {
+            "schema":4,"kind":"ndsrecomp-tier3-coverage",
+            "rom_sha1":"a"*40,
+            "pages":{"page_size":4096,"entries":[p]}
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            x=Path(temp)/"a.json"
+            y=Path(temp)/"b.json"
+            x.write_text(json.dumps(sample(a)))
+            y.write_text(json.dumps(sample(b)))
+            grouped=tier3.load_pages([x,y],"a"*40)
+        self.assertEqual(len(grouped[(9,BASE)]),1)
+        roots=grouped[(9,BASE)][0][0]
+        self.assertTrue(tier3.bitmap_has_root(roots,BASE+64,"arm"))
+        self.assertTrue(tier3.bitmap_has_root(roots,BASE+128,"arm"))
+        both=tier3.promote(
+            {"arm9":[window(BASE+64),window(BASE+128)]},
+            [bank(9,content)],grouped,{9:set(),7:set()})
+        self.assertEqual(both["selected_by_bank"]["dusk_arm9_main"],2)
+
+    def test_different_code_at_same_address_never_shares_roots(self):
+        import json
+        one=b"A"*8192
+        two=b"B"*8192
+        a,_=page(9,BASE,one[:4096],BASE+64)
+        b,_=page(9,BASE,two[:4096],BASE+128)
+        sample=lambda p: {
+            "schema":4,"kind":"ndsrecomp-tier3-coverage",
+            "rom_sha1":"a"*40,
+            "pages":{"page_size":4096,"entries":[p]}
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            x=Path(temp)/"a.json"
+            y=Path(temp)/"b.json"
+            x.write_text(json.dumps(sample(a)))
+            y.write_text(json.dumps(sample(b)))
+            grouped=tier3.load_pages([x,y],"a"*40)
+        self.assertEqual(len(grouped[(9,BASE)]),2)
+        result=tier3.promote(
+            {"arm9":[window(BASE+64),window(BASE+128)]},
+            [bank(9,one)],grouped,{9:set(),7:set()})
+        self.assertEqual(result["selected_by_bank"]["dusk_arm9_main"],1)
+        self.assertEqual(result["seeds"]["dusk_arm9_main"][0]["addr"],BASE+64)
+
     def test_limits_budget_and_refuses_overwrite(self):
         image=b"X"*8192
         b=bank(9,image)

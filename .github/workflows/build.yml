@@ -1,0 +1,49 @@
+name: Build and test - ROM free
+on:
+  push:
+    branches: [master, main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: ${{ matrix.os }} native prototype
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
+      - name: Compile
+        run: cmake --build build --config Release --parallel 2
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Upload Windows executable (presentation prototype, NOT the game)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-pc-windows-presentation-prototype
+          path: |
+            build/Release/dusk_pc.exe
+            build/Release/dusk_rom_info.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Linux ROM analyzer
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-rom-inspector-linux
+          path: build/dusk_rom_info
+          if-no-files-found: error
+          retention-days: 14

@@ -21,6 +21,7 @@ jobs:
             case "$path" in /*|*..*|*.nds|*.bin|*.rom|*.sav) exit 1;; esac
           done
           tar -xJf /tmp/native-source.tar.xz -C .
+          rm .github/workflows/build.yml
           rm bootstrap/native-source.part*
           rmdir bootstrap
           git add -A

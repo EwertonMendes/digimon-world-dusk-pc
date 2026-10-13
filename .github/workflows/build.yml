@@ -309,3 +309,26 @@ jobs:
           path: build-native/Dusk-PC-Native-Launcher-ROM-Free.exe
           if-no-files-found: error
           retention-days: 14
+
+  dusk-native-layout-contract:
+    name: Native Dusk screen layout and touch coordinate contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned public NDSRecomp source
+        shell: bash
+        run: |
+          git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
+          git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
+      - name: Verify and apply native UI patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-ui.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-ui.patch
+          test -f upstream/runner/src/dusk_native_ui.h
+      - name: Test native viewport, touchscreen and aspect math
+        run: |
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror -I upstream/runner/src tests/native_layout_geometry.cpp -o native-layout-test
+          ./native-layout-test

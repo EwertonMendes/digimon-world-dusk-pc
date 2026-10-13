@@ -1,0 +1,150 @@
+--- a/runner/src/dusk_native_ui.h
++++ b/runner/src/dusk_native_ui.h
+@@ -5,2 +5,3 @@
+ #include <cmath>
++#include <cstdint>
+ 
+@@ -14,2 +15,3 @@
+     bool reversed=false; // swaps spatial positions, never swaps hardware screen identity
++    bool half_present=true; // ~29.913 visual Hz; DS guest stays ~59.826Hz
+     int float_corner=1; // 0 left-top, 1 right-top, 2 left-bottom, 3 right-bottom
+@@ -18,2 +20,7 @@
+ };
++// Pure decision: never skip guest ticks, input, GPU emulation, audio or hash.
++// At 59.826 DS VBlanks/sec this presents 29.913 unique frames/sec.
++inline bool should_present(uint64_t guest_frame, bool half_rate) {
++    return !half_rate || (guest_frame % 2u) == 0u;
++}
+ struct Geometry { Rect top, bottom, toolbar, play; };
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1413,6 +1413,6 @@
+     const auto& c=p.dusk.cfg;
+-    out << 2 << ' ' << int(c.layout) << ' ' << int(c.auxiliary) << ' '
++    out << 3 << ' ' << int(c.layout) << ' ' << int(c.auxiliary) << ' '
+         << int(c.help) << ' ' << c.float_corner << ' '
+         << c.float_percent << ' ' << c.floating_x << ' ' << c.floating_y << ' '
+-        << int(c.reversed) << '\n';
++        << int(c.reversed) << ' ' << int(c.half_present) << '\n';
+ }
+@@ -1430,3 +1430,3 @@
+     if(in>>version>>mode>>aux>>help>>corner>>percent>>fx>>fy &&
+-       (version==1 || version==2) && mode>=0 && mode<=4 && (aux==0||aux==1) &&
++       (version>=1 && version<=3) && mode>=0 && mode<=4 && (aux==0||aux==1) &&
+        (help==0||help==1) && corner>=0 && corner<=3 &&
+@@ -1440,3 +1440,5 @@
+         int reversed=0;
+-        if(version==2 && in>>reversed && (reversed==0||reversed==1)) c.reversed=bool(reversed);
++        if(version>=2 && in>>reversed && (reversed==0||reversed==1)) c.reversed=bool(reversed);
++        int half=1;
++        if(version>=3 && in>>half && (half==0||half==1)) c.half_present=bool(half);
+     }
+@@ -1483,5 +1485,8 @@
+     SDL_RenderDebugText(renderer,708,17,p.dusk.cfg.reversed?"UNSWAP":"SWAP");
+-    if(p.dusk.cfg.help && g.toolbar.w>1260) {
++    dusk_fill(renderer,{795,7,96,28},p.dusk.cfg.half_present?53:48,77,116);
++    SDL_SetRenderDrawColor(renderer,255,255,255,255);
++    SDL_RenderDebugText(renderer,806,17,p.dusk.cfg.half_present?"30 FPS":"60 FPS");
++    if(p.dusk.cfg.help && g.toolbar.w>1510) {
+         SDL_SetRenderDrawColor(renderer,179,190,215,255);
+-        SDL_RenderDebugText(renderer,803,17,"F4 LAYOUT F5 AUX F6 SIZE F7 CORNER F8 SWAP F11 FULL");
++        SDL_RenderDebugText(renderer,898,17,"F4 LAYOUT F5 AUX F8 SWAP F9 30/60 F11 FULL");
+     }
+@@ -1513,2 +1518,4 @@
+             p.dusk.cfg.reversed=!p.dusk.cfg.reversed;
++        } else if(x>=795 && x<891) {
++            p.dusk.cfg.half_present=!p.dusk.cfg.half_present;
+         }
+@@ -2873,2 +2880,4 @@
+     uint64_t synthetic_presents = 0;
++    uint64_t actual_presents = 0;
++    uint64_t present_fps_frames = 0;
+     FrameBlendCache blend_cache{};
+@@ -3252,2 +3261,4 @@
+                     cfg.reversed=!cfg.reversed;
++                } else if(code==SDL_SCANCODE_F9) {
++                    cfg.half_present=!cfg.half_present;
+                 } else if(code==SDL_SCANCODE_F7) {
+@@ -3269,3 +3280,3 @@
+                    code==SDL_SCANCODE_F6 || code==SDL_SCANCODE_F7 ||
+-                   code==SDL_SCANCODE_F8 || code==SDL_SCANCODE_F11 || code==SDL_SCANCODE_F1) continue;
++                   code==SDL_SCANCODE_F8 || code==SDL_SCANCODE_F9 || code==SDL_SCANCODE_F11 || code==SDL_SCANCODE_F1) continue;
+             }
+@@ -4099,3 +4110,3 @@
+         // again per frame because their top surface lives on the GPU.
+-        if (interpolation_active && blend_cache.valid && !turbo_active &&
++        if (!(presentation.dusk.enabled && presentation.dusk.cfg.half_present) && interpolation_active && blend_cache.valid && !turbo_active &&
+             !nds_gpu2d_direct_present_frame_active() &&
+@@ -4135,17 +4146,24 @@
+         }
+-        const PresentationTicks presentation_ticks = present_screens(
+-            presentation, top_pixels, top_width,
+-            bottom_pixels, bottom_width,
+-            runtime_ui,
+-            mph_prime_virtual_stylus || generic_virtual_stylus,
+-            mph_virtual_x, mph_virtual_y,
+-            savestate_notice.empty() ? nullptr : savestate_notice.c_str());
+-        if (!presentation_ticks.ok) {
+-            compute_failed = true;
+-            running = false;
+-            break;
+-        }
+-        phase_upload_ticks += presentation_ticks.upload;
+-        phase_draw_ticks += presentation_ticks.draw;
+-        phase_swap_ticks += presentation_ticks.swap;
++        const bool draw_this_frame =
++            !presentation.dusk.enabled ||
++            dusk_native::should_present(shown_frames, presentation.dusk.cfg.half_present);
++        if (draw_this_frame) {
++            const PresentationTicks presentation_ticks = present_screens(
++                presentation, top_pixels, top_width,
++                bottom_pixels, bottom_width,
++                runtime_ui,
++                mph_prime_virtual_stylus || generic_virtual_stylus,
++                mph_virtual_x, mph_virtual_y,
++                savestate_notice.empty() ? nullptr : savestate_notice.c_str());
++            if (!presentation_ticks.ok) {
++                compute_failed = true;
++                running = false;
++                break;
++            }
++            phase_upload_ticks += presentation_ticks.upload;
++            phase_draw_ticks += presentation_ticks.draw;
++            phase_swap_ticks += presentation_ticks.swap;
++            ++actual_presents;
++            ++present_fps_frames;
++        }
+         // Digest the exact surfaces the presenter was handed, after the
+@@ -4155,3 +4173,3 @@
+                             nds_gpu2d_direct_present_frame_active());
+-        if (interpolation_active &&
++        if (draw_this_frame && !(presentation.dusk.enabled && presentation.dusk.cfg.half_present) && interpolation_active &&
+             !nds_gpu2d_direct_present_frame_active()) {
+@@ -4280,3 +4298,3 @@
+         g_live_stats.underruns = current_underruns;
+-        g_live_stats.real_presents = shown_frames;
++        g_live_stats.real_presents = actual_presents;
+         g_live_stats.synthetic_presents = synthetic_presents;
+@@ -4301,4 +4319,8 @@
+             const double fps = static_cast<double>(fps_frames) / seconds;
++            const double drawn_fps = static_cast<double>(present_fps_frames) / seconds;
+             const std::string fps_text =
+-                std::to_string(fps).substr(0, 4) + " FPS";
++                presentation.dusk.enabled
++                    ? ("GAME " + std::to_string(fps).substr(0, 5) +
++                       "Hz | DISPLAY " + std::to_string(drawn_fps).substr(0, 5) + " FPS")
++                    : std::to_string(fps).substr(0, 4) + " FPS";
+             const std::string governor_text =
+@@ -4331,2 +4353,3 @@
+             fps_frames = 0;
++            present_fps_frames = 0;
+             fps_start = counter;
+@@ -4380,2 +4403,8 @@
+     SDL_Quit();
++    if (presentation.dusk.enabled) {
++        std::fprintf(stderr,"[dusk] 30Hz presentation=%u guest_frames=%llu unique_presents=%llu\n",
++                     unsigned(presentation.dusk.cfg.half_present),
++                     static_cast<unsigned long long>(shown_frames),
++                     static_cast<unsigned long long>(actual_presents));
++    }
+     std::fprintf(stderr, "[sdl] closed after %llu presented frames\n",

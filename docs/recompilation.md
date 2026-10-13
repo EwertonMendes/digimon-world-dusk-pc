@@ -26,3 +26,17 @@ REA can complement Ghidra analysis, but its experimental Windows provider is lim
 - Firmware/BIOS requirements; use only legally provided files.
 - PPU, textures, audio, save memory and touchscreen accuracy.
 - Licensing implications of upstream runner components.
+
+## Verified Dusk USA private static-bank pipeline (2026-10-13)
+
+After building NDSRecomp at the pinned upstream commit, run locally with your own ROM:
+
+```powershell
+python tools/prepare_dusk_recomp.py --rom "C:\\Games\\Digimon World - Dusk (USA).nds"
+python tools/prepare_dusk_recomp.py --rom "C:\\Games\\Digimon World - Dusk (USA).nds" --recompiler "C:\\tools\\nds_recompile.exe"
+python tools/prepare_dusk_recomp.py --rom "C:\\Games\\Digimon World - Dusk (USA).nds" --recompiler "C:\\tools\\nds_recompile.exe" --emit
+```
+
+This prepares the ARM9 main bank starting at `0x02000800` and ARM7 main bank at `0x02380000` under ignored `.private/recomp`. With `--overlays`, it also records 18 **research-only** overlay banks; their load addresses are not verified executable entrypoints, so the generator refuses to emit them. The ARM9 secure-area prefix (0x800 bytes) is intentionally not interpreted as plaintext code. Always inspect `.private/recomp/manifest.json` and verify compiler output. The tool cannot start the game without missing runtime/firmware and dynamic dispatcher integration. Recompiled C and all private images are game-derived and must not be published.
+
+The upstream audit and synthetic-code emission contract run on GitHub Actions without any proprietary data. Genuine Dusk-bank audit/emission is only possible locally with the user's ROM. The benchmark is not a claim of playable native execution.

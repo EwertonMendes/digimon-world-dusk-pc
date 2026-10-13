@@ -40,7 +40,7 @@ def bitmap_has_root(page: dict, pc: int, mode: str) -> bool:
 
 def load_pages(manifests: list[Path], rom_sha1: str) -> dict[tuple[int,int], list[tuple[dict,bytes]]]:
     pages: dict[tuple[int,int], list[tuple[dict,bytes]]] = {}
-    seen: set[tuple[int,int,str]] = set()
+    seen: dict[tuple[int,int,str], dict] = {}
     for path in manifests:
         doc = json.loads(path.read_text(encoding="utf-8"))
         if doc.get("kind") != "ndsrecomp-tier3-coverage" or doc.get("rom_sha1") != rom_sha1:
@@ -55,9 +55,31 @@ def load_pages(manifests: list[Path], rom_sha1: str) -> dict[tuple[int,int], lis
             if cpu not in (7,9) or base % PAGE or len(raw) != PAGE or page.get("sha1") != digest:
                 raise ValueError(f"Invalid private page digest/cpu/size: {path} 0x{base:x}")
             key = (cpu,base,digest)
+            # A byte-identical page generation may appear in several sessions
+            # with DIFFERENT root bitmaps. Union only roots of that same
+            # (CPU, RAM address, complete-page SHA1) generation; never union
+            # different overlay contents merely because addresses match.
+            normalized=dict(page)
+            for mode,expected_bytes in (("arm",PAGE//4//8),("thumb",PAGE//2//8)):
+                field="root_"+mode
+                bits=base64.b64decode(page.get(field,""),validate=True)
+                if len(bits)>expected_bytes:
+                    raise ValueError(f"Invalid {field} bitmap size: {path} 0x{base:x}")
+                normalized[field]=base64.b64encode(
+                    bits.ljust(expected_bytes,b"\x00")
+                ).decode("ascii")
             if key not in seen:
-                seen.add(key)
-                pages.setdefault((cpu,base),[]).append((page,raw))
+                seen[key]=normalized
+                pages.setdefault((cpu,base),[]).append((normalized,raw))
+            else:
+                current=seen[key]
+                for mode in ("arm","thumb"):
+                    field="root_"+mode
+                    a=base64.b64decode(current[field],validate=True)
+                    b=base64.b64decode(normalized[field],validate=True)
+                    current[field]=base64.b64encode(
+                        bytes(x|y for x,y in zip(a,b))
+                    ).decode("ascii")
     return pages
 
 

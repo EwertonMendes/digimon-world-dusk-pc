@@ -1,6 +1,6 @@
 # Digimon World Dusk PC — native port research
 
-**Status: initial tooling and display prototype, NOT a playable game.**
+**Status (2026-10-13): real Dusk ARM9/ARM7 code compiled and privately tested through the first in-game story map. The public Windows `dusk_pc.exe` remains a synthetic presentation demo. An experimental real-game Linux/WSL browser-display package exists for the original ROM owner, but a standalone Windows executable and complete playthrough are not yet validated.**
 
 This repository contains original, ROM-free code for investigating a native PC port of *Digimon World Dusk* (Nintendo DS). The technical goal is static recompilation (NDSRecomp where feasible), a compatible runtime, and a desktop presentation compositor.
 
@@ -10,7 +10,7 @@ This repository contains original, ROM-free code for investigating a native PC p
 - `dusk_rom_info`: identify/validate Nintendo DS ROM, SHA-256, header CRC16, ARM9/ARM7 segment maps, 18 ARM9 overlays, FAT mapping. Explicit optional private extraction of code segments.
 - `dusk_pc.exe` **Windows presentation-only** sample with synthetic frames, fullscreen, five layouts, auxiliary-screen drag/scale/toggle, settings persistence, touchscreen coordinate mapping in the core.
 - GitHub Actions Windows/Linux builds that **do not require or contain ROMs**.
-- Isolated Python helper to clone/build/test upstream NDSRecomp's *recompiler*. **Not integrated with Dusk yet.**
+- Isolated Python helper to clone/build/test upstream NDSRecomp's *recompiler*. **The research build has now generated Dusk title banks locally and registered them with the native runner; this integration is not published with game-derived content.**
 
 ## Windows: download and run
 
@@ -44,7 +44,7 @@ On Windows the executables may be under `build/Release/`. `bootstrap_recompiler.
 
 - The ROM, firmware/BIOS dumps, extracted assets, code banks and user saves are **never committed or uploaded**.
 - The exact US reference has game code `A6RE`, MD5 `35b6209cf0a69b68a5f78c07d9433c27`, SHA-256 `df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb`.
-- This source code **does not execute** ARM7 or ARM9, does not render Digimon assets, and does not yet provide a game save/audio runtime.
+- The **public GitHub frontend demonstration** does not run ARM7/ARM9 or display Digimon assets. A **separately built private native runner** now executes the original Dusk ARM9/ARM7 code and renders real game frames; its binaries/derived sources are never committed here. Long-term gameplay, saves and audio are not validated.
 - The repository is public as initially created. Keep only legally distributable original tooling in Git.
 
 ## Engineering notes
@@ -53,4 +53,18 @@ See `docs/architecture.md`, `docs/recompilation.md`, `docs/research/rom-structur
 
 ## Current recompilation status
 
-We now provide a ROM-hash-verified private bank generator at `tools/prepare_dusk_recomp.py`. Its inputs are the verified US ROM, its outputs are ignored ARM9/ARM7 bank images/configs and, optionally, NDSRecomp-generated C. The 18 overlays can be prepared for investigation but are not automatically dispatched. See `docs/recompilation.md` for local commands. This is **not** a playable native Dusk port; fullscreen/layout prototype remains synthetic.
+We now provide a ROM-hash-verified private bank generator at `tools/prepare_dusk_recomp.py`. Its inputs are the verified US ROM, its outputs are ignored ARM9/ARM7 bank images/configs and, optionally, NDSRecomp-generated C. The 18 overlays can be prepared for investigation but are not automatically dispatched. See `docs/recompilation.md` for local commands. A separate private proof-of-concept runtime has progressed from the title screen through player creation and starter selection into the first story scene. It uses recompiled original code, FreeBIOS, and generated firmware on Linux x64. The full Windows native port, sound, saves, multiplayer, and complete progression remain unproven. The public `dusk_pc.exe` is still synthetic.
+
+## Verified private native gameplay research
+
+The local ARM9/ARM7 runner produced actual frames, accepted START/A/touch controls,
+and reached the first story map. A reproducible local-only script is provided
+under `tools/test_dusk_native_story.py`. The exact-ROM evidence, cycles and
+limitations are documented at
+[`docs/research/native-story-2026-10-13.md`](docs/research/native-story-2026-10-13.md).
+
+An experimental local-browser presentation can interact with the native Linux
+runtime (via WSL2 on Windows), without executing a conventional external emulator.
+That private binary and generated game code are distributed separately to the
+ROM owner. **Do not confuse this with the public synthetic Windows demo, and do
+not upload ROM-derived artifacts here.**

@@ -47,6 +47,15 @@ class BankTests(unittest.TestCase):
                 pipeline.safe_destination(root/"generated",root/"rom.nds")
             pipeline.safe_destination(root/".private"/"recomp",root/"rom.nds")
 
+    def test_normalize_runner_shard_contract(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            (root/"synthetic_arm9.c").write_text("/* generated */")
+            (root/"synthetic_arm9_dispatch.c").write_text("/* generated */")
+            pipeline.normalize_emission(root,"synthetic_arm9")
+            self.assertTrue((root/"synthetic_arm9_00.c").is_file())
+            self.assertFalse((root/"synthetic_arm9.c").exists())
+
     def test_recompiler_contract_with_own_synthetic_arm(self):
         exe=os.environ.get("NDS_RECOMPILER")
         if not exe:
@@ -61,7 +70,8 @@ class BankTests(unittest.TestCase):
             subprocess.run(cmd+["--audit"],check=True)
             (root/"generated").mkdir()
             subprocess.run(cmd+["--out",str(root/"generated"),"--bank","synthetic_arm9"],check=True)
-            self.assertTrue(any((root/"generated").glob("*_dispatch.c")))
+            pipeline.normalize_emission(root/"generated","synthetic_arm9")
+            self.assertTrue((root/"generated"/"synthetic_arm9_00.c").is_file())
 
 if __name__=="__main__":
     unittest.main(verbosity=2)

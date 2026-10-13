@@ -69,8 +69,9 @@ class BankTests(unittest.TestCase):
             cmd=[exe,"--config",str(root/"sample.toml"),"--bin",str(root/"sample.bin")]
             subprocess.run(cmd+["--audit"],check=True)
             (root/"generated").mkdir()
-            subprocess.run(cmd+["--out",str(root/"generated"),"--bank","synthetic_arm9"],check=True)
+            subprocess.run(cmd+["--out",str(root/"generated"),"--bank","synthetic_arm9","--shards","4"],check=True)
             pipeline.normalize_emission(root/"generated","synthetic_arm9")
+            self.assertEqual(len(list((root/"generated").glob("synthetic_arm9_[0-9][0-9].c"))),4)
             self.assertTrue((root/"generated"/"synthetic_arm9_00.c").is_file())
 
 if __name__=="__main__":

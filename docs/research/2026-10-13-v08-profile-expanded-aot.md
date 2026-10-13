@@ -68,3 +68,11 @@ python tools/prepare_dusk_recomp.py \
 ```
 
 No guest ROM bytes, extracted assets, frame data or private binary logs are included in this document or tracked source.
+
+## v0.9 private Windows release — incremental, isolated change
+
+A fully combined 8-bank AOT C generation was completed with mandatory live-byte checks, but a Linux full rebuild was deferred for separate validation because all large main-bank translation units must be reoptimized. **The actual v0.9 user-facing binary deliberately retains the v0.8 main ARM9/ARM7 bank implementations and original overlay 0/1/17 implementations**, and adds only newly verified ARM9 overlays **2, 6 and 13**. It is therefore a controlled one-dimension change, preserving previously user-validated guest execution paths while adding newly observed scene code. Do not claim all 1,176/305 merged seeds are active in the v0.9 runtime; these are candidate generation results for the next complete AOT variant.
+
+Private native Linux validation succeeded after linking the incremental overlays: the scripted intro reached the first story scene after 2,765 VBlanks, with ARM9/ARM7 cycle counts and all 6 framebuffer SHA256 digests exactly equal to v0.8. Private Windows Zig/GNU SDL3 3.2.20 compilation and link succeeded; linked registry includes dispatch for overlays 02,06,13. The single owner-only GUI EXE includes exactly the verified Dusk USA ROM and the matching SDL3 DLL; bundle payload SHA256 was verified independently.
+
+**Battle FPS in Windows v0.9 is not yet measured.** The overlay capture was from a session containing menus/transitions/battle, but the trace does not prove which scene used each overlay; only real-owner A/B tests can validate whether observed hitching is eliminated. No merge is appropriate before that gate.

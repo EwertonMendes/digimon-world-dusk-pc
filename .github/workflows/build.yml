@@ -80,6 +80,19 @@ jobs:
           path: upstream-source.tar.xz
           if-no-files-found: error
           retention-days: 7
+      - name: Package pinned public recomp-ui dependency for offline diagnostics
+        shell: bash
+        run: |
+          git clone --no-checkout https://github.com/RetroPortingToolKit/recomp-ui.git recomp-ui
+          git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
+          tar -cJf recomp-ui-source.tar.xz -C recomp-ui --exclude=.git .
+      - name: Upload recomp-ui source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: recomp-ui-upstream-source-pinned
+          path: recomp-ui-source.tar.xz
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload Linux native recompiler utility
         uses: actions/upload-artifact@v4
         with:

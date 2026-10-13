@@ -59,6 +59,7 @@ class BankTests(unittest.TestCase):
                 "synthetic_arm9","arm9",image,0x02000800,0x02000800))
             cmd=[exe,"--config",str(root/"sample.toml"),"--bin",str(root/"sample.bin")]
             subprocess.run(cmd+["--audit"],check=True)
+            (root/"generated").mkdir()
             subprocess.run(cmd+["--out",str(root/"generated"),"--bank","synthetic_arm9"],check=True)
             self.assertTrue(any((root/"generated").glob("*_dispatch.c")))
 

@@ -151,6 +151,8 @@ jobs:
           git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
           git -C upstream submodule update --init --recursive
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
+          git clone --no-checkout https://github.com/RetroPortingToolKit/recomp-ui.git recomp-ui
+          git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
       - name: Build Windows ARM static recompiler
         shell: pwsh
         run: |
@@ -167,7 +169,7 @@ jobs:
       - name: Compile ROM-free Windows native hardware runtime
         shell: pwsh
         run: |
-          cmake -S upstream/runner -B upstream/runner/build-windows -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DNDS_SDL_BACKEND=NONE -DNDS_ENABLE_COMPUTE_RENDERER=OFF -DNDS_BOOTSTRAP_FIRMWARE=ON -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON
+          cmake -S upstream/runner -B upstream/runner/build-windows -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DNDS_SDL_BACKEND=NONE -DNDS_ENABLE_COMPUTE_RENDERER=OFF -DNDS_BOOTSTRAP_FIRMWARE=ON -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON -DNDS_RECOMP_UI_ROOT=$($PWD.Path)/recomp-ui
           cmake --build upstream/runner/build-windows --target nds_runner --parallel 2
           if (!(Test-Path upstream/runner/build-windows/nds_runner.exe)) { throw "Windows nds_runner.exe missing" }
       - name: Verify Windows binary exists (no game code)

@@ -140,6 +140,8 @@ def main() -> int:
     p.add_argument("--rom",type=Path,required=True)
     p.add_argument("--out",type=Path,default=Path(".private/recomp"))
     p.add_argument("--overlays",action="store_true")
+    p.add_argument("--coverage",type=Path,help="Exact-ROM full-page AOT profile; requires guarded dispatch")
+    p.add_argument("--coverage-extra",type=Path,action="append",default=[],help="Additional same-ROM traces to merge safely")
     p.add_argument("--recompiler",type=Path)
     p.add_argument("--emit",action="store_true")
     p.add_argument("--arm9-shards",type=int,default=16,help="ARM9 C body shards (1..99)")
@@ -150,7 +152,30 @@ def main() -> int:
     if not (1 <= args.arm9_shards <= 99 and 1 <= args.arm7_shards <= 99):
         p.error("Shard counts must be 1..99")
     try:
+        if args.coverage_extra and not args.coverage:
+            raise ValueError("--coverage-extra requires --coverage")
         report=prepare(args.rom,args.out,args.overlays)
+        if args.coverage:
+            from derive_verified_aot import derive, apply_private_configs
+            raw=args.rom.read_bytes()
+            profile=json.loads(args.coverage.read_text(encoding="utf-8"))
+            if args.coverage_extra:
+                from merge_verified_profiles import merge
+                captures=[profile]
+                captures.extend(json.loads(extra.read_text(encoding="utf-8")) for extra in args.coverage_extra)
+                profile=merge(captures)
+                print("Merged verified trace generations:",profile["merge_provenance"])
+            proof=derive(raw,profile)
+            apply_private_configs(args.out.resolve(),proof)
+            if args.overlays:
+                from derive_verified_overlays import verified_overlay_roots, activate_verified_overlays
+                overlay_proof=verified_overlay_roots(raw,profile)
+                activate_verified_overlays(args.out.resolve(),report,overlay_proof)
+                proof["overlays"] = overlay_proof
+                print("Verified overlay banks:",[x["bank"] for x in overlay_proof])
+            (args.out/"verified-aot.json").write_text(json.dumps(proof,indent=2)+"\n",encoding="utf-8")
+            print("Verified observed native entrypoints:",
+                  {k:len(v) for k,v in proof["seeds"].items()})
         print("ROM SHA-1:",report["romSHA1"])
         print("Prepared",len(report["banks"]),"private bank inputs")
         if args.recompiler:
@@ -167,6 +192,8 @@ def main() -> int:
                      "--bin",str(output/(name+".bin"))]
                 cmd+=["--out",str(output/"generated"),"--bank",name,
                       "--shards",str(args.arm9_shards if bank["cpu"]=="arm9" else args.arm7_shards)] if args.emit else ["--audit"]
+                if args.emit and args.coverage:
+                    cmd.append("--validate-live-bytes")
                 print("Running",name,"in",("emit" if args.emit else "audit"),"mode",flush=True)
                 subprocess.run(cmd,check=True)
                 if args.emit:

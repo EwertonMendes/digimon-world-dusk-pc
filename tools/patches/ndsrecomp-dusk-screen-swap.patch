@@ -1,0 +1,143 @@
+diff --git a/runner/src/dusk_native_ui.h b/runner/src/dusk_native_ui.h
+--- a/runner/src/dusk_native_ui.h
++++ b/runner/src/dusk_native_ui.h
+@@ -11,6 +11,7 @@
+     Layout layout=Layout::Modern;
+     bool auxiliary=true;
+     bool help=true;
++    bool reversed=false; // swaps spatial positions, never swaps hardware screen identity
+     int float_corner=1; // 0 left-top, 1 right-top, 2 left-bottom, 3 right-bottom
+     int float_percent=36; // 25..65
+     float floating_x=-1.f, floating_y=-1.f; // normalized within play area, -1 means corner preset
+@@ -36,9 +37,11 @@
+     if(!show) { g.bottom=fitted(play,bottom_w,192); return g; }
+     switch(cfg.layout) {
+       case Layout::Modern: {
+-        const int sidebar=std::clamp(int(play.w*0.28),180,std::min(460,play.w/2));
+-        const Rect primary{play.x,play.y,std::max(1,play.w-sidebar-pad),play.h};
+-        const Rect auxiliary{primary.x+primary.w+pad,play.y,sidebar,play.h};
++        const int upper=std::max(1,std::min(460,play.w/2));
++        const int sidebar=std::clamp(int(play.w*0.28),std::min(180,upper),upper);
++        const int primary_width=std::max(1,play.w-sidebar-pad);
++        const Rect primary{play.x+(cfg.reversed?sidebar+pad:0),play.y,primary_width,play.h};
++        const Rect auxiliary{play.x+(cfg.reversed?0:primary_width+pad),play.y,sidebar,play.h};
+         g.bottom=fitted(primary,bottom_w,192);
+         g.top=fitted({auxiliary.x,auxiliary.y+std::min(30,play.h/12),auxiliary.w,std::min(play.h*2/3,auxiliary.w*192/std::max(1,top_w)+2)},top_w,192);
+         break;
+@@ -49,24 +52,24 @@
+         const int sw=std::min(desired,std::max(1,play.h*top_w/192/2));
+         const int sh=std::max(1,int(double(sw)*192/std::max(1,top_w)));
+         const int free_x=std::max(0,play.w-sw),free_y=std::max(0,play.h-sh);
+-        int x=(cfg.float_corner%2==0)?0:free_x;
++        int x=((cfg.float_corner%2==0) != cfg.reversed)?0:free_x;
+         int y=(cfg.float_corner<2)?0:free_y;
+-        if(cfg.floating_x>=0) x=int(std::clamp(cfg.floating_x,0.f,1.f)*free_x);
++        if(cfg.floating_x>=0) x=int((cfg.reversed?1.f-std::clamp(cfg.floating_x,0.f,1.f):std::clamp(cfg.floating_x,0.f,1.f))*free_x);
+         if(cfg.floating_y>=0) y=int(std::clamp(cfg.floating_y,0.f,1.f)*free_y);
+         g.top={play.x+x,play.y+y,sw,sh};
+         break;
+       }
+       case Layout::Classic: {
+         const int gap=std::max(6,pad/2), avail=(play.h-gap)/2;
+-        g.top=fitted({play.x,play.y,play.w,avail},top_w,192);
+-        g.bottom=fitted({play.x,play.y+avail+gap,play.w,avail},bottom_w,192);
++        g.top=fitted({play.x,play.y+(cfg.reversed?avail+gap:0),play.w,avail},top_w,192);
++        g.bottom=fitted({play.x,play.y+(cfg.reversed?0:avail+gap),play.w,avail},bottom_w,192);
+         break;
+       }
+       case Layout::Horizontal: {
+         const int gap=pad;
+         const int side=(play.w-gap)/2;
+-        g.bottom=fitted({play.x,play.y,side,play.h},bottom_w,192);
+-        g.top=fitted({play.x+side+gap,play.y,side,play.h},top_w,192);
++        g.bottom=fitted({play.x+(cfg.reversed?side+gap:0),play.y,side,play.h},bottom_w,192);
++        g.top=fitted({play.x+(cfg.reversed?0:side+gap),play.y,side,play.h},top_w,192);
+         break;
+       }
+       case Layout::MainOnly: break;
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1411,9 +1411,10 @@
+     std::ofstream out(p.dusk.config_path,std::ios::trunc);
+     if(!out) { std::fprintf(stderr,"[dusk-ui] settings write failed\n"); return; }
+     const auto& c=p.dusk.cfg;
+-    out << 1 << ' ' << int(c.layout) << ' ' << int(c.auxiliary) << ' '
++    out << 2 << ' ' << int(c.layout) << ' ' << int(c.auxiliary) << ' '
+         << int(c.help) << ' ' << c.float_corner << ' '
+-        << c.float_percent << ' ' << c.floating_x << ' ' << c.floating_y << '\n';
++        << c.float_percent << ' ' << c.floating_x << ' ' << c.floating_y << ' '
++        << int(c.reversed) << '\n';
+ }
+ static void dusk_load(FrontendPresentation& p) {
+     p.dusk.enabled=dusk_native_requested();
+@@ -1427,7 +1428,7 @@
+     int version=0,mode=0,aux=1,help=1,corner=1,percent=36;
+     float fx=-1.f,fy=-1.f;
+     if(in>>version>>mode>>aux>>help>>corner>>percent>>fx>>fy &&
+-       version==1 && mode>=0 && mode<=4 && (aux==0||aux==1) &&
++       (version==1 || version==2) && mode>=0 && mode<=4 && (aux==0||aux==1) &&
+        (help==0||help==1) && corner>=0 && corner<=3 &&
+        percent>=25 && percent<=65 && std::isfinite(fx) && std::isfinite(fy)) {
+         auto& c=p.dusk.cfg;
+@@ -1436,6 +1437,8 @@
+         c.float_percent=percent;
+         c.floating_x=std::clamp(fx,-1.f,1.f);
+         c.floating_y=std::clamp(fy,-1.f,1.f);
++        int reversed=0;
++        if(version==2 && in>>reversed && (reversed==0||reversed==1)) c.reversed=bool(reversed);
+     }
+ }
+ static dusk_native::Geometry dusk_geometry(const FrontendPresentation& p) {
+@@ -1475,9 +1478,12 @@
+     SDL_RenderDebugText(renderer,494,17,"FULLSCREEN");
+     dusk_fill(renderer,{607,7,82,28},48,67,99);
+     SDL_RenderDebugText(renderer,621,17,"HELP");
+-    if(p.dusk.cfg.help && g.toolbar.w>740) {
++    dusk_fill(renderer,{699,7,86,28},p.dusk.cfg.reversed?73:48,67,99);
++    SDL_SetRenderDrawColor(renderer,255,255,255,255);
++    SDL_RenderDebugText(renderer,708,17,p.dusk.cfg.reversed?"UNSWAP":"SWAP");
++    if(p.dusk.cfg.help && g.toolbar.w>1260) {
+         SDL_SetRenderDrawColor(renderer,179,190,215,255);
+-        SDL_RenderDebugText(renderer,705,17,"F4 LAYOUT  F5 AUX  F6 SIZE  F7 CORNER  F11 FULL");
++        SDL_RenderDebugText(renderer,803,17,"F4 LAYOUT F5 AUX F6 SIZE F7 CORNER F8 SWAP F11 FULL");
+     }
+ }
+ static bool dusk_handle_mouse(FrontendPresentation& p, SDL_Event& ev) {
+@@ -1503,6 +1509,8 @@
+             SDL_SetWindowFullscreen(window,!fullscreen);
+         } else if(x>=607 && x<689) {
+             p.dusk.cfg.help=!p.dusk.cfg.help;
++        } else if(x>=699 && x<785) {
++            p.dusk.cfg.reversed=!p.dusk.cfg.reversed;
+         }
+         dusk_save(p);
+         return true;
+@@ -1513,7 +1521,8 @@
+         const auto next=dusk_geometry(p);
+         const int free_x=std::max(1,next.play.w-next.top.w);
+         const int free_y=std::max(1,next.play.h-next.top.h);
+-        p.dusk.cfg.floating_x=std::clamp((x-p.dusk.drag_dx-next.play.x)/free_x,0.f,1.f);
++        const float desired=std::clamp((x-p.dusk.drag_dx-next.play.x)/free_x,0.f,1.f);
++        p.dusk.cfg.floating_x=p.dusk.cfg.reversed?1.f-desired:desired;
+         p.dusk.cfg.floating_y=std::clamp((y-p.dusk.drag_dy-next.play.y)/free_y,0.f,1.f);
+         return true;
+     }
+@@ -3239,6 +3248,8 @@
+                     cfg.auxiliary=!cfg.auxiliary;
+                 } else if(code==SDL_SCANCODE_F6) {
+                     cfg.float_percent=cfg.float_percent>=65?25:cfg.float_percent+10;
++                } else if(code==SDL_SCANCODE_F8) {
++                    cfg.reversed=!cfg.reversed;
+                 } else if(code==SDL_SCANCODE_F7) {
+                     cfg.float_corner=(cfg.float_corner+1)%4;
+                     cfg.floating_x=-1;cfg.floating_y=-1;
+@@ -3256,7 +3267,7 @@
+                 const SDL_Scancode code=sdl_event_scancode(event);
+                 if(code==SDL_SCANCODE_F4 || code==SDL_SCANCODE_F5 ||
+                    code==SDL_SCANCODE_F6 || code==SDL_SCANCODE_F7 ||
+-                   code==SDL_SCANCODE_F11 || code==SDL_SCANCODE_F1) continue;
++                   code==SDL_SCANCODE_F8 || code==SDL_SCANCODE_F11 || code==SDL_SCANCODE_F1) continue;
+             }
+ #endif
+             convert_mouse_event_to_logical_coordinates(event, presentation);

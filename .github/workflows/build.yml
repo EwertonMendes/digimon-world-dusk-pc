@@ -24,7 +24,15 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
-        run: python3 -m py_compile tools/test_dusk_native_story.py tools/prepare_dusk_recomp.py
+        run: |
+          python3 -m py_compile tools/test_dusk_native_story.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py
+          python3 -m unittest discover -s tests -p test_native_perf.py -v
+          python3 -m unittest discover -s tests -p test_verified_aot.py -v
+          python3 -m unittest discover -s tests -p test_verified_overlays.py -v
+          python3 -m unittest discover -s tests -p test_merge_verified_profiles.py -v
+          python3 -m unittest discover -s tests -p test_verified_aot_delta.py -v
+          python3 -m unittest discover -s tests -p test_refresh_shipped_overlays.py -v
+          python3 -m unittest discover -s tests -p test_promote_tier3_spans.py -v
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
@@ -332,3 +340,37 @@ jobs:
         run: |
           c++ -std=c++20 -O2 -Wall -Wextra -Werror -I upstream/runner/src tests/native_layout_geometry.cpp -o native-layout-test
           ./native-layout-test
+
+  native-layout-swap:
+    name: Verify native SDL layout patches and touchscreen mapping
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned NDSRecomp upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
+          git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
+          git -C upstream submodule update --init --recursive
+      - name: Validate then apply v0.6 compositor and new screen-swap patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-ui.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-ui.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-screen-swap.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-screen-swap.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-30hz.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
+      - name: Build ROM-free geometry and touch tests
+        run: |
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_screen_swap.cpp -o native_screen_swap
+          ./native_screen_swap
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
+          ./native_30hz_pacing

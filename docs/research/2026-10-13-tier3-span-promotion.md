@@ -55,3 +55,47 @@ No older rows were lost. Most importantly, \`0x0200F96C\`, \`0x0207EDC8\`, \`0x0
 This is recompilation of the original game's ARM/Thumb program; the executable will still need a native implementation of original Nintendo DS hardware contracts (DMA, MMIO, GPU, clocks, audio). Such compatibility code is **not itself ARM interpretation**. Removing the interpreter from all gameplay requires proving every executed code generation and handling never-observed dynamic code; a finite five-session coverage set cannot certify the entire game.
 
 **Avoid:** manually rewriting Dusk, stretching a 30Hz guest simulation, repeating visual frames as real FPS, putting game assets in GitHub, speculative overlay entrypoints, and silent Tier3 fallback in a final purportedly interpretation-free release.
+
+
+## Completed private native build and CPU-exact differential check
+
+The actual **Windows x64 SDL3 runner successfully compiled and linked** against
+the 48 ARM9 + 24 ARM7 additional guarded seeds, retaining the seven old overlays.
+The Windows GUI launcher was versioned independently at \`v0.13\`, compiled as
+PE x64 GUI and privately bundled with the owner's ROM and matching SDL3 DLL.
+The private archive footer, SHA256 and original ROM checksum were verified; no
+ROM or generated bank C was published to GitHub.
+
+A separate **Linux native runner** built from the exact same newly generated C
+banks passed the original Dusk 2765-VBlank title/starter/story-intro flow:
+**all ARM9 and ARM7 guest cycle counts equal** the v0.12 reference and **six
+framebuffer SHA256 digests match bit-for-bit**.
+
+Additionally, we ran the **same 840-VBlank unthrottled Linux title/boot replay**
+twice, using the actual previous and new native game runners:
+
+| Measured stat | Baseline v0.12 | Tier3-span-AOT v0.13 | Improvement |
+| --- | ---: | ---: | ---: |
+| ARM9 Tier3 exact wall time | 2,388.953 ms | 21.121 ms | ~99.12% less |
+| ARM7 Tier3 exact wall time | 103.393 ms | 0.300 ms | ~99.71% less |
+| Total exact Tier3 wall time | 2,492.346 ms | 21.421 ms | ~99.14% less |
+| ARM9 native-dispatch cache-hit-absent counter | 23,101,694 | 67,600 | ~99.71% less |
+| ARM7 cache-hit-absent counter | 858,759 | 161 | ~99.98% less |
+| Unthrottled host wall duration | 6.026 s | 3.846 s | ~36.2% less duration, ~56.7% greater throughput |
+
+Guest frames and virtual ARM9/ARM7 cycles were identical in this replay.
+These are the NDSRecomp runtime's **exact Tier3 profiler counters**, not
+inference from a generated C function count. The playback was headless Linux
+without audio presentation or any 60Hz limiter, and tested title/early boot
+rather than actual interactive Windows battles, so **DO NOT interpret the
+218 VBlanks/sec uncapped figure as interactive Windows game FPS**.
+
+This is a substantial actual execution-path optimization: the hot original
+PCs previously interpreted are now successfully dispatched to native banks
+in this tested route. Further less common and dynamic paths can still enter
+Tier3. Long-tail Windows battle/menu/audio tests by the owner remain required.
+
+The ROM-private full game EXE and exact matching original-game-derived source
+archive were handed to the owner directly; public GitHub Actions tests only
+ROM-free scripts/launcher. The PR remains draft pending Windows gameplay FPS,
+audio-underrun and correctness comparison.

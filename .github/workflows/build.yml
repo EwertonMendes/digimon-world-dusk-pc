@@ -118,6 +118,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nds-recompiler-windows-x64
-          path: upstream/recompiler/build/Release/nds_recompile.exe
+          path: upstream/recompiler/build/nds_recompile.exe
           if-no-files-found: error
           retention-days: 14

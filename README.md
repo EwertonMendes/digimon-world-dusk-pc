@@ -68,3 +68,11 @@ runtime (via WSL2 on Windows), without executing a conventional external emulato
 That private binary and generated game code are distributed separately to the
 ROM owner. **Do not confuse this with the public synthetic Windows demo, and do
 not upload ROM-derived artifacts here.**
+
+## Windows one-click native alpha — v0.4 (private tester artifact)
+
+The private Windows x64 alpha release now has a **single `.exe` launcher containing both the original ROM supplied by its owner and the recompiled ARM9/ARM7 game runtime**, with a browser-based fullscreen/display interface. The tester does **not** need WSL, Python, a separate ROM, or a build toolchain. See [`docs/windows-oneclick.md`](docs/windows-oneclick.md).
+
+**This private binary is deliberately NOT hosted by public GitHub Actions or committed to this public repository.** It is delivered directly to the ROM owner outside GitHub. CI builds and uploads only a ROM-free Windows launcher template, and `native-launcher/tools/pack_private.py` combines that template with the locally generated private title runtime and verified ROM to produce subsequent one-click builds. This establishes the repeatable release process without publicly redistributing commercial game data.
+
+A successful Windows PE x64 build and private bundled ROM integrity test have been performed. **Actual Windows gameplay must still be validated on the user's Windows computer; Linux reached the first story scene earlier.** Save and audio support remain disabled in this alpha.

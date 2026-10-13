@@ -19,7 +19,7 @@ def main():
     args=parser.parse_args()
     folder=args.checkout / "runner/vendor/melonds/net"
     replace_exact(folder/"Net_Slirp.h", "__WIN32__", "_WIN32", 1)
-    replace_exact(folder/"Net_Slirp.cpp", "__WIN32__", "_WIN32", 4)
+    replace_exact(folder/"Net_Slirp.cpp", "__WIN32__", "_WIN32", 6)
 
 if __name__=="__main__":
     main()

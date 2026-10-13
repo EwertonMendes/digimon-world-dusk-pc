@@ -152,6 +152,7 @@ jobs:
           git -C upstream submodule update --init --recursive
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
           git clone --no-checkout https://github.com/RetroPortingToolKit/recomp-ui.git recomp-ui
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
       - name: Build Windows ARM static recompiler

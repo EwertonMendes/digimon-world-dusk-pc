@@ -26,7 +26,7 @@ const (
 	magic      = "DUSKPACKv1!!"
 	footerSize = 52
 	romSHA256  = "df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb"
-	appVersion = "v0.12"
+	appVersion = "v0.13"
 )
 
 // readPayload rejects unknown files and untrusted/unbounded sizes.
@@ -137,7 +137,7 @@ func main() {
 	files, err := readPayload(exe)
 	if err != nil { fatal(err) }
 	if len(os.Args)==2 && strings.EqualFold(os.Args[1],"--verify-bundle") {
-		fmt.Println("Pacote privado Dusk v0.12 íntegro")
+		fmt.Println("Pacote privado Dusk v0.13 íntegro")
 		return
 	}
 	path, err := userDir()

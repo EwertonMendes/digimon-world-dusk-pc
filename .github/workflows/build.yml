@@ -96,12 +96,12 @@ jobs:
       - name: Build Windows recompiler
         shell: pwsh
         run: |
-          cmake -S upstream/recompiler -B upstream/recompiler/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build upstream/recompiler/build --config Release --target nds_recompile --parallel 2
+          cmake -S upstream/recompiler -B upstream/recompiler/build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+          cmake --build upstream/recompiler/build --target nds_recompile --parallel 2
       - name: Verify recompiler binary
         shell: pwsh
         run: |
-          if (!(Test-Path upstream/recompiler/build/Release/nds_recompile.exe)) { throw "Expected nds_recompile.exe missing" }
+          if (!(Test-Path upstream/recompiler/build/nds_recompile.exe)) { throw "Expected nds_recompile.exe missing" }
           & upstream/recompiler/build/Release/nds_recompile.exe --codegen-identity
       - name: Upload native Windows static recompiler utility
         uses: actions/upload-artifact@v4

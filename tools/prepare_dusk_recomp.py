@@ -125,6 +125,16 @@ def prepare(rom: Path, dst: Path, overlays: bool=False) -> dict:
     return report
 
 
+def normalize_emission(output: Path, name: str) -> None:
+    """Adapt one-body NDSRecomp output to the runner's *_00.c glob contract."""
+    bare=output/(name+".c")
+    indexed=output/(name+"_00.c")
+    if bare.is_file() and not indexed.exists():
+        bare.rename(indexed)
+    if not indexed.is_file() or not (output/(name+"_dispatch.c")).is_file():
+        raise ValueError(f"Missing generated body/dispatch for {name}")
+
+
 def main() -> int:
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--rom",type=Path,required=True)
@@ -154,8 +164,8 @@ def main() -> int:
                 cmd+=["--out",str(output/"generated"),"--bank",name] if args.emit else ["--audit"]
                 print("Running",name,"in",("emit" if args.emit else "audit"),"mode",flush=True)
                 subprocess.run(cmd,check=True)
-                if args.emit and not (output/"generated"/(name+"_dispatch.c")).is_file():
-                    raise ValueError(f"NDSRecomp did not emit dispatch source for {name}")
+                if args.emit:
+                    normalize_emission(output/"generated",name)
     except (ValueError,OSError,subprocess.CalledProcessError) as e:
         print("ERROR:",e,file=sys.stderr)
         return 1

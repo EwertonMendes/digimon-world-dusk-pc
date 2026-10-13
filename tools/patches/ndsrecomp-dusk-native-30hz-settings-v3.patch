@@ -1,0 +1,18 @@
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1422,9 +1422,14 @@
+     // SDL creates this per-user directory. No admin rights or registry writes.
+     char* path=SDL_GetPrefPath("DuskPC","DigimonWorldDusk");
+     if(!path) return;
+-    p.dusk.config_path=std::filesystem::path(path)/"native-layout.cfg";
++    // Save new settings separately so older executables can still load their v2 configuration.
++    p.dusk.config_path=std::filesystem::path(path)/"native-layout-v3.cfg";
+     SDL_free(path);
+     std::ifstream in(p.dusk.config_path);
++    if (!in) {
++        in.clear();
++        in.open(p.dusk.config_path.parent_path()/"native-layout.cfg");
++    }
+     int version=0,mode=0,aux=1,help=1,corner=1,percent=36;
+     float fx=-1.f,fy=-1.f;
+     if(in>>version>>mode>>aux>>help>>corner>>percent>>fx>>fy &&

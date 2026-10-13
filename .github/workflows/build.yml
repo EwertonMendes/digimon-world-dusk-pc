@@ -139,8 +139,7 @@ jobs:
           retention-days: 14
 
   freebios-headless-windows:
-    if: github.event_name == 'workflow_dispatch'
-    name: ROM-free Windows native runner feasibility (manual, experimental)
+    name: ROM-free Windows native runner feasibility (experimental)
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -157,6 +156,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'WinSock patch failed' }
           git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
           if ($LASTEXITCODE -ne 0) { throw 'TFTP patch failed' }
+          python tools/patch_windows_net.py upstream
+          if ($LASTEXITCODE -ne 0) { throw 'Net_Slirp Win32 guard patch failed' }
           git clone --no-checkout https://github.com/RetroPortingToolKit/recomp-ui.git recomp-ui
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
       - name: Build Windows ARM static recompiler

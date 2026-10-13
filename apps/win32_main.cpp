@@ -106,7 +106,7 @@ void toggleFullScreen() {
         g.fullscreen=false;
     }
 }
-void update() { InvalidateRect(g.window,nullptr,FALSE); }
+void update() { if(g.window) InvalidateRect(g.window,nullptr,FALSE); }
 LRESULT CALLBACK windowProc(HWND window,UINT msg,WPARAM wp,LPARAM lp) {
     switch(msg) {
     case WM_ERASEBKGND: return 1;
@@ -132,13 +132,13 @@ LRESULT CALLBACK windowProc(HWND window,UINT msg,WPARAM wp,LPARAM lp) {
             SetCapture(window);
         }
         // Touch mapping is validated in core tests. No game is listening yet.
-        if(!g.dragging) dusk::screenToTouch(g.layout,true,x,y,g.touchX,g.touchY);
+        if(!g.dragging) (void)dusk::screenToTouch(g.layout,true,x,y,g.touchX,g.touchY);
         update();return 0;
     }
     case WM_MOUSEMOVE: {
         if(g.dragging) {
             RECT rc{};GetClientRect(window,&rc);
-            const int w=std::max(1,rc.right-rc.left),h=std::max(1,rc.bottom-rc.top);
+            const int w=std::max(1,static_cast<int>(rc.right-rc.left)),h=std::max(1,static_cast<int>(rc.bottom-rc.top));
             const int px=GET_X_LPARAM(lp)-g.dragOffsetX;
             const int py=GET_Y_LPARAM(lp)-g.dragOffsetY;
             g.settings.floatX=static_cast<float>(std::clamp(px,0,std::max(0,w-g.layout.secondary.w)))/std::max(1,w-g.layout.secondary.w);
@@ -152,7 +152,7 @@ LRESULT CALLBACK windowProc(HWND window,UINT msg,WPARAM wp,LPARAM lp) {
         PAINTSTRUCT ps{};auto dc=BeginPaint(window,&ps);
         RECT client{};GetClientRect(window,&client);
         HBRUSH background=CreateSolidBrush(RGB(15,18,31));FillRect(dc,&client,background);DeleteObject(background);
-        const int w=std::max(0,client.right-client.left),h=std::max(0,client.bottom-client.top);
+        const int w=std::max(0,static_cast<int>(client.right-client.left)),h=std::max(0,static_cast<int>(client.bottom-client.top));
         const int contentHeight=std::max(0,h-96);
         g.layout=dusk::computeLayout(w,contentHeight,g.settings);
         drawSurface(dc,g.layout.primary,pixelsMain.data(),L"PRIMARY - SYNTHETIC FRAME",RGB(98,103,182));
@@ -169,7 +169,7 @@ LRESULT CALLBACK windowProc(HWND window,UINT msg,WPARAM wp,LPARAM lp) {
         EndPaint(window,&ps);return 0;
     }
     case WM_DESTROY:
-        dusk::saveSettings(g.configPath,g.settings);
+        (void)dusk::saveSettings(g.configPath,g.settings);
         PostQuitMessage(0);return 0;
     default: return DefWindowProcW(window,msg,wp,lp);
     }

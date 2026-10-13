@@ -23,7 +23,7 @@ main.overlay{display:flex}main.overlay #primary{width:min(90vw,calc((100vh - 94p
 'use strict';
 const stage=document.getElementById('stage'), screen2=document.getElementById('secondary'), screen1=document.getElementById('primary');
 const layout=document.getElementById('layout'), imgA=document.getElementById('imageA'), imgB=document.getElementById('imageB'), status=document.getElementById('status');
-const keys=new Set(); let touch=null, fast=false, secondaryVisible=true, active=true, updating=false, frame=0, inputPending=false;
+const keys=new Set(); let touch=null, fast=false, secondaryVisible=true, active=true, updating=false, frame=0, inputPending=false, inputQueued=false;
 const keyMap={z:0,x:1,Shift:2,Enter:3,ArrowRight:4,d:4,ArrowLeft:5,a:5,ArrowUp:6,w:6,ArrowDown:7,s:7,e:8,q:9,v:10,c:11};
 function mask(){let n=4095;for(const bit of keys)n &=~(1<<bit);return n;}
 function setLayout(val){stage.className=val;layout.value=val;localStorage.setItem('dusk-layout',val);screen2.style.display=secondaryVisible && val!=='only'?'':'none';}
@@ -33,7 +33,7 @@ document.getElementById('toggle').onclick=toggleScreen;
 function toggleFast(){fast=!fast;document.getElementById('fast').textContent='Acelerar: '+(fast?'sim':'não');}
 document.getElementById('fast').onclick=toggleFast;
 document.getElementById('full').onclick=()=>stage.requestFullscreen?.();
-async function sendInput(){if(inputPending)return;inputPending=true;try{await fetch('/api/input',{method:'POST',headers:{'Content-Type':'application/json','X-Dusk-Token':'{{TOKEN}}'},body:JSON.stringify({mask:mask(),touch})});}catch(e){status.textContent=' · Sem conexão: '+e.message;}finally{inputPending=false;}}
+async function sendInput(){inputQueued=true;if(inputPending)return;inputPending=true;try{while(inputQueued){inputQueued=false;const response=await fetch('/api/input',{method:'POST',headers:{'Content-Type':'application/json','X-Dusk-Token':'{{TOKEN}}'},body:JSON.stringify({mask:mask(),touch})});if(!response.ok)throw Error('controle HTTP '+response.status);}}catch(e){status.textContent=' · Sem conexão: '+e.message;}finally{inputPending=false;if(inputQueued)void sendInput();}}
 const heldCodes=new Set();
 window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
 if(e.key==='Tab'){e.preventDefault();if(!e.repeat)toggleScreen();return;}

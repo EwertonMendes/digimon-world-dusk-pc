@@ -201,3 +201,24 @@ jobs:
         run: |
           $output = (Get-Item upstream/runner/build-windows/nds_runner.exe).Length
           Write-Host "Windows native runner compiled; bytes=$output (NO Dusk game banks)"
+
+  private-build-toolchain:
+    name: Windows cross toolchain for private local game build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Fetch pinned standalone Zig C/C++ Windows cross compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output zig.tar.xz https://ziglang.org/download/0.14.1/zig-x86_64-linux-0.14.1.tar.xz
+          sha256sum zig.tar.xz
+          tar -tJf zig.tar.xz | head -n 12 || true
+      - name: Upload local private build toolchain (ROM-free)
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-build-zig-linux-cross-windows
+          path: zig.tar.xz
+          if-no-files-found: error
+          retention-days: 2

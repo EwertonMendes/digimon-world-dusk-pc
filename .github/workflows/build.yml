@@ -181,6 +181,7 @@ jobs:
             "-G", "Ninja",
             "-DCMAKE_C_COMPILER=clang",
             "-DCMAKE_CXX_COMPILER=clang++",
+            "-DCMAKE_CXX_FLAGS=-DNOMINMAX",
             "-DCMAKE_BUILD_TYPE=Release",
             "-DNDS_SDL_BACKEND=NONE",
             "-DNDS_ENABLE_COMPUTE_RENDERER=OFF",

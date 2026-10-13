@@ -169,8 +169,24 @@ jobs:
       - name: Compile ROM-free Windows native hardware runtime
         shell: pwsh
         run: |
-          cmake -S upstream/runner -B upstream/runner/build-windows -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DNDS_SDL_BACKEND=NONE -DNDS_ENABLE_COMPUTE_RENDERER=OFF -DNDS_BOOTSTRAP_FIRMWARE=ON -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON "-DNDS_RECOMP_UI_ROOT=$($PWD.Path)/recomp-ui"
-          cmake --build upstream/runner/build-windows --target nds_runner --parallel 2
+          $uiPath = (Resolve-Path ./recomp-ui).Path
+          $cmakeArgs = @(
+            "-S", "upstream/runner",
+            "-B", "upstream/runner/build-windows",
+            "-G", "Ninja",
+            "-DCMAKE_C_COMPILER=clang",
+            "-DCMAKE_CXX_COMPILER=clang++",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DNDS_SDL_BACKEND=NONE",
+            "-DNDS_ENABLE_COMPUTE_RENDERER=OFF",
+            "-DNDS_BOOTSTRAP_FIRMWARE=ON",
+            "-DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON",
+            "-DNDS_RECOMP_UI_ROOT=$uiPath"
+          )
+          & cmake @cmakeArgs
+          if ($LASTEXITCODE -ne 0) { throw "Runner CMake configure failed" }
+          & cmake --build upstream/runner/build-windows --target nds_runner --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw "Runner compilation failed" }
           if (!(Test-Path upstream/runner/build-windows/nds_runner.exe)) { throw "Windows nds_runner.exe missing" }
       - name: Verify Windows binary exists (no game code)
         shell: pwsh

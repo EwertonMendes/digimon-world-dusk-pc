@@ -11,17 +11,20 @@ jobs:
         with:
           ref: feature/initial-native-foundation
           persist-credentials: true
-      - name: Expand ROM-free source archive into versioned files
+      - name: Expand known ROM-free source files
         shell: bash
         run: |
           set -euo pipefail
-          test -f bootstrap/native-source.tar.xz
-          tar -tJf bootstrap/native-source.tar.xz | grep -vE '(^/|\.\.|\.nds$|\.bin$)' > /dev/null
-          tar -xJf bootstrap/native-source.tar.xz -C .
-          rm bootstrap/native-source.tar.xz
+          cat bootstrap/native-source.part* | base64 --decode > /tmp/native-source.tar.xz
+          echo "980efc7a5e7ad6918849e3c84bdf86c0ca8866a91639935c5ae06f1517c5fd0c  /tmp/native-source.tar.xz" | sha256sum -c -
+          tar -tJf /tmp/native-source.tar.xz | while read -r path; do
+            case "$path" in /*|*..*|*.nds|*.bin|*.rom|*.sav) exit 1;; esac
+          done
+          tar -xJf /tmp/native-source.tar.xz -C .
+          rm bootstrap/native-source.part*
           rmdir bootstrap
           git add -A
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "feat: import native foundation source and Windows CI"
+          git commit -m "feat: add native foundation sources and Windows CI"
           git push origin HEAD:feature/initial-native-foundation

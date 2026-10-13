@@ -1,0 +1,99 @@
+--- a/runner/CMakeLists.txt
++++ b/runner/CMakeLists.txt
+@@ -20,6 +20,7 @@
+ arm_recomp_core_sources(NDS_ARM_RECOMP_SOURCES armv4t)
+ arm_recomp_core_include_dirs(NDS_ARM_RECOMP_INCLUDE_DIRS armv4t)
+ 
++option(NDS_DIAGNOSTIC_FREEBIOS_ONLY "Allow clean build without proprietary retail BIOS bank sources" OFF)
+ option(NDS_BOOTSTRAP_FIRMWARE
+     "Build with BIOS banks only so guest-produced firmware RAM can be captured"
+     OFF)
+@@ -209,11 +210,14 @@
+     endforeach()
+     set(TITLE_BANK_SOURCES ${TITLE_BANK_BODIES} ${TITLE_BANK_DISPATCH})
+ endif()
++set(RETAIL_BIOS_SOURCES)
++if(NOT NDS_DIAGNOSTIC_FREEBIOS_ONLY)
++  list(APPEND RETAIL_BIOS_SOURCES
++      ${GEN}/arm9_bios.c ${GEN}/arm9_bios_dispatch.c
++      ${GEN}/arm7_bios.c ${GEN}/arm7_bios_dispatch.c)
++endif()
+ add_library(nds_banks STATIC
+-    ${GEN}/arm9_bios.c
+-    ${GEN}/arm9_bios_dispatch.c
+-    ${GEN}/arm7_bios.c
+-    ${GEN}/arm7_bios_dispatch.c
++    ${RETAIL_BIOS_SOURCES}
+     ${GEN}/freebios_arm9.c
+     ${GEN}/freebios_arm9_dispatch.c
+     ${GEN}/freebios_arm7.c
+@@ -230,8 +234,7 @@
+     ${NDS_SM64DS_BANK_DIR}
+     ${TITLE_GROUP_DIRS})
+ set_source_files_properties(
+-    ${GEN}/arm9_bios.c ${GEN}/arm9_bios_dispatch.c
+-    ${GEN}/arm7_bios.c ${GEN}/arm7_bios_dispatch.c
++    ${RETAIL_BIOS_SOURCES}
+     ${GEN}/freebios_arm9.c ${GEN}/freebios_arm9_dispatch.c
+     ${GEN}/freebios_arm7.c ${GEN}/freebios_arm7_dispatch.c
+     ${FW_BANK_BODIES}
+@@ -254,10 +257,14 @@
+ # Every immutable bank is CPU-specific even though both use one runtime ABI.
+ # Tell the C compiler which core owns each source so it can fold the emitted
+ # timing selection without changing generated C or the two-CPU scheduler.
+-set(ARM9_BANK_SOURCES ${GEN}/arm9_bios.c ${GEN}/arm9_bios_dispatch.c
+-    ${GEN}/freebios_arm9.c ${GEN}/freebios_arm9_dispatch.c)
+-set(ARM7_BANK_SOURCES ${GEN}/arm7_bios.c ${GEN}/arm7_bios_dispatch.c
+-    ${GEN}/freebios_arm7.c ${GEN}/freebios_arm7_dispatch.c)
++set(ARM9_BANK_SOURCES ${GEN}/freebios_arm9.c ${GEN}/freebios_arm9_dispatch.c)
++if(NOT NDS_DIAGNOSTIC_FREEBIOS_ONLY)
++  list(APPEND ARM9_BANK_SOURCES ${GEN}/arm9_bios.c ${GEN}/arm9_bios_dispatch.c)
++endif()
++set(ARM7_BANK_SOURCES ${GEN}/freebios_arm7.c ${GEN}/freebios_arm7_dispatch.c)
++if(NOT NDS_DIAGNOSTIC_FREEBIOS_ONLY)
++  list(APPEND ARM7_BANK_SOURCES ${GEN}/arm7_bios.c ${GEN}/arm7_bios_dispatch.c)
++endif()
+ set(SM64DS_ARM9_BANK_SOURCES)
+ set(SM64DS_HLE_PROFILE_SOURCES)
+ foreach(src IN LISTS FW_BANK_BODIES FW_BANK_DISPATCH)
+@@ -714,6 +721,9 @@
+     endif()
+ endif()
+ target_link_libraries(nds_runner PRIVATE nds_banks nds_support nds_armv4t slirp)
++if(NDS_DIAGNOSTIC_FREEBIOS_ONLY)
++    target_compile_definitions(nds_runner PRIVATE NDS_DIAGNOSTIC_FREEBIOS_ONLY=1)
++endif()
+ if(NDS_BOOTSTRAP_FIRMWARE)
+     target_compile_definitions(nds_runner PRIVATE NDS_BOOTSTRAP_FIRMWARE=1)
+ elseif(EXISTS "${GEN}/fw_arm9_calibration_save_dispatch.c")
+--- a/runner/src/main.cpp
++++ b/runner/src/main.cpp
+@@ -64,10 +64,12 @@
+ #endif
+ 
+ // Generated per-CPU dispatch tables (C linkage).
++#ifndef NDS_DIAGNOSTIC_FREEBIOS_ONLY
+ extern "C" const DispatchEntry g_dispatch_arm9_bios[];
+ extern "C" const unsigned g_dispatch_arm9_bios_len;
+ extern "C" const DispatchEntry g_dispatch_arm7_bios[];
+ extern "C" const unsigned g_dispatch_arm7_bios_len;
++#endif
+ extern "C" const DispatchEntry g_dispatch_freebios_arm9[];
+ extern "C" const unsigned g_dispatch_freebios_arm9_len;
+ extern "C" const DispatchEntry g_dispatch_freebios_arm7[];
+@@ -2074,10 +2076,15 @@
+             nds_register_dispatch(NDS_ARM7, g_dispatch_freebios_arm7,
+                                   g_dispatch_freebios_arm7_len, 0x00000000u);
+         } else {
++#ifdef NDS_DIAGNOSTIC_FREEBIOS_ONLY
++            std::fprintf(stderr, "Retail BIOS disabled in this diagnostic FreeBIOS build\n");
++            std::exit(1);
++#else
+             nds_register_dispatch(NDS_ARM9, g_dispatch_arm9_bios,
+                                   g_dispatch_arm9_bios_len, 0xFFFF0000u);
+             nds_register_dispatch(NDS_ARM7, g_dispatch_arm7_bios,
+                                   g_dispatch_arm7_bios_len, 0x00000000u);
++#endif
+         }
+ #ifndef NDS_BOOTSTRAP_FIRMWARE
+         nds_register_dispatch(NDS_ARM9, g_dispatch_fw_arm9_early,

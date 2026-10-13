@@ -1,0 +1,18 @@
+--- a/runner/vendor/melonds/net/libslirp/src/tftp.c
++++ b/runner/vendor/melonds/net/libslirp/src/tftp.c
+@@ -27,6 +27,15 @@
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ 
++#ifdef _WIN32
++/* TFTP works with CRT file descriptors, not Winsock SOCKET handles. */
++#include <io.h>
++#define close _close
++#define open _open
++#define lseek _lseek
++#define read _read
++#endif
++
+ static inline int tftp_session_in_use(struct tftp_session *spt)
+ {
+     return (spt->slirp != NULL);

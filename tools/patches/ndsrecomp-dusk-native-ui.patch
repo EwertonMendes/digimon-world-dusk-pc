@@ -1,0 +1,444 @@
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1,4 +1,5 @@
+ #include "frontend.h"
++#include "dusk_native_ui.h"
+ #include "host_profile.h"
+ 
+ #include <algorithm>
+@@ -1317,6 +1318,16 @@
+ }
+ 
+ struct FrontendPresentation {
++#if defined(NDS_HAVE_SDL3)
++    struct DuskNative {
++        bool enabled = false;
++        bool dragging = false;
++        bool toolbar_pressed = false;
++        int drag_dx = 0, drag_dy = 0;
++        dusk_native::Config cfg{};
++        std::filesystem::path config_path;
++    } dusk;
++#endif
+     bool separate = false;
+     bool gl_top = false;
+     SDL_Window* windows[2]{};
+@@ -1377,6 +1388,143 @@
+         default:
+             return 0;
+     }
++}
++#endif
++
++#if defined(NDS_HAVE_SDL3)
++static bool dusk_native_requested() {
++    const char* value=std::getenv("NDS_DUSK_NATIVE_UI");
++    return value && value[0]=='1' && value[1]=='\0';
++}
++static const char* dusk_mode_name(dusk_native::Layout l) {
++    switch (l) {
++        case dusk_native::Layout::Modern: return "MODERN";
++        case dusk_native::Layout::Floating: return "FLOATING";
++        case dusk_native::Layout::Classic: return "CLASSIC";
++        case dusk_native::Layout::Horizontal: return "SIDE BY SIDE";
++        case dusk_native::Layout::MainOnly: return "MAIN ONLY";
++    }
++    return "MODERN";
++}
++static void dusk_save(FrontendPresentation& p) {
++    if(!p.dusk.enabled || p.dusk.config_path.empty()) return;
++    std::ofstream out(p.dusk.config_path,std::ios::trunc);
++    if(!out) { std::fprintf(stderr,"[dusk-ui] settings write failed\n"); return; }
++    const auto& c=p.dusk.cfg;
++    out << 1 << ' ' << int(c.layout) << ' ' << int(c.auxiliary) << ' '
++        << int(c.help) << ' ' << c.float_corner << ' '
++        << c.float_percent << ' ' << c.floating_x << ' ' << c.floating_y << '\n';
++}
++static void dusk_load(FrontendPresentation& p) {
++    p.dusk.enabled=dusk_native_requested();
++    if(!p.dusk.enabled) return;
++    // SDL creates this per-user directory. No admin rights or registry writes.
++    char* path=SDL_GetPrefPath("DuskPC","DigimonWorldDusk");
++    if(!path) return;
++    p.dusk.config_path=std::filesystem::path(path)/"native-layout.cfg";
++    SDL_free(path);
++    std::ifstream in(p.dusk.config_path);
++    int version=0,mode=0,aux=1,help=1,corner=1,percent=36;
++    float fx=-1.f,fy=-1.f;
++    if(in>>version>>mode>>aux>>help>>corner>>percent>>fx>>fy &&
++       version==1 && mode>=0 && mode<=4 && (aux==0||aux==1) &&
++       (help==0||help==1) && corner>=0 && corner<=3 &&
++       percent>=25 && percent<=65 && std::isfinite(fx) && std::isfinite(fy)) {
++        auto& c=p.dusk.cfg;
++        c.layout=static_cast<dusk_native::Layout>(mode);
++        c.auxiliary=aux; c.help=help; c.float_corner=corner;
++        c.float_percent=percent;
++        c.floating_x=std::clamp(fx,-1.f,1.f);
++        c.floating_y=std::clamp(fy,-1.f,1.f);
++    }
++}
++static dusk_native::Geometry dusk_geometry(const FrontendPresentation& p) {
++    int w=1280,h=720;
++    if(p.renderers[0]) SDL_GetRenderOutputSize(p.renderers[0],&w,&h);
++    return dusk_native::compute(w,h,p.dusk.cfg,
++                                p.screen_widths[0],p.screen_widths[1]);
++}
++static SDL_Rect dusk_sdl_rect(dusk_native::Rect r) { return {r.x,r.y,r.w,r.h}; }
++static void dusk_fill(SDL_Renderer* renderer,dusk_native::Rect r,
++                      uint8_t red,uint8_t green,uint8_t blue,uint8_t alpha=255) {
++    SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
++    SDL_SetRenderDrawColor(renderer,red,green,blue,alpha);
++    const SDL_FRect rect{float(r.x),float(r.y),float(r.w),float(r.h)};
++    SDL_RenderFillRect(renderer,&rect);
++}
++static void dusk_outline(SDL_Renderer* renderer,dusk_native::Rect r,
++                         uint8_t red,uint8_t green,uint8_t blue) {
++    SDL_SetRenderDrawColor(renderer,red,green,blue,255);
++    const SDL_FRect rect{float(r.x)-1.f,float(r.y)-1.f,
++                         float(r.w)+2.f,float(r.h)+2.f};
++    SDL_RenderRect(renderer,&rect);
++}
++static void dusk_toolbar(SDL_Renderer* renderer, const FrontendPresentation& p,
++                         const dusk_native::Geometry& g) {
++    dusk_fill(renderer,{0,0,g.toolbar.w,g.toolbar.h},20,24,39);
++    dusk_fill(renderer,{0,g.toolbar.h-1,g.toolbar.w,1},62,75,102);
++    SDL_SetRenderDrawColor(renderer,231,234,254,255);
++    SDL_RenderDebugText(renderer,12,16,"DIGIMON WORLD DUSK  |  PC");
++    dusk_fill(renderer,{240,7,127,28},57,66,109);
++    SDL_SetRenderDrawColor(renderer,255,255,255,255);
++    SDL_RenderDebugText(renderer,250,17,dusk_mode_name(p.dusk.cfg.layout));
++    dusk_fill(renderer,{379,7,94,28},p.dusk.cfg.auxiliary?48:75,67,99);
++    SDL_SetRenderDrawColor(renderer,255,255,255,255);
++    SDL_RenderDebugText(renderer,392,17,p.dusk.cfg.auxiliary?"AUX ON":"AUX OFF");
++    dusk_fill(renderer,{485,7,110,28},48,67,99);
++    SDL_RenderDebugText(renderer,494,17,"FULLSCREEN");
++    dusk_fill(renderer,{607,7,82,28},48,67,99);
++    SDL_RenderDebugText(renderer,621,17,"HELP");
++    if(p.dusk.cfg.help && g.toolbar.w>740) {
++        SDL_SetRenderDrawColor(renderer,179,190,215,255);
++        SDL_RenderDebugText(renderer,705,17,"F4 LAYOUT  F5 AUX  F6 SIZE  F7 CORNER  F11 FULL");
++    }
++}
++static bool dusk_handle_mouse(FrontendPresentation& p, SDL_Event& ev) {
++    if(!p.dusk.enabled || p.separate) return false;
++    if(ev.type!=SDL_MOUSEBUTTONDOWN && ev.type!=SDL_MOUSEBUTTONUP &&
++       ev.type!=SDL_MOUSEMOTION) return false;
++    float x=0,y=0;
++    bool down=ev.type==SDL_MOUSEBUTTONDOWN;
++    bool up=ev.type==SDL_MOUSEBUTTONUP;
++    if(down||up) {x=ev.button.x;y=ev.button.y;}
++    else {x=ev.motion.x;y=ev.motion.y;}
++    if(!SDL_RenderCoordinatesFromWindow(p.renderers[0],x,y,&x,&y)) return false;
++    const auto g=dusk_geometry(p);
++    if(down && ev.button.button==SDL_BUTTON_LEFT && y<g.toolbar.h) {
++        p.dusk.toolbar_pressed=true;
++        if(x>=240 && x<367) {
++            p.dusk.cfg.layout=static_cast<dusk_native::Layout>((int(p.dusk.cfg.layout)+1)%5);
++        } else if(x>=379 && x<473) {
++            p.dusk.cfg.auxiliary=!p.dusk.cfg.auxiliary;
++        } else if(x>=485 && x<595) {
++            SDL_Window* window=p.windows[0];
++            const bool fullscreen=(SDL_GetWindowFlags(window)&SDL_WINDOW_FULLSCREEN)!=0;
++            SDL_SetWindowFullscreen(window,!fullscreen);
++        } else if(x>=607 && x<689) {
++            p.dusk.cfg.help=!p.dusk.cfg.help;
++        }
++        dusk_save(p);
++        return true;
++    }
++    if(up && p.dusk.toolbar_pressed) {p.dusk.toolbar_pressed=false;return true;}
++    if(up && p.dusk.dragging) {p.dusk.dragging=false;dusk_save(p);return true;}
++    if(p.dusk.dragging && ev.type==SDL_MOUSEMOTION) {
++        const auto next=dusk_geometry(p);
++        const int free_x=std::max(1,next.play.w-next.top.w);
++        const int free_y=std::max(1,next.play.h-next.top.h);
++        p.dusk.cfg.floating_x=std::clamp((x-p.dusk.drag_dx-next.play.x)/free_x,0.f,1.f);
++        p.dusk.cfg.floating_y=std::clamp((y-p.dusk.drag_dy-next.play.y)/free_y,0.f,1.f);
++        return true;
++    }
++    if(down && ev.button.button==SDL_BUTTON_LEFT &&
++       p.dusk.cfg.layout==dusk_native::Layout::Floating &&
++       p.dusk.cfg.auxiliary && dusk_native::contains(g.top,x,y)) {
++        p.dusk.dragging=true; p.dusk.drag_dx=int(x)-g.top.x;
++        p.dusk.drag_dy=int(y)-g.top.y;
++        return true;
++    }
++    return (down||up) && ev.button.button==SDL_BUTTON_LEFT && y<g.toolbar.h;
+ }
+ #endif
+ 
+@@ -1523,6 +1671,13 @@
+             float y = event.button.y;
+             if (SDL_RenderCoordinatesFromWindow(
+                     renderer, event.button.x, event.button.y, &x, &y)) {
++                if(presentation.dusk.enabled && !presentation.separate) {
++                    float tx=0,ty=0;
++                    if(dusk_native::map_touch(dusk_geometry(presentation),x,y,tx,ty)) {
++                        x=tx+(presentation.canvas_width-kScreenWidth)/2;
++                        y=ty+kScreenHeight;
++                    } else { x=-1000.f; y=-1000.f; }
++                }
+                 event.button.x = x;
+                 event.button.y = y;
+             }
+@@ -1534,6 +1689,13 @@
+             float y = event.motion.y;
+             if (SDL_RenderCoordinatesFromWindow(
+                     renderer, event.motion.x, event.motion.y, &x, &y)) {
++                if(presentation.dusk.enabled && !presentation.separate) {
++                    float tx=0,ty=0;
++                    if(dusk_native::map_touch(dusk_geometry(presentation),x,y,tx,ty)) {
++                        x=tx+(presentation.canvas_width-kScreenWidth)/2;
++                        y=ty+kScreenHeight;
++                    } else { x=-1000.f; y=-1000.f; }
++                }
+                 event.motion.x = x;
+                 event.motion.y = y;
+             }
+@@ -1683,8 +1845,14 @@
+ bool create_presentation(const NdsFrontendOptions& options,
+                          FrontendPresentation& presentation,
+                          bool allow_gl_top = true) {
++#if defined(NDS_HAVE_SDL3)
++    dusk_load(presentation);
++#endif
+     presentation.separate =
+         options.screen_layout == NdsScreenLayout::Separate;
++#if defined(NDS_HAVE_SDL3)
++    if(presentation.dusk.enabled) presentation.separate=false;
++#endif
+ #if defined(NDS_HAVE_COMPUTE_RENDERER)
+     const char* direct_selection =
+         std::getenv("NDS_COMPUTE_DIRECT_PRESENT");
+@@ -1725,12 +1893,22 @@
+         (presentation.gl_top
+              ? static_cast<uint64_t>(SDL_WINDOW_OPENGL) : 0u);
+     presentation.windows[0] = create_window(
++#if defined(NDS_HAVE_SDL3)
++        presentation.dusk.enabled ? "Digimon World Dusk | PC" :
++#endif
+         presentation.separate ? "ndsrecomp - Top Screen"
+                                : "ndsrecomp firmware preview",
+         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
++#if defined(NDS_HAVE_SDL3)
++        presentation.dusk.enabled ? 1360 :
++#endif
+         (presentation.separate ? presentation.screen_widths[0]
+                                : presentation.canvas_width) * kWindowScale,
++#if defined(NDS_HAVE_SDL3)
++        presentation.dusk.enabled ? 800 : first_height,
++#else
+         first_height,
++#endif
+         top_window_flags);
+     if (!presentation.windows[0]) {
+         std::fprintf(stderr, "[sdl] window failed: %s\n", SDL_GetError());
+@@ -1796,6 +1974,12 @@
+             !presentation.separate && screen == 0
+                 ? kScreenHeight * 2 : kScreenHeight;
+         if (screen == 0 || presentation.separate) {
++#if defined(NDS_HAVE_SDL3)
++            if(presentation.dusk.enabled && !presentation.separate) {
++                SDL_SetRenderLogicalPresentation(presentation.renderers[screen],
++                       0,0,SDL_LOGICAL_PRESENTATION_DISABLED);
++            } else
++#endif
+             set_render_logical_size(
+                 presentation.renderers[screen],
+                 presentation.separate
+@@ -1976,6 +2160,30 @@
+         start = SDL_GetPerformanceCounter();
+         SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
+         SDL_RenderClear(renderer);
++#if defined(NDS_HAVE_SDL3)
++        if(presentation.dusk.enabled) {
++            const auto geo=dusk_geometry(presentation);
++            dusk_fill(renderer,{0,0,geo.toolbar.w,geo.play.y+geo.play.h+60},13,17,28);
++            dusk_fill(renderer,geo.play,19,26,41);
++            auto bottom=dusk_sdl_rect(geo.bottom);
++            render_screen(presentation,1,bottom);
++            dusk_outline(renderer,geo.bottom,84,100,159);
++            if(geo.top.w>0) {
++                auto top=dusk_sdl_rect(geo.top);
++                render_screen(presentation,0,top);
++                dusk_outline(renderer,geo.top,122,92,213);
++            }
++            if(virtual_stylus_visible)
++                draw_virtual_stylus(renderer,bottom,virtual_stylus_x,virtual_stylus_y);
++            draw_savestate_notice(renderer,bottom,savestate_notice);
++            dusk_toolbar(renderer,presentation,geo);
++            ticks.draw+=SDL_GetPerformanceCounter()-start;
++            start=SDL_GetPerformanceCounter();
++            SDL_RenderPresent(renderer);
++            ticks.swap+=SDL_GetPerformanceCounter()-start;
++            return ticks;
++        }
++#endif
+         const SDL_Rect top_rect{
+             (presentation.canvas_width -
+              presentation.screen_widths[0]) / 2,
+@@ -2798,6 +3006,9 @@
+     uint64_t max_emu_ticks = 0;
+     uint64_t max_emu_frame = 0;
+     uint64_t slow_frames_32ms = 0;
++#if defined(NDS_HAVE_SDL3)
++    uint64_t dusk_last_hitch_frame = 0;
++#endif
+     uint64_t last_underruns_seen = 0;
+     uint64_t first_underrun_frame = 0;
+     uint64_t last_underrun_frame = 0;
+@@ -3016,6 +3227,38 @@
+         }
+         SDL_Event event{};
+         while (SDL_PollEvent(&event)) {
++#if defined(NDS_HAVE_SDL3)
++            if(dusk_handle_mouse(presentation,event)) continue;
++            if(presentation.dusk.enabled && event.type==SDL_KEYDOWN && !event.key.repeat) {
++                const SDL_Scancode code=sdl_event_scancode(event);
++                auto& cfg=presentation.dusk.cfg;
++                bool changed=true;
++                if(code==SDL_SCANCODE_F4) {
++                    cfg.layout=static_cast<dusk_native::Layout>((int(cfg.layout)+1)%5);
++                } else if(code==SDL_SCANCODE_F5) {
++                    cfg.auxiliary=!cfg.auxiliary;
++                } else if(code==SDL_SCANCODE_F6) {
++                    cfg.float_percent=cfg.float_percent>=65?25:cfg.float_percent+10;
++                } else if(code==SDL_SCANCODE_F7) {
++                    cfg.float_corner=(cfg.float_corner+1)%4;
++                    cfg.floating_x=-1;cfg.floating_y=-1;
++                } else if(code==SDL_SCANCODE_F11 ||
++                          (code==SDL_SCANCODE_RETURN && (event.key.mod&SDL_KMOD_ALT))) {
++                    SDL_Window* window=presentation.windows[0];
++                    bool fullscreen=(SDL_GetWindowFlags(window)&SDL_WINDOW_FULLSCREEN)!=0;
++                    SDL_SetWindowFullscreen(window,!fullscreen);
++                } else if(code==SDL_SCANCODE_F1) {
++                    cfg.help=!cfg.help;
++                } else changed=false;
++                if(changed) {dusk_save(presentation);continue;}
++            }
++            if(presentation.dusk.enabled && event.type==SDL_KEYUP) {
++                const SDL_Scancode code=sdl_event_scancode(event);
++                if(code==SDL_SCANCODE_F4 || code==SDL_SCANCODE_F5 ||
++                   code==SDL_SCANCODE_F6 || code==SDL_SCANCODE_F7 ||
++                   code==SDL_SCANCODE_F11 || code==SDL_SCANCODE_F1) continue;
++            }
++#endif
+             convert_mouse_event_to_logical_coordinates(event, presentation);
+             if (event.type == SDL_QUIT) {
+                 release_relative_mouse();
+@@ -3779,6 +4022,17 @@
+             }
+             if (frame_emu_ticks * 1000u > frequency * 32u)
+                 ++slow_frames_32ms;
++#if defined(NDS_HAVE_SDL3)
++            if(presentation.dusk.enabled &&
++               frame_emu_ticks * 1000u > frequency * 70u &&
++               (shown_frames - dusk_last_hitch_frame >= 60u ||
++                dusk_last_hitch_frame == 0u)) {
++                std::fprintf(stderr,"[dusk-perf] scene/frame hitch frame=%llu cpu_ms=%.1f threshold_ms=70\n",
++                    static_cast<unsigned long long>(shown_frames),
++                    1000.0 * double(frame_emu_ticks) / double(frequency));
++                dusk_last_hitch_frame=shown_frames;
++            }
++#endif
+         }
+ #if defined(NDS_HAVE_COMPUTE_RENDERER)
+         if (nds_gpu3d_compute_runtime_failed()) {
+@@ -4044,7 +4298,11 @@
+                     ? " - Gov S" + std::to_string(perf_governor.stage) +
+                           (perf_governor.stage2_held ? " held" : "")
+                     : "";
+-            const std::string top_title = !savestate_notice.empty()
++            const std::string top_title =
++#if defined(NDS_HAVE_SDL3)
++                presentation.dusk.enabled ? "Digimon World Dusk | PC - " + fps_text + governor_text :
++#endif
++                !savestate_notice.empty()
+                 ? "ndsrecomp - " + savestate_notice
+                 : presentation.separate
+                 ? "ndsrecomp - Top Screen - " + fps_text + governor_text
+--- a/runner/src/dusk_native_ui.h
++++ b/runner/src/dusk_native_ui.h
+@@ -0,0 +1,82 @@
++#pragma once
++// ROM-free, deterministic geometry for Dusk's native SDL3 compositor.
++// This file deliberately knows nothing about SDL, guest RAM, ARM execution or ROM assets.
++#include <algorithm>
++#include <cmath>
++
++namespace dusk_native {
++enum class Layout : int { Modern = 0, Floating = 1, Classic = 2, Horizontal = 3, MainOnly = 4 };
++struct Rect { int x=0, y=0, w=0, h=0; };
++struct Config {
++    Layout layout=Layout::Modern;
++    bool auxiliary=true;
++    bool help=true;
++    int float_corner=1; // 0 left-top, 1 right-top, 2 left-bottom, 3 right-bottom
++    int float_percent=36; // 25..65
++    float floating_x=-1.f, floating_y=-1.f; // normalized within play area, -1 means corner preset
++};
++struct Geometry { Rect top, bottom, toolbar, play; };
++inline Rect fitted(Rect region, int source_w=256, int source_h=192) {
++    if(region.w<=0 || region.h<=0 || source_w<=0 || source_h<=0) return {};
++    const double s=std::min(double(region.w)/source_w,double(region.h)/source_h);
++    const int w=std::max(1,int(std::floor(source_w*s)));
++    const int h=std::max(1,int(std::floor(source_h*s)));
++    return {region.x+(region.w-w)/2,region.y+(region.h-h)/2,w,h};
++}
++inline bool contains(Rect r,float x,float y) {
++    return r.w>0 && r.h>0 && x>=r.x && x<r.x+r.w && y>=r.y && y<r.y+r.h;
++}
++inline Geometry compute(int width,int height,Config cfg, int top_w=256,int bottom_w=256) {
++    const int w=std::max(width,320), h=std::max(height,240);
++    const int pad=std::clamp(w/100,8,24);
++    const int bar=42;
++    const Rect play{pad,bar+pad,w-2*pad,std::max(120,h-bar-2*pad)};
++    Geometry g{}; g.toolbar={0,0,w,bar}; g.play=play;
++    const bool show=cfg.auxiliary && cfg.layout!=Layout::MainOnly;
++    if(!show) { g.bottom=fitted(play,bottom_w,192); return g; }
++    switch(cfg.layout) {
++      case Layout::Modern: {
++        const int sidebar=std::clamp(int(play.w*0.28),180,std::min(460,play.w/2));
++        const Rect primary{play.x,play.y,std::max(1,play.w-sidebar-pad),play.h};
++        const Rect auxiliary{primary.x+primary.w+pad,play.y,sidebar,play.h};
++        g.bottom=fitted(primary,bottom_w,192);
++        g.top=fitted({auxiliary.x,auxiliary.y+std::min(30,play.h/12),auxiliary.w,std::min(play.h*2/3,auxiliary.w*192/std::max(1,top_w)+2)},top_w,192);
++        break;
++      }
++      case Layout::Floating: {
++        g.bottom=fitted(play,bottom_w,192);
++        const int desired=std::clamp(int(play.w*std::clamp(cfg.float_percent,25,65)/100.0),100,play.w/2);
++        const int sw=std::min(desired,std::max(1,play.h*top_w/192/2));
++        const int sh=std::max(1,int(double(sw)*192/std::max(1,top_w)));
++        const int free_x=std::max(0,play.w-sw),free_y=std::max(0,play.h-sh);
++        int x=(cfg.float_corner%2==0)?0:free_x;
++        int y=(cfg.float_corner<2)?0:free_y;
++        if(cfg.floating_x>=0) x=int(std::clamp(cfg.floating_x,0.f,1.f)*free_x);
++        if(cfg.floating_y>=0) y=int(std::clamp(cfg.floating_y,0.f,1.f)*free_y);
++        g.top={play.x+x,play.y+y,sw,sh};
++        break;
++      }
++      case Layout::Classic: {
++        const int gap=std::max(6,pad/2), avail=(play.h-gap)/2;
++        g.top=fitted({play.x,play.y,play.w,avail},top_w,192);
++        g.bottom=fitted({play.x,play.y+avail+gap,play.w,avail},bottom_w,192);
++        break;
++      }
++      case Layout::Horizontal: {
++        const int gap=pad;
++        const int side=(play.w-gap)/2;
++        g.bottom=fitted({play.x,play.y,side,play.h},bottom_w,192);
++        g.top=fitted({play.x+side+gap,play.y,side,play.h},top_w,192);
++        break;
++      }
++      case Layout::MainOnly: break;
++    }
++    return g;
++}
++inline bool map_touch(const Geometry& g,float x,float y,float& outx,float& outy) {
++    if(!contains(g.bottom,x,y)) return false;
++    outx=std::clamp((x-g.bottom.x)*256.f/g.bottom.w,0.f,255.999f);
++    outy=std::clamp((y-g.bottom.y)*192.f/g.bottom.h,0.f,191.999f);
++    return true;
++}
++} // namespace dusk_native

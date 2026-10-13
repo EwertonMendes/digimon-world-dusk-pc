@@ -102,7 +102,7 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path upstream/recompiler/build/nds_recompile.exe)) { throw "Expected nds_recompile.exe missing" }
-          & upstream/recompiler/build/Release/nds_recompile.exe --codegen-identity
+          & ./upstream/recompiler/build/nds_recompile.exe --codegen-identity
       - name: Upload native Windows static recompiler utility
         uses: actions/upload-artifact@v4
         with:

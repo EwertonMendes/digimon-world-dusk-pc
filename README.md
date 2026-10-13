@@ -50,3 +50,7 @@ On Windows the executables may be under `build/Release/`. `bootstrap_recompiler.
 ## Engineering notes
 
 See `docs/architecture.md`, `docs/recompilation.md`, `docs/research/rom-structure.md`, `docs/setup-windows.md`, and `docs/roadmap.md`. Requirements and decisions are documented in `AGENTS.md`.
+
+## Current recompilation status
+
+We now provide a ROM-hash-verified private bank generator at `tools/prepare_dusk_recomp.py`. Its inputs are the verified US ROM, its outputs are ignored ARM9/ARM7 bank images/configs and, optionally, NDSRecomp-generated C. The 18 overlays can be prepared for investigation but are not automatically dispatched. See `docs/recompilation.md` for local commands. This is **not** a playable native Dusk port; fullscreen/layout prototype remains synthetic.

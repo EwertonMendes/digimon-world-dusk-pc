@@ -73,3 +73,33 @@ jobs:
         env:
           NDS_RECOMPILER: ./upstream/recompiler/build/nds_recompile
         run: python3 tests/test_recomp_pipeline.py
+
+  upstream-recompiler-windows:
+    name: Windows ARM static recompiler toolchain
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned NDSRecomp toolchain
+        shell: pwsh
+        run: |
+          git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
+          git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
+          git -C upstream submodule update --init --recursive
+      - name: Build Windows recompiler
+        shell: pwsh
+        run: |
+          cmake -S upstream/recompiler -B upstream/recompiler/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build upstream/recompiler/build --config Release --target nds_recompile --parallel 2
+      - name: Verify recompiler binary
+        shell: pwsh
+        run: |
+          if (!(Test-Path upstream/recompiler/build/Release/nds_recompile.exe)) { throw "Expected nds_recompile.exe missing" }
+          & upstream/recompiler/build/Release/nds_recompile.exe --codegen-identity
+      - name: Upload native Windows static recompiler utility
+        uses: actions/upload-artifact@v4
+        with:
+          name: nds-recompiler-windows-x64
+          path: upstream/recompiler/build/Release/nds_recompile.exe
+          if-no-files-found: error
+          retention-days: 14

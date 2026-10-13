@@ -88,3 +88,20 @@ This uses `--validate-live-bytes` **automatically** when a coverage file is supp
 ## Architectural clarification
 
 The project performs actual **static ARM-to-C recompilation**, but still needs a native compatibility runtime to faithfully expose Nintendo DS hardware semantics (MMIO, timers, DMA, memory map, dual CPUs, 2D/3D graphics, audio and inputs). Removing **all** DS-derived hardware behavior without replacing it in host-native equivalents would break the program. The goal is to remove **instruction interpretation from hot game-code paths** through verified AOT execution, then progressively replace individual hardware components with maintainable native APIs where semantics are known. A complete high-level rewrite is a separate and much larger undertaking.
+
+## Subsequent local differential replay (actual tested result)
+
+The private generated AOT bank C sources were linked into an independent Linux native runner. The existing scripted 2,765-VBlank Dusk title/new-game/starter/story-intro replay **succeeded** with all **six screen SHA-256 values identical** to the previously accepted runner, and with exactly the same ARM9 and ARM7 guest cycle counters. This is evidence for that route only; battle has not been covered.
+
+A separate headless, uncapped Linux test compared exactly **840 guest VBlanks** with equal guest cycle counts. The internal Tier3 counters, not merely a frame-rate guess, were:
+
+| 840-VBlank internal counter | Earlier runner | Expanded ROM-verified AOT | Reduction |
+| --- | ---: | ---: | ---: |
+| ARM9 Tier3 instructions | 43,097,692 | 21,306,323 | 50.56% |
+| ARM7 Tier3 instructions | 12,534,905 | 752,105 | 94.00% |
+| **Total Tier3 instructions** | **55,632,597** | **22,058,428** | **60.35%** |
+| Wall duration (same local replay) | 9.094 s | 6.239 s | 31.39% lower |
+
+The earlier build was compiled with a separate bank optimization setting from the new build; these figures therefore demonstrate measurable **aggregate execution improvement and reduced interpretation**, but are not a rigorous isolated attribution of the speedup to any one compiler setting. Additional runs were directionally consistent.
+
+Do not report those 840 VBlanks divided by wall-clock seconds as Windows interactive FPS: the benchmark is **uncapped**, without live SDL presentation or audio pacing. The hardware-bound intended cadence remains ~59.826 Hz. The Windows GUI build, transitions, menu and battle still need independent testing.

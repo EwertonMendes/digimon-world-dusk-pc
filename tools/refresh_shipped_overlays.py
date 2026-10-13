@@ -70,7 +70,7 @@ def stage_refresh(source_stage: Path, destination: Path, proofs: list[dict]) -> 
     """Create isolated private configs, never mutate the last known good build."""
     if destination.exists():
         raise FileExistsError(f"Refusing to overwrite existing output: {destination}")
-    destination.mkdir(parents=True)
+    destination.mkdir(parents=True, parents=True)
     manifest = []
     for proof in proofs:
         name = proof["bank"]

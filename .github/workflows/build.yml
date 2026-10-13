@@ -27,6 +27,7 @@ jobs:
         run: |
           python3 -m py_compile tools/test_dusk_native_story.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py
           python3 -m unittest discover -s tests -p test_native_perf.py -v
+          python3 -m unittest discover -s tests -p test_verified_aot.py -v
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON

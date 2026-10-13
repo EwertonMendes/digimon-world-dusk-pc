@@ -142,9 +142,13 @@ def main() -> int:
     p.add_argument("--overlays",action="store_true")
     p.add_argument("--recompiler",type=Path)
     p.add_argument("--emit",action="store_true")
+    p.add_argument("--arm9-shards",type=int,default=16,help="ARM9 C body shards (1..99)")
+    p.add_argument("--arm7-shards",type=int,default=8,help="ARM7 C body shards (1..99)")
     args=p.parse_args()
     if args.emit and not args.recompiler:
         p.error("--emit requires --recompiler")
+    if not (1 <= args.arm9_shards <= 99 and 1 <= args.arm7_shards <= 99):
+        p.error("Shard counts must be 1..99")
     try:
         report=prepare(args.rom,args.out,args.overlays)
         print("ROM SHA-1:",report["romSHA1"])
@@ -161,7 +165,8 @@ def main() -> int:
                 name=bank["bank"]
                 cmd=[executable,"--config",str(output/(name+".toml")),
                      "--bin",str(output/(name+".bin"))]
-                cmd+=["--out",str(output/"generated"),"--bank",name] if args.emit else ["--audit"]
+                cmd+=["--out",str(output/"generated"),"--bank",name,
+                      "--shards",str(args.arm9_shards if bank["cpu"]=="arm9" else args.arm7_shards)] if args.emit else ["--audit"]
                 print("Running",name,"in",("emit" if args.emit else "audit"),"mode",flush=True)
                 subprocess.run(cmd,check=True)
                 if args.emit:

@@ -76,3 +76,11 @@ The private Windows x64 alpha release now has a **single `.exe` launcher contain
 **This private binary is deliberately NOT hosted by public GitHub Actions or committed to this public repository.** It is delivered directly to the ROM owner outside GitHub. CI builds and uploads only a ROM-free Windows launcher template, and `native-launcher/tools/pack_private.py` combines that template with the locally generated private title runtime and verified ROM to produce subsequent one-click builds. This establishes the repeatable release process without publicly redistributing commercial game data.
 
 A successful Windows PE x64 build and private bundled ROM integrity test have been performed. **Actual Windows gameplay must still be validated on the user's Windows computer; Linux reached the first story scene earlier.** Save and audio support remain disabled in this alpha.
+
+## Native Windows desktop preview v0.5 (no browser)
+
+We have a private owner-only Windows x64 build that compiles **the original Dusk ARM9/ARM7 guest code statically** and presents the game with the NDSRecomp **SDL3 native** frontend (`--interactive`). It no longer uses the previous `--serve` / HTTP / PNG / browser path, and the user's verified USA ROM is bundled directly in the private one-click GUI EXE. The ROM and generated title banks are never committed to this public repository.
+
+The Windows GUI launcher sources and tests are in `native-launcher/desktop`. The owner-only assembler is `tools/pack_native_private.py`; the isolated upstream title-bank optimization patch is `tools/patches/ndsrecomp-title-opt-level.patch`. Detailed provenance, performance measurements and exact release steps are in [docs/native-desktop.md](docs/native-desktop.md).
+
+**Current limits:** the real Windows GUI still needs human testing for FPS and compatibility; saves are disabled, gameplay/battles/audio are not fully validated, and native SDL initially presents stacked DS screens (PC-modern floating and adaptive layout remains to implement in SDL). Linux first-60-VBlank diagnostics measured ~22.4/s with unoptimized title banks, ~32.4/s with -O1. These are not Windows in-game FPS claims. The ROM-free executable downloadable from GitHub Actions is **only the launcher**, not playable Dusk; the complete private EXE is provided directly to the owner.

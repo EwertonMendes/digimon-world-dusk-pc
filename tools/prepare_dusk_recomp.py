@@ -158,6 +158,12 @@ def main() -> int:
             profile=json.loads(args.coverage.read_text(encoding="utf-8"))
             proof=derive(raw,profile)
             apply_private_configs(args.out.resolve(),proof)
+            if args.overlays:
+                from derive_verified_overlays import verified_overlay_roots, activate_verified_overlays
+                overlay_proof=verified_overlay_roots(raw,profile)
+                activate_verified_overlays(args.out.resolve(),report,overlay_proof)
+                proof["overlays"] = overlay_proof
+                print("Verified overlay banks:",[x["bank"] for x in overlay_proof])
             (args.out/"verified-aot.json").write_text(json.dumps(proof,indent=2)+"\n",encoding="utf-8")
             print("Verified observed native entrypoints:",
                   {k:len(v) for k,v in proof["seeds"].items()})

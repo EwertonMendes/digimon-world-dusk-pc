@@ -12,6 +12,7 @@ import subprocess
 import sys
 
 UPSTREAM = "https://github.com/RetroPortingToolKit/ndsrecomp.git"
+PINNED = "3a57236bb23d25dcb4caad7d58d733311062ff5e"
 
 
 def command(*args: str, cwd: Path | None = None) -> None:
@@ -35,10 +36,15 @@ def main() -> int:
         if args.no_clone:
             parser.error("NDSRecomp checkout missing")
         source.parent.mkdir(parents=True, exist_ok=True)
-        command("git", "clone", "--recursive", UPSTREAM, str(source))
+        command("git", "clone", UPSTREAM, str(source))
+        command("git", "checkout", "--detach", PINNED, cwd=source)
+        command("git", "submodule", "update", "--init", "--recursive", cwd=source)
     else:
         print("Using checkout:", source.resolve())
-    command("git", "rev-parse", "HEAD", cwd=source)
+    current = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
+    if current != PINNED:
+        parser.error(f"Expected pinned NDSRecomp {PINNED}; found {current}. Use a separate checkout at the pinned commit.")
+    print("Pinned upstream revision:", current)
     recompiler = source / "recompiler"
     if not (recompiler / "CMakeLists.txt").is_file():
         parser.error("NDSRecomp checkout does not contain recompiler/CMakeLists.txt")

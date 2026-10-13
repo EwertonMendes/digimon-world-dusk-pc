@@ -32,6 +32,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_merge_verified_profiles.py -v
           python3 -m unittest discover -s tests -p test_verified_aot_delta.py -v
           python3 -m unittest discover -s tests -p test_refresh_shipped_overlays.py -v
+          python3 -m unittest discover -s tests -p test_promote_tier3_spans.py -v
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON

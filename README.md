@@ -84,3 +84,32 @@ We have a private owner-only Windows x64 build that compiles **the original Dusk
 The Windows GUI launcher sources and tests are in `native-launcher/desktop`. The owner-only assembler is `tools/pack_native_private.py`; the isolated upstream title-bank optimization patch is `tools/patches/ndsrecomp-title-opt-level.patch`. Detailed provenance, performance measurements and exact release steps are in [docs/native-desktop.md](docs/native-desktop.md).
 
 **Current limits:** the real Windows GUI still needs human testing for FPS and compatibility; saves are disabled, gameplay/battles/audio are not fully validated, and native SDL initially presents stacked DS screens (PC-modern floating and adaptive layout remains to implement in SDL). Linux first-60-VBlank diagnostics measured ~22.4/s with unoptimized title banks, ~32.4/s with -O1. These are not Windows in-game FPS claims. The ROM-free executable downloadable from GitHub Actions is **only the launcher**, not playable Dusk; the complete private EXE is provided directly to the owner.
+
+## Dusk Native v0.6: modern layouts inside the Windows game window
+
+The new owner-private Windows x64 build (delivered directly in ChatGPT,
+**not** uploaded to the public GitHub) runs the SDL3 native frontend
+without a browser. It replaces the vertical-only presentation and
+`ndsrecomp firmware preview` window title with **Digimon World Dusk | PC**.
+
+- Five layouts: Modern (large lower game screen + upper information panel),
+  Floating (drag the auxiliary panel), Classic, Horizontal and Main Only.
+- Native toolbar: MODE, AUX, FULLSCREEN, HELP.
+- Shortcuts: F4 layout, F5 upper-screen visibility, F6 floating size,
+  F7 floating corner, F11 or Alt+Enter fullscreen, F1 help.
+- Resizable window and proportional scaling, precise touchscreen coordinate
+  mapping, persistent display preferences stored under SDL's user folder.
+- Frame-time diagnostics for intermittent CPU frames exceeding 70 ms.
+
+The isolated upstream native compositor patch is at
+`tools/patches/ndsrecomp-dusk-native-ui.patch`; the ROM-free geometry
+regression test is at `tests/native_layout_geometry.cpp`. This feature
+is opt-in using `NDS_DUSK_NATIVE_UI=1`, set by the dedicated v0.6 launcher,
+so other titles retain upstream presentation behavior.
+
+**Performance status:** the user has observed about 58-60 FPS in many
+v0.5 scenes, with occasional transition stutters. v0.6 preserves the
+existing optimized title banks while improving usability and collecting
+rate-limited performance logs. The occasional stutters have not been
+proven fixed. Full graphical and audio validation of v0.6 is pending the
+owner's Windows test. See [native desktop notes](docs/native-desktop.md).

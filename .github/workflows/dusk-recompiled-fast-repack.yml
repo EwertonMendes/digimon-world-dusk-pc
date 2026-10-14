@@ -1,0 +1,104 @@
+name: Digimon World Dusk Recompiled - FAST Windows cosmetic repack
+on:
+  workflow_dispatch:
+    inputs:
+      approve_game_bundle:
+        description: 'Authorize packaging byte-verified game into a new Windows EXE'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dusk-fast-repack-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fast-cosmetic-repack:
+    if: inputs.approve_game_bundle == true
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: mingw-w64-ucrt-x86_64-binutils
+      - name: Refuse repack if native runner inputs changed
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p test_native_runtime_pin.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime provenance tests failed' }
+          python tools/native_runtime_pin.py
+          if ($LASTEXITCODE -ne 0) { throw 'Native patch identity changed; full build required' }
+      - name: Retrieve SHA-pinned validated Windows game
+        shell: pwsh
+        run: |
+          $pin = Get-Content tools/native-windows-runtime-pin.json -Raw | ConvertFrom-Json
+          New-Item -ItemType Directory -Force .private/prior | Out-Null
+          gh run download $pin.run_id --repo EwertonMendes/digimon-world-dusk-pc --name $pin.artifact_name --dir .private/prior
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned native artifact download failed' }
+          $source = Join-Path '.private/prior' $pin.exe_filename
+          python tools/repack_verified_native_windows.py --exe $source --out .private/verified-runtime --sha256 $pin.exe_sha256
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned runner or ROM failed SHA-256 verification' }
+      - name: Generate approved icons and splash without ARM recompilation
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Pillow unavailable' }
+          python tools/generate_icons.py
+          python tools/generate_splash.py
+          python -m unittest discover -s tests -p test_icon_assets.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Icon validation failed' }
+          python -m unittest discover -s tests -p test_splash_assets.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Splash validation failed' }
+      - name: Rebuild only GUI launcher and package existing game
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist, .private/staging | Out-Null
+          $windres = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/windres.exe'
+          & $windres -i assets/icons/generated/windows/dusk.rc -O coff -o native-launcher/desktop/dusk_icon_windows_amd64.syso
+          if ($LASTEXITCODE -ne 0) { throw 'PE icon resource build failed' }
+          Push-Location native-launcher/desktop
+          go test ./... -count=1
+          if ($LASTEXITCODE -ne 0) { throw 'Go tests failed' }
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/staging/dusk-launcher.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher build failed' }
+          Pop-Location
+          $name = (python -c 'import sys;sys.path.insert(0,"tools");from branding import WINDOWS_EXE;print(WINDOWS_EXE)').Trim()
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner .private/verified-runtime/runner.exe --sdl .private/verified-runtime/SDL3.dll --iconv .private/verified-runtime/libiconv-2.dll --window-icon assets/icons/generated/windows/window-icon.rgba --splash assets/splash/generated/dusk-splash.bmp --rom .private/verified-runtime/game.nds --output "dist/$name"
+          if ($LASTEXITCODE -ne 0) { throw 'Private EXE packaging failed' }
+          $exe = (Resolve-Path "dist/$name").Path
+          $verified = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
+          if ($verified.ExitCode -ne 0) { throw 'Built EXE failed private integrity check' }
+          $meta = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
+          $version = (python -c 'import sys;sys.path.insert(0,"tools");from branding import APP_VERSION;print(APP_VERSION)').Trim()
+          if ($meta.ProductName -ne 'Digimon World Dusk Recompiled' -or $meta.ProductVersion -ne $version) {
+            throw 'Wrong Windows version/product identity'
+          }
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  $name" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Fast cosmetic repack - $name - Original native runner and original ROM reused byte-for-byte. No ARM recompilation. Press P to pause/resume the 5-second splash." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          Copy-Item assets/splash/generated/dusk-splash.bmp dist/dusk-splash-preview.bmp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Digimon-World-Dusk-Recompiled-Windows-FAST-GAME
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

@@ -33,7 +33,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           python3 -m unittest discover -s tests -p test_icon_assets.py -v
-          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/analyze_v016_sessions.py tools/apply_dusk_patches.py tools/verified_dispatch_rows.py tools/pack_native_private.py
+          python3 -m unittest discover -s tests -p test_splash_assets.py -v
+          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/analyze_v016_sessions.py tools/apply_dusk_patches.py tools/verified_dispatch_rows.py tools/pack_native_private.py tools/branding.py tools/generate_splash.py
           python3 -m unittest discover -s tests -p test_native_perf.py -v
           python3 -m unittest discover -s tests -p test_v016_diagnostics.py -v
           python3 -m unittest discover -s tests -p test_apply_dusk_patches.py -v
@@ -81,9 +82,9 @@ jobs:
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: dusk-pc-windows-presentation-prototype
+          name: Digimon-World-Dusk-Recompiled-v0.24-Windows-PRESENTATION-ONLY
           path: |
-            build/Release/dusk_pc.exe
+            build/Release/Digimon-World-Dusk-Recompiled-v0.24-PRESENTATION-PROTOTYPE.exe
             build/Release/dusk_rom_info.exe
           if-no-files-found: error
           retention-days: 14

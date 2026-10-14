@@ -46,7 +46,7 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-SDL3
+            mingw-w64-ucrt-x86_64-sdl3
             mingw-w64-ucrt-x86_64-python
             mingw-w64-ucrt-x86_64-pkgconf
       - uses: actions/setup-go@v5

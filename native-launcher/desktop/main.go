@@ -8,7 +8,6 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -26,7 +25,6 @@ const (
 	magic      = "DUSKPACKv1!!"
 	footerSize = 52
 	romSHA256  = "df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb"
-	appVersion = "v0.13"
 )
 
 // readPayload rejects unknown files and untrusted/unbounded sizes.
@@ -73,13 +71,6 @@ func readPayload(executable string) (map[string][]byte, error) {
 	return contents, nil
 }
 
-func userDir() (string, error) {
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" { return "", errors.New("LOCALAPPDATA indisponível") }
-	path := filepath.Join(base, "DuskNativePC", appVersion)
-	return path, os.MkdirAll(path, 0700)
-}
-
 func provision(path string, files map[string][]byte) error {
 	for name, b := range files {
 		dst := filepath.Join(path, name)
@@ -96,33 +87,27 @@ func provision(path string, files map[string][]byte) error {
 		// is explicit; never fall back to executing stale/unverified code.
 		if err = os.Rename(temp, dst); err != nil { os.Remove(temp); return err }
 	}
-	// The FreeBIOS identity is local user state, not packaged game content.
-	id := filepath.Join(path, "generated-identity.bin")
-	if _, err := os.Stat(id); errors.Is(err, os.ErrNotExist) {
-		b := make([]byte, 6)
-		if _, err = rand.Read(b); err != nil { return err }
-		b[0] = (b[0] | 2) &^ 1
-		if err = os.WriteFile(id, b, 0600); err != nil { return err }
-	}
 	return nil
 }
 
-func launch(path string) error {
-	logPath := filepath.Join(path, "native-performance.log")
+func launch(p gamePaths) error {
+	logPath := filepath.Join(p.install, "native-performance.log")
 	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil { return err }
 	defer file.Close()
-	diagDir := filepath.Join(path, "diagnostics")
-	if err := os.MkdirAll(diagDir, 0700); err != nil { return err }
-	args := []string{path, "--rom", filepath.Join(path, "game.nds"),
+	// Firmware identity, firmware state and in-game EEPROM belong to the player,
+	// never to a release folder. No savestate directory is configured.
+	args := []string{p.console, "--rom", filepath.Join(p.install, "game.nds"),
 		"--interactive", "--boot", "direct", "--generated-firmware", "--freebios",
-		"--network", "off", "--no-save", "--screen-layout", "stacked", "--fullscreen", "off",
-		"--diagnostics", "on", "--diagnostics-dir", diagDir,
+		"--network", "off", "--config", p.config,
+		"--save-path", p.save, "--firmware-state-path", p.firmware,
+		"--screen-layout", "stacked", "--fullscreen", "off",
+		"--diagnostics", "on", "--diagnostics-dir", p.diagnostics,
 		"--diagnostics-interval-ms", "1000"}
-	cmd := exec.Command(filepath.Join(path, "runner.exe"), args...)
-	cmd.Dir = path
+	cmd := exec.Command(filepath.Join(p.install, "runner.exe"), args...)
+	cmd.Dir = p.install
 	cmd.Stdout, cmd.Stderr = file, file
-	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0", "NDS_DUSK_NATIVE_UI=1")
+	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0", "NDS_DUSK_NATIVE_UI=1", "NDS_DUSK_DISABLE_SAVESTATES=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW: SDL window remains visible
 	if err := cmd.Start(); err != nil { return err }
 	if err := cmd.Wait(); err != nil {
@@ -137,11 +122,16 @@ func main() {
 	files, err := readPayload(exe)
 	if err != nil { fatal(err) }
 	if len(os.Args)==2 && strings.EqualFold(os.Args[1],"--verify-bundle") {
-		fmt.Println("Pacote privado Dusk v0.13 íntegro")
+		fmt.Printf("Pacote privado Dusk %s íntegro\n", appVersion)
 		return
 	}
-	path, err := userDir()
+	base := os.Getenv("LOCALAPPDATA")
+	if base == "" { fatal(errors.New("LOCALAPPDATA indisponível")) }
+	p := pathsFor(base)
+	release, err := acquireSaveSession()
 	if err != nil { fatal(err) }
-	if err := provision(path, files); err != nil { fatal(err) }
-	if err := launch(path); err != nil { fatal(err) }
+	defer release()
+	if err := prepareGameData(p, base); err != nil { fatal(err) }
+	if err := provision(p.install, files); err != nil { fatal(err) }
+	if err := launch(p); err != nil { fatal(err) }
 }

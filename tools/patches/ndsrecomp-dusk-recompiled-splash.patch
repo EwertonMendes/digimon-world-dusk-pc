@@ -8,7 +8,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.25" :
  #endif
          presentation.separate ? "ndsrecomp - Top Screen"
-@@ -2390,4 +2390,101 @@
+@@ -2390,4 +2390,100 @@
 +#if defined(NDS_HAVE_SDL3)
 +// Runtime-provided title decouples cosmetic release versions from native
 +// recompilation. The launcher is the single source of truth for the name.
@@ -109,7 +109,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  } // namespace
  
  int nds_run_interactive_frontend(const NdsFrontendOptions& initial_options) {
-@@ -2430,5 +2527,12 @@
+@@ -2430,5 +2526,12 @@
      if (!create_presentation(options, presentation)) {
          SDL_Quit();
          return 1;
@@ -122,7 +122,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    }
 +#endif
      const int bottom_logical_width = presentation.separate
-@@ -4550,5 +4654,5 @@
+@@ -4550,5 +4653,5 @@
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)
 -                presentation.dusk.enabled ? "Digimon World Dusk | PC" :

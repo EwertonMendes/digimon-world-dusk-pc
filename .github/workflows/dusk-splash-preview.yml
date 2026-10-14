@@ -1,0 +1,36 @@
+name: Preview Tblack splash artwork (no game build)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/generate_splash.py'
+      - 'assets/icons/dusk-icon-master.webp'
+      - 'tools/branding.py'
+permissions:
+  contents: read
+jobs:
+  render-preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Render exact splash shown by SDL3 and export static PNG
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/generate_splash.py
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          path=Path('assets/splash/generated/dusk-splash.bmp')
+          with Image.open(path) as img:
+              assert img.size==(1280,720) and img.mode=='RGB'
+              img.save('dusk-splash-preview.png',optimize=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Digimon-Dusk-Tblack-Splash-PREVIEW-PNG
+          path: dusk-splash-preview.png
+          retention-days: 30

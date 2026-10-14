@@ -35,9 +35,11 @@ def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
         files['libiconv-2.dll'] = iconv.read_bytes()
     if window_icon is not None:
         icon_bytes = window_icon.read_bytes()
-        if not icon_bytes.startswith(b'BM') or not 54 <= len(icon_bytes) <= 1 << 20:
-            raise ValueError('SDL window icon must be a valid bounded BMP file')
-        files['window-icon.bmp'] = icon_bytes
+        if len(icon_bytes) != 128 * 128 * 4:
+            raise ValueError('SDL window icon must contain exactly 128x128 RGBA32 pixels')
+        if icon_bytes[3] != 0 or icon_bytes[-1] != 0:
+            raise ValueError('SDL window icon must preserve transparent corners')
+        files['window-icon.rgba'] = icon_bytes
     if hashlib.sha256(files['game.nds']).hexdigest() != ROM_SHA256:
         raise ValueError('Expected the verified Dusk USA ROM')
     for name in ('runner.exe', 'SDL3.dll', 'libiconv-2.dll'):
@@ -76,7 +78,7 @@ def main() -> None:
     p.add_argument('--baseline-dispatch', type=Path)
     p.add_argument('--candidate-dispatch', type=Path)
     p.add_argument('--iconv', type=Path, help='Windows libiconv-2.dll needed by certain SDL3 builds')
-    p.add_argument('--window-icon', type=Path, help='BMP displayed by the SDL3 game window')
+    p.add_argument('--window-icon', type=Path, help='128x128 RGBA32 icon displayed by SDL3')
     args = p.parse_args()
     print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
                 args.baseline_dispatch, args.candidate_dispatch, args.iconv))

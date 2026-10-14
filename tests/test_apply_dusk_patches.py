@@ -14,10 +14,24 @@ class IntegrationTests(unittest.TestCase):
         names = module.DESKTOP
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(names[0], "ndsrecomp-dusk-native-ui.patch")
-        self.assertEqual(names[-2], "ndsrecomp-dusk-pc-menu-input-capture.patch")
-        self.assertEqual(names[-1], "ndsrecomp-dusk-battle-frame-spikes.patch")
+        self.assertEqual(names[-3], "ndsrecomp-dusk-pc-menu-input-capture.patch")
+        self.assertEqual(names[-2], "ndsrecomp-dusk-battle-frame-spikes.patch")
+        self.assertEqual(names[-1], "ndsrecomp-dusk-precise-pacing.patch")
         for name in names:
             self.assertTrue((p.parent / "patches" / name).is_file(), name)
+
+    def test_pacing_patch_only_replaces_host_sleep_without_touching_guest_or_audio(self):
+        patch = (p.parent / "patches" /
+                 "ndsrecomp-dusk-precise-pacing.patch").read_text()
+        self.assertEqual(patch.count("+        dusk_audio_pace_wait();"), 1)
+        self.assertIn("+                dusk_audio_pace_wait();", patch)
+        self.assertIn("+    SDL_DelayPrecise(500000ull);", patch)
+        self.assertIn("+    SDL_Delay(1);", patch)  # SDL2 compatibility
+        self.assertNotIn("kAudioQueueFrames", patch)
+        self.assertNotIn("kSystemCyclesPerFrame", patch)
+        self.assertNotIn("scheduler_run_round", patch)
+        self.assertEqual(patch.count("-                SDL_Delay(1);"), 1)
+        self.assertEqual(patch.count("-        SDL_Delay(1);"), 1)
 
     def test_small_contract_is_prefix_of_desktop(self):
         self.assertEqual(module.DESKTOP[:len(module.NATIVE_UI)], module.NATIVE_UI)

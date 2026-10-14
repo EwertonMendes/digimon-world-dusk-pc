@@ -14,9 +14,10 @@ class IntegrationTests(unittest.TestCase):
         names = module.DESKTOP
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(names[0], "ndsrecomp-dusk-native-ui.patch")
-        self.assertEqual(names[-3], "ndsrecomp-dusk-pc-menu-input-capture.patch")
-        self.assertEqual(names[-2], "ndsrecomp-dusk-battle-frame-spikes.patch")
-        self.assertEqual(names[-1], "ndsrecomp-dusk-precise-pacing.patch")
+        self.assertEqual(names[-4], "ndsrecomp-dusk-pc-menu-input-capture.patch")
+        self.assertEqual(names[-3], "ndsrecomp-dusk-battle-frame-spikes.patch")
+        self.assertEqual(names[-2], "ndsrecomp-dusk-precise-pacing.patch")
+        self.assertEqual(names[-1], "ndsrecomp-dusk-window-icon.patch")
         for name in names:
             self.assertTrue((p.parent / "patches" / name).is_file(), name)
 

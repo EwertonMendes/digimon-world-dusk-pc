@@ -8,7 +8,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.25" :
  #endif
          presentation.separate ? "ndsrecomp - Top Screen"
-@@ -2390,4 +2390,91 @@
+@@ -2390,4 +2390,92 @@
 +#if defined(NDS_HAVE_SDL3)
 +// Host-only splash: ROM/guest frames, timing and save state are untouched.
 +// BMP is generated from approved artwork at build time and integrity-checked
@@ -101,7 +101,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  } // namespace
  
  int nds_run_interactive_frontend(const NdsFrontendOptions& initial_options) {
-@@ -2430,5 +2517,12 @@
+@@ -2430,5 +2518,12 @@
      if (!create_presentation(options, presentation)) {
          SDL_Quit();
          return 1;
@@ -114,7 +114,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    }
 +#endif
      const int bottom_logical_width = presentation.separate
-@@ -4550,5 +4644,5 @@
+@@ -4550,5 +4645,5 @@
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)
 -                presentation.dusk.enabled ? "Digimon World Dusk | PC" :

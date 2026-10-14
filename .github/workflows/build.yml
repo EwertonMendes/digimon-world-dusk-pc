@@ -35,6 +35,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_promote_tier3_spans.py -v
           python3 -m unittest discover -s tests -p test_verified_dispatch_rows.py -v
           python3 -m unittest discover -s tests -p test_dusk_gameplay_scenarios.py -v
+          python3 -m unittest discover -s tests -p test_dusk_gameplay_save_fixture.py -v
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON

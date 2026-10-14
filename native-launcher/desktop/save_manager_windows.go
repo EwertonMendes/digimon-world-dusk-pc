@@ -23,6 +23,12 @@ func messageBox(title, message string, flags uintptr) int {
     return int(ret)
 }
 
+// Hold Shift while launching the game to open this menu without a terminal.
+func shiftHeld() bool {
+    pressed, _, _ := syscall.NewLazyDLL("user32.dll").NewProc("GetAsyncKeyState").Call(0x10)
+    return pressed & 0x8000 != 0
+}
+
 // The launcher holds the save mutex during this dialog: a second game instance
 // cannot write the EEPROM while backup restoration takes place.
 func manageSaves(p gamePaths) error {

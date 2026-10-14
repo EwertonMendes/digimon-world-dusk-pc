@@ -48,7 +48,7 @@ func readPayload(executable string) (map[string][]byte, error) {
 	if !bytes.Equal(checksum[:], trailer[20:52]) { return nil, errors.New("assinatura do pacote divergente") }
 	reader, err := zip.NewReader(bytes.NewReader(buffer), int64(n))
 	if err != nil { return nil, err }
-	required := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20}
+	required := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "window-icon.rgba":128 * 128 * 4}
 	// SDL3's MSYS2 UCRT package uses libiconv. When present, it must be
 	// packaged in the same SHA256-verified archive and deployed beside SDL3.
 	// Older 3-file owner builds remain compatible with this reader.

@@ -100,9 +100,21 @@ func recoverInterruptedRestore(p gamePaths) error {
     exists, err := validSave(p.save)
     if err != nil { return fmt.Errorf("save atual inválido; rollback preservado: %w", err) }
     if exists {
-        // Restore already completed. Leave rollback intact for manual review;
-        // automatic deletion could discard a player's previous progress.
-        return fmt.Errorf("rollback de restauração pendente ao lado de um save válido: %s", rollback)
+        // A crash may occur *after* the new save was installed, but before
+        // cleanup. Retire the old rollback only when its full SHA256 is
+        // already preserved in a verified backup; otherwise fail closed.
+        previousHash, err := hashFile(rollback)
+        if err != nil { return err }
+        names, err := listBackups(p)
+        if err != nil { return err }
+        for _, name := range names {
+            _, hash, err := validateBackup(p, name)
+            if err != nil { return fmt.Errorf("backup inválido durante recuperação: %w", err) }
+            if hash == previousHash {
+                return os.Remove(rollback)
+            }
+        }
+        return fmt.Errorf("rollback não encontrado nos backups verificados, preservado para revisão: %s", rollback)
     }
     return os.Rename(rollback, p.save)
 }

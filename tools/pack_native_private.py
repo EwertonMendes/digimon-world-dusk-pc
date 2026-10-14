@@ -18,6 +18,7 @@ ROM_SHA256 = 'df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb'
 def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
           baseline: Path | None = None, candidate: Path | None = None,
           iconv: Path | None = None,
+          splash: Path | None = None,
           window_icon: Path | None = None) -> dict:
     if (baseline is None) != (candidate is None):
         raise ValueError('Provide both --baseline-dispatch and --candidate-dispatch')
@@ -40,6 +41,14 @@ def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
         if icon_bytes[3] != 0 or icon_bytes[-1] != 0:
             raise ValueError('SDL window icon must preserve transparent corners')
         files['window-icon.rgba'] = icon_bytes
+    if splash is not None:
+        splash_data = splash.read_bytes()
+        if (len(splash_data) < 54 or len(splash_data) > 4 * 1024 * 1024 or
+                splash_data[:2] != b'BM' or
+                struct.unpack_from('<iiH', splash_data, 18)[:2] != (1280, 720) or
+                struct.unpack_from('<H', splash_data, 28)[0] != 24):
+            raise ValueError('Splash must be a 1280x720 uncompressed 24-bit BMP')
+        files['dusk-splash.bmp'] = splash_data
     if hashlib.sha256(files['game.nds']).hexdigest() != ROM_SHA256:
         raise ValueError('Expected the verified Dusk USA ROM')
     for name in ('runner.exe', 'SDL3.dll', 'libiconv-2.dll'):
@@ -79,10 +88,11 @@ def main() -> None:
     p.add_argument('--candidate-dispatch', type=Path)
     p.add_argument('--iconv', type=Path, help='Windows libiconv-2.dll needed by certain SDL3 builds')
     p.add_argument('--window-icon', type=Path, help='128x128 RGBA32 icon displayed by SDL3')
+    p.add_argument('--splash', type=Path, help='1280x720 BMP displayed by SDL3 before boot')
     args = p.parse_args()
     print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
                 args.baseline_dispatch, args.candidate_dispatch, args.iconv,
-                args.window_icon))
+                args.splash, args.window_icon))
 
 if __name__ == '__main__':
     main()

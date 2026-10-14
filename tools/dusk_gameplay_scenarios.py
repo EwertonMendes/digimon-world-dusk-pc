@@ -137,7 +137,7 @@ def cartridge_fixture(source: Path, out: Path) -> tuple[list[str], str]:
     shutil.copyfile(source, target)
     if hashlib.sha256(target.read_bytes()).hexdigest() != original:
         raise RuntimeError("Cartridge save fixture did not copy bit-for-bit")
-    config.write_text('[cartridge]\\nsave_type = "eeprom"\\nsave_size = 65536\\n',
+    config.write_text('[cartridge]\nsave_type = "eeprom"\nsave_size = 65536\n',
                       encoding="utf-8")
     return ["--save-path", str(target), "--config", str(config)], original
 

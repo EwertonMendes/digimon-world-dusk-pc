@@ -17,7 +17,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    return configured && configured[0] ? configured :
 +        "Digimon World Dusk Recompiled | v0.25";
 +}
-++// Host-only splash: ROM/guest frames, timing and save state are untouched.
++// Host-only splash: ROM/guest frames, timing and save state are untouched.
 +// BMP is generated from approved artwork at build time and integrity-checked
 +// by the desktop launcher. SDL3 loads it without another image dependency.
 +static bool dusk_show_startup(FrontendPresentation& presentation) {

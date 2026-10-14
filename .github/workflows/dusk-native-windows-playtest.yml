@@ -79,6 +79,18 @@ jobs:
           mkdir -p .cache/dusk-native-ccache
           ccache --set-config=max_size=1536M
           ccache --zero-stats
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate and validate approved cross-platform icon assets
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Pillow install failed' }
+          python tools/generate_icons.py
+          if ($LASTEXITCODE -ne 0) { throw 'Icon generation failed' }
+          python -m unittest discover -s tests -p test_icon_assets.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Icon verification failed' }
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
@@ -206,6 +218,10 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist, .private/staging | Out-Null
+          $windres = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/windres.exe'
+          if (!(Test-Path -LiteralPath $windres)) { throw 'MinGW windres not found' }
+          & $windres -i assets/icons/generated/windows/dusk.rc -O coff -o native-launcher/desktop/dusk_icon_windows_amd64.syso
+          if ($LASTEXITCODE -ne 0) { throw 'Windows launcher icon resource compilation failed' }
           Push-Location native-launcher/desktop
           go test ./... -count=1
           if ($LASTEXITCODE -ne 0) { throw 'Launcher unit tests failed' }
@@ -231,19 +247,19 @@ jobs:
               throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
             }
           }
-          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING.exe
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --window-icon assets/icons/generated/windows/window-icon.rgba --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
-          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING.exe).Path
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON.exe).Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha  Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Dusk PC v0.21 precise frame pacing owner playtest (audio queue/cadence/SPU unchanged)`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "$sha  Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.23 transparent icon + precise frame pacing owner playtest (audio queue/cadence/SPU unchanged)`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING-NATIVE-GAME
+          name: Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7
@@ -252,111 +268,89 @@ jobs:
   repackage-validated-native:
     if: inputs.approve_game_bundle == true && inputs.fast_repack == true
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       GH_TOKEN: ${{ github.token }}
-      # Dedicated, restorable cache for the Windows Go launcher/stdlib.
-      GOCACHE: ${{ github.workspace }}/.cache/dusk-go-build
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Prefer preinstalled Go to avoid unnecessary setup
-        id: preinstalled-go
-        shell: pwsh
-        run: |
-          $go = Get-Command go -ErrorAction SilentlyContinue
-          $available = 'false'
-          if ($go) {
-            $versionLine = & go version
-            Write-Host "Go available from Windows runner image: $versionLine"
-            if ($LASTEXITCODE -eq 0 -and $versionLine -match 'go1\.(\d+)') {
-              if ([int]$Matches[1] -ge 23) {
-                $available = 'true'
-              }
-            }
-          }
-          if ($available -eq 'true') {
-            $version = [regex]::Match($versionLine,'go1\.\d+(\.\d+)?').Value
-          } else {
-            $version = 'go1.23-setup'
-          }
-          "go_version=$version" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
-          "available=$available" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
       - uses: actions/setup-go@v5
-        if: steps.preinstalled-go.outputs.available != 'true'
         with:
           go-version: '1.23'
           cache: false
-      - name: Restore cached Windows Go compiled packages
-        id: go-cache
-        uses: actions/cache/restore@v4
+      - uses: actions/setup-python@v5
         with:
-          path: .cache/dusk-go-build
-          key: dusk-go-win-v1-${{ steps.preinstalled-go.outputs.go_version }}-${{ hashFiles('native-launcher/desktop/go.mod', 'native-launcher/desktop/*.go') }}
-          restore-keys: |
-            dusk-go-win-v1-${{ steps.preinstalled-go.outputs.go_version }}-
-      - name: Reject stale fast repack of a different native game build
+          python-version: '3.11'
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: mingw-w64-ucrt-x86_64-binutils
+      - name: Generate checked Windows icon assets
         shell: pwsh
         run: |
-          # A v0.20 launcher carrying a v0.19 native runner would silently
-          # omit the battle frame-spike instrumentation. Fail closed instead
-          # of delivering an incorrectly labelled executable.
-          $go = Get-Content native-launcher/desktop/save_data.go -Raw
-          if ($go -notmatch 'appVersion\s*=\s*"v0\.20"') {
-            throw 'Fast repackage is pinned to the v0.20 game runner; the launcher version differs. Build a new native runner and update the pinned artifact/SHA first.'
+          python -m pip install Pillow==11.3.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pillow install failed' }
+          python tools/generate_icons.py
+          if ($LASTEXITCODE -ne 0) { throw 'Icon generation failed' }
+          python -m unittest discover -s tests -p test_icon_assets.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Icon validation failed' }
+          python -m unittest discover -s tests -p test_private_packer_gate.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Private packer tests failed' }
+      - name: Require v0.23 launcher and pin native runtime provenance
+        shell: pwsh
+        run: |
+          $source = Get-Content native-launcher/desktop/save_data.go -Raw
+          if ($source -notmatch 'appVersion\s*=\s*"v0\.23"') {
+            throw 'Fast repack requires v0.23 launcher and the exact validated native runner'
           }
-      - name: Retrieve successful owner AOT native runner from exact build
+      - name: Retrieve byte-verified v0.23 SDL3 runner and ROM
         shell: pwsh
         run: |
-          gh run download 38629961367 --repo EwertonMendes/digimon-world-dusk-pc --name Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS-NATIVE-GAME --dir .private/prior
-          if ($LASTEXITCODE -ne 0) { throw 'Verified owner native build download failed' }
-          $sha = (Get-FileHash .private/prior/Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($sha -ne '05a7cbc3d7c6b5d808acaeb8514208af90e28f899d04e98184a297b883abc038') {
-            throw "Wrong upstream AOT bundle SHA256: $sha"
+          gh run download 38643954559 --repo EwertonMendes/digimon-world-dusk-pc --name Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON-NATIVE-GAME --dir .private/prior
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Windows native artifact download failed' }
+          $exe = '.private/prior/Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON.exe'
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne '73c72c6dfea754f716ef8684277daaf15556c8977e9484c9281f226bf81aae45') {
+            throw "Wrong original runner bundle SHA256: $sha"
           }
-      - name: Recover original ROM and SDL3 runner from authenticated bundle
+          python tools/repack_verified_native_windows.py --exe $exe --out .private/verified-runtime --sha256 73c72c6dfea754f716ef8684277daaf15556c8977e9484c9281f226bf81aae45
+          if ($LASTEXITCODE -ne 0) { throw 'Native game data integrity verification failed' }
+      - name: Embed Windows PE icon and build corrected GUI launcher
         shell: pwsh
         run: |
-          python tools/repack_verified_native_windows.py --exe .private/prior/Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS.exe --out .private/verified-runtime --sha256 05a7cbc3d7c6b5d808acaeb8514208af90e28f899d04e98184a297b883abc038
-          if ($LASTEXITCODE -ne 0) { throw 'Exact original AOT runner identity invalid' }
-      - name: Compile and test v0.20 Windows GUI launcher only
-        shell: pwsh
-        run: |
+          New-Item -ItemType Directory -Force .private/staging | Out-Null
+          $windres = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/windres.exe'
+          if (!(Test-Path -LiteralPath $windres)) { throw 'MinGW windres is required to embed the PE icon' }
+          & $windres -i assets/icons/generated/windows/dusk.rc -O coff -o native-launcher/desktop/dusk_icon_windows_amd64.syso
+          if ($LASTEXITCODE -ne 0) { throw 'Windows icon resource generation failed' }
           Push-Location native-launcher/desktop
           go test ./... -count=1
-          if ($LASTEXITCODE -ne 0) { throw 'Native launcher tests failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'Native launcher Go tests failed' }
           $env:GOOS = 'windows'
           $env:GOARCH = 'amd64'
           $env:CGO_ENABLED = '0'
-          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/dusk-v020-launcher.exe .
-          if ($LASTEXITCODE -ne 0) { throw 'Native Windows GUI launcher build failed' }
+          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/staging/dusk-launcher.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Windows GUI launcher compilation failed' }
           Pop-Location
-      - name: Save reusable Windows Go compiler cache before packaging
-        if: success() && steps.go-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        continue-on-error: true
-        with:
-          path: .cache/dusk-go-build
-          key: ${{ steps.go-cache.outputs.cache-primary-key }}
-      - name: Package one-click game and verify Windows PE on Windows
+      - name: Repackage, verify and publish real Windows v0.23 EXE
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          python tools/pack_native_private.py --launcher .private/dusk-v020-launcher.exe --runner .private/verified-runtime/runner.exe --sdl .private/verified-runtime/SDL3.dll --iconv .private/verified-runtime/libiconv-2.dll --rom .private/verified-runtime/game.nds --output dist/Digimon-Dusk-PC-Windows-v0.20-LAUNCHER-REPACK.exe
-          if ($LASTEXITCODE -ne 0) { throw 'Native one-click packaging failed' }
-          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.20-LAUNCHER-REPACK.exe).Path
-          $proc = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
-          if ($proc.ExitCode -ne 0) { throw "EXE bundle verification failed: $($proc.ExitCode)" }
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner .private/verified-runtime/runner.exe --sdl .private/verified-runtime/SDL3.dll --iconv .private/verified-runtime/libiconv-2.dll --window-icon assets/icons/generated/windows/window-icon.rgba --rom .private/verified-runtime/game.nds --output dist/Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON-FIXED.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to package transparent SDL3 icon' }
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON-FIXED.exe).Path
+          $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw 'EXE bundle verification (including required RGBA icon) failed' }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha  Digimon-Dusk-PC-Windows-v0.20-LAUNCHER-REPACK.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Digimon World Dusk PC v0.20 battle diagnostics launcher-only repack for owner testing.`nNative runner is EXACTLY the one in successful build 38629961367.`nOriginal authenticated v0.20 battle-frame diagnostic runner, unchanged ARM9/ARM7/SDL/audio/video code. No claim of repaired battle stutter.`nRuntime install v0.20, original EEPROM save remains %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav.`nDouble-click to play." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "$sha  Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON-FIXED.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Digimon World Dusk PC v0.23: corrected transparent Windows EXE and SDL3 window icon. Native ARM9/ARM7 runner is byte-identical to the validated build 38643954559. EEPROM remains in the stable userdata/A6RE profile. Double click to launch." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name,Length
       - uses: actions/upload-artifact@v4
         with:
-          name: Digimon-Dusk-PC-Windows-v0.20-LAUNCHER-REPACK-GAME
+          name: Digimon-Dusk-PC-Windows-v0.23-TRANSPARENT-ICON-FIXED-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
-

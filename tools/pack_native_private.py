@@ -17,7 +17,8 @@ ROM_SHA256 = 'df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb'
 
 def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
           baseline: Path | None = None, candidate: Path | None = None,
-          iconv: Path | None = None) -> dict:
+          iconv: Path | None = None,
+          window_icon: Path | None = None) -> dict:
     if (baseline is None) != (candidate is None):
         raise ValueError('Provide both --baseline-dispatch and --candidate-dispatch')
     # Game-derived banks are not uploaded. Compare byte-validated C dispatch
@@ -32,6 +33,13 @@ def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
     }
     if iconv is not None:
         files['libiconv-2.dll'] = iconv.read_bytes()
+    if window_icon is not None:
+        icon_bytes = window_icon.read_bytes()
+        if len(icon_bytes) != 128 * 128 * 4:
+            raise ValueError('SDL window icon must contain exactly 128x128 RGBA32 pixels')
+        if icon_bytes[3] != 0 or icon_bytes[-1] != 0:
+            raise ValueError('SDL window icon must preserve transparent corners')
+        files['window-icon.rgba'] = icon_bytes
     if hashlib.sha256(files['game.nds']).hexdigest() != ROM_SHA256:
         raise ValueError('Expected the verified Dusk USA ROM')
     for name in ('runner.exe', 'SDL3.dll', 'libiconv-2.dll'):
@@ -70,9 +78,11 @@ def main() -> None:
     p.add_argument('--baseline-dispatch', type=Path)
     p.add_argument('--candidate-dispatch', type=Path)
     p.add_argument('--iconv', type=Path, help='Windows libiconv-2.dll needed by certain SDL3 builds')
+    p.add_argument('--window-icon', type=Path, help='128x128 RGBA32 icon displayed by SDL3')
     args = p.parse_args()
     print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
-                args.baseline_dispatch, args.candidate_dispatch, args.iconv))
+                args.baseline_dispatch, args.candidate_dispatch, args.iconv,
+                args.window_icon))
 
 if __name__ == '__main__':
     main()

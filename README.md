@@ -67,6 +67,14 @@ Documentos: [arquitetura](docs/architecture.md),
 [recompilação](docs/recompilation.md),
 [pesquisa v0.16 segura](docs/research/2026-10-14-v016-owner-sessions-safe.md).
 
+## Identidade visual do aplicativo
+
+O ícone oficial é gerado de uma única [arte aprovada](assets/icons/dusk-icon-master.webp)
+para Windows, Linux, macOS e Android por `tools/generate_icons.py`.
+O launcher Windows e a janela SDL3 do jogo recebem seus respectivos ícones
+nas builds privadas **v0.23**. Os ports Linux/macOS/Android ainda exigem
+integração e compilação próprias. Consulte [recursos e instruções](docs/icon-assets.md).
+
 ## Desenvolvimento e testes
 
 O CI público testa o núcleo C++20, layouts, controles sintéticos, ferramentas

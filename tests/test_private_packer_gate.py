@@ -19,6 +19,34 @@ class BundleProtectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "both"):
             build(*(Path("missing") for _ in range(5)), baseline=Path("none"))
 
+    def test_rejects_invalid_window_icon_without_private_rom(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            invalid = root / "bad.rgba"
+            invalid.write_bytes(b"not a bitmap")
+            for name, data in (
+                ("launcher", b"MZfake"),
+                ("runner", b"MZSDL3.dll"),
+                ("sdl", b"MZdll"),
+                ("rom", b"not real ROM"),
+            ):
+                (root / name).write_bytes(data)
+            with self.assertRaisesRegex(ValueError, "SDL window icon"):
+                build(*(root / name for name in ("launcher", "runner", "sdl", "rom", "out")),
+                      window_icon=invalid)
+
+    def test_cli_forwards_window_icon_to_private_packer(self):
+        import sys
+        from unittest.mock import patch
+        from pack_native_private import main
+        cli = ["pack_native_private.py",
+               "--launcher", "a.exe", "--runner", "runner.exe",
+               "--sdl", "SDL3.dll", "--rom", "game.nds",
+               "--output", "out.exe", "--window-icon", "window-icon.rgba"]
+        with patch.object(sys, "argv", cli), patch("pack_native_private.build") as mock:
+            main()
+        self.assertEqual(mock.call_args.args[-1], Path("window-icon.rgba"))
+
     def test_dropped_bank_refuses_packaging_before_opening_private_game(self):
         with tempfile.TemporaryDirectory() as td:
             a,b=Path(td)/"old",Path(td)/"new"

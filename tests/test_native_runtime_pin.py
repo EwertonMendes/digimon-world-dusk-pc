@@ -43,6 +43,20 @@ class RuntimePinTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Native sources changed"):
                 verified_pin(pin, root)
 
+    def test_windows_crlf_checkout_matches_linux_lf(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            patch = self.make_source(root)
+            source = root / PIN_INPUTS[0]
+            source.write_bytes(b"one\ntwo\n")
+            patch.write_bytes(b"minus\nplus\n")
+            linux_hash = runtime_fingerprint(root)
+            source.write_bytes(b"one\r\ntwo\r\n")
+            patch.write_bytes(b"minus\r\nplus\r\n")
+            self.assertEqual(runtime_fingerprint(root), linux_hash)
+            patch.write_bytes(b"minus\r\nchanged\r\n")
+            self.assertNotEqual(runtime_fingerprint(root), linux_hash)
+
     def test_missing_native_inputs_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(FileNotFoundError):

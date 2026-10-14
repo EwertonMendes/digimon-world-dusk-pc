@@ -32,12 +32,13 @@ class RuntimePinTests(unittest.TestCase):
             self.assertEqual(runtime_fingerprint(root), digest)
             pin = root / "runtime.json"
             pin.write_text(json.dumps({
-                "run_id": 123,
+                "run_id": 123, "artifact_id": 456,
+                "artifact_digest": "sha256:" + "b" * 64,
                 "artifact_name": "Digimon-World-Dusk-Recompiled-v0.25-Windows-NATIVE-GAME",
                 "exe_filename": "Digimon-World-Dusk-Recompiled-v0.25-Windows.exe",
-                "exe_sha256": "a" * 64, "source_fingerprint": digest
+                "source_fingerprint": digest
             }))
-            self.assertEqual(verified_pin(pin, root)["run_id"], 123)
+            self.assertEqual(verified_pin(pin, root)["artifact_id"], 456)
             patch.write_bytes(b"changed native patch")
             with self.assertRaisesRegex(ValueError, "Native sources changed"):
                 verified_pin(pin, root)

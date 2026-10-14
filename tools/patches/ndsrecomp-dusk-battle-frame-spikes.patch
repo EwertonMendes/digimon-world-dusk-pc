@@ -1,0 +1,136 @@
+diff --git a/runner/src/frontend.h b/runner/src/frontend.h
+--- a/runner/src/frontend.h
++++ b/runner/src/frontend.h
+@@ -417,6 +417,18 @@
+     // Terminal: a stage could not be applied, so the governor stopped.
+     uint8_t perf_governor_apply_failed;
+     uint64_t perf_governor_transitions;
++    // Cumulative lightweight frame-miss probes. Only updated when diagnostics
++    // are enabled; these are NOT audio buffering / guest clock adjustments.
++    uint64_t frame_gap_over_20ms;
++    uint64_t emu_over_12ms;
++    uint64_t emu_over_budget;
++    uint64_t max_frame_gap_ticks;
++    uint64_t max_frame_gap_frame;
++    uint64_t max_emu_frame_ticks;
++    uint64_t max_emu_frame;
++    uint64_t max_present_frame_ticks;
++    uint64_t max_present_frame;
++    uint64_t last_hitch_frame;
+ };
+ void nds_frontend_live_stats(NdsFrontendLiveStats* out);
+ 
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -2739,6 +2739,7 @@
+     uint64_t phase_draw_ticks = 0;
+     uint64_t phase_swap_ticks = 0;
+     uint64_t phase_drain_ticks = 0;
++    uint64_t prior_guest_frame_start = 0;
+     uint64_t governor_last_underruns = 0;
+     NdsGpu3dProfile governor_gpu3d_profile{};
+     nds_gpu3d_profile(&governor_gpu3d_profile);
+@@ -3752,6 +3753,22 @@
+         publish_input_debug();
+ 
+         const uint64_t phase0 = SDL_GetPerformanceCounter();
++        if (nds_diagnostics_enabled() && prior_guest_frame_start) {
++            // Wall-clock presentation gap, including pacing/event handling,
++            // catches a single visually frozen battle-background frame even
++            // when 1-second aggregate FPS averages ~59.8.
++            const uint64_t gap = phase0 - prior_guest_frame_start;
++            if (gap > g_live_stats.max_frame_gap_ticks) {
++                g_live_stats.max_frame_gap_ticks = gap;
++                g_live_stats.max_frame_gap_frame = shown_frames;
++            }
++            if (static_cast<double>(gap) * 1000.0 >
++                static_cast<double>(frequency) * 20.0) {
++                ++g_live_stats.frame_gap_over_20ms;
++                g_live_stats.last_hitch_frame = shown_frames;
++            }
++        }
++        prior_guest_frame_start = phase0;
+         const uint64_t now = scheduler_system_timestamp();
+         const uint64_t next_frame =
+             (now / kSystemCyclesPerFrame + 1u) * kSystemCyclesPerFrame;
+@@ -3773,6 +3790,21 @@
+         {
+             frame_emu_ticks = SDL_GetPerformanceCounter() - phase0;
+             phase_emu_ticks += frame_emu_ticks;
++            if (nds_diagnostics_enabled()) {
++                if (frame_emu_ticks > g_live_stats.max_emu_frame_ticks) {
++                    g_live_stats.max_emu_frame_ticks = frame_emu_ticks;
++                    g_live_stats.max_emu_frame = shown_frames;
++                }
++                const double emu_ms =
++                    static_cast<double>(frame_emu_ticks) * 1000.0 /
++                    static_cast<double>(frequency);
++                if (emu_ms > 12.0)
++                    ++g_live_stats.emu_over_12ms;
++                if (emu_ms > 1000.0 / 59.8261) {
++                    ++g_live_stats.emu_over_budget;
++                    g_live_stats.last_hitch_frame = shown_frames;
++                }
++            }
+             if (frame_emu_ticks > max_emu_ticks) {
+                 max_emu_ticks = frame_emu_ticks;
+                 max_emu_frame = shown_frames;
+@@ -3896,7 +3928,14 @@
+         } else {
+             blend_cache.valid = false;
+         }
+-        phase_present_ticks += SDL_GetPerformanceCounter() - phase1;
++        const uint64_t frame_present_ticks =
++            SDL_GetPerformanceCounter() - phase1;
++        phase_present_ticks += frame_present_ticks;
++        if (nds_diagnostics_enabled() &&
++            frame_present_ticks > g_live_stats.max_present_frame_ticks) {
++            g_live_stats.max_present_frame_ticks = frame_present_ticks;
++            g_live_stats.max_present_frame = shown_frames;
++        }
+         if (audio && audio_started) {
+             const uint32_t queued = audio_queue_count(audio, audio_queue);
+             audio_min_queue = std::min(audio_min_queue, queued);
+diff --git a/runner/src/diagnostics.cpp b/runner/src/diagnostics.cpp
+--- a/runner/src/diagnostics.cpp
++++ b/runner/src/diagnostics.cpp
+@@ -793,6 +793,15 @@
+         "\"fps\":%.3f,\"ms_per_frame\":{\"emu\":%.3f,\"present\":%.3f,"
+         "\"adaptive\":%.3f,\"upload\":%.3f,\"draw\":%.3f,\"swap\":%.3f,"
+         "\"drain\":%.3f},\"underruns_delta\":%llu,"
++        // Incremental miss counts retain sub-frame hitches that disappear
++        // in 1s means. Maximum durations are SESSION highs, not interval
++        // percentiles, and include the corresponding game frame index.
++        "\"frame_spikes\":{\"gap_gt_20ms\":%llu,"
++        "\"emu_gt_12ms\":%llu,\"emu_over_ds_budget\":%llu,"
++        "\"max_gap_ms\":%.3f,\"max_gap_frame\":%llu,"
++        "\"max_emu_ms\":%.3f,\"max_emu_frame\":%llu,"
++        "\"max_present_ms\":%.3f,\"max_present_frame\":%llu,"
++        "\"last_hitch_frame\":%llu},"
+         "\"governor\":{\"stage\":%u,\"over_frames\":%u,"
+         "\"under_frames\":%u,\"held\":%s,\"apply_failed\":%s,"
+         "\"transitions\":%llu,\"compute_readback_ms\":%.3f},"
+@@ -821,6 +830,22 @@
+         per_frame_ms(sub_u64(stats.drain_ticks, before.drain_ticks),
+                      frame_delta, stats.freq),
+         (unsigned long long)sub_u64(stats.underruns, before.underruns),
++        (unsigned long long)sub_u64(stats.frame_gap_over_20ms,
++                                    before.frame_gap_over_20ms),
++        (unsigned long long)sub_u64(stats.emu_over_12ms,
++                                    before.emu_over_12ms),
++        (unsigned long long)sub_u64(stats.emu_over_budget,
++                                    before.emu_over_budget),
++        static_cast<double>(stats.max_frame_gap_ticks) * 1000.0 /
++            static_cast<double>(stats.freq),
++        (unsigned long long)stats.max_frame_gap_frame,
++        static_cast<double>(stats.max_emu_frame_ticks) * 1000.0 /
++            static_cast<double>(stats.freq),
++        (unsigned long long)stats.max_emu_frame,
++        static_cast<double>(stats.max_present_frame_ticks) * 1000.0 /
++            static_cast<double>(stats.freq),
++        (unsigned long long)stats.max_present_frame,
++        (unsigned long long)stats.last_hitch_frame,
+         stats.perf_governor_stage,
+         stats.perf_governor_over_frames,
+         stats.perf_governor_under_frames,

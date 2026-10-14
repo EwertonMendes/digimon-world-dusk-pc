@@ -1,0 +1,41 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -967,6 +967,20 @@
+ #endif
+ }
+ 
++// Windows timer wakes from SDL_Delay(1) are not frame-accurate. The owner
++// v0.20 trace recorded 5,413 >20-ms visual frame intervals in 273 seconds
++// despite only two guest frames over the DS emulation budget after boot.
++// Keep the existing real audio clock, queue watermark and every PCM sample.
++// Only bound one pacing sleep to 0.5 ms with SDL3's precise timer; all waiting
++// remains outside the guest scheduler, rendering and SDL audio callback.
++static inline void dusk_audio_pace_wait() {
++#if defined(NDS_HAVE_SDL3)
++    SDL_DelayPrecise(500000ull);
++#else
++    SDL_Delay(1);
++#endif
++}
++
+ uint32_t drain_audio(const NdsAudioDevice& device, AudioQueue& queue,
+                      bool throttle, uint32_t pace_floor, bool& queue_error) {
+     if (!device) return 0;
+@@ -1015,7 +1029,7 @@
+                     queue_error = true;
+                     return audio_queue_count(device, queue);
+                 }
+-                SDL_Delay(1);
++                dusk_audio_pace_wait();
+             }
+         }
+     }
+@@ -1034,7 +1048,7 @@
+     uint32_t queued = audio_queue_count(device, queue);
+     while (throttle && queued > pace_floor) {
+-        SDL_Delay(1);
++        dusk_audio_pace_wait();
+         queued = audio_queue_count(device, queue);
+     }
+     return queued;

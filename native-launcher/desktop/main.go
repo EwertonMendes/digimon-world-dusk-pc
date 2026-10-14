@@ -49,10 +49,16 @@ func readPayload(executable string) (map[string][]byte, error) {
 	reader, err := zip.NewReader(bytes.NewReader(buffer), int64(n))
 	if err != nil { return nil, err }
 	required := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20}
-	if len(reader.File) != len(required) { return nil, errors.New("quantidade de arquivos incorreta") }
-	contents := make(map[string][]byte, len(required))
+	// SDL3's MSYS2 UCRT package uses libiconv. When present, it must be
+	// packaged in the same SHA256-verified archive and deployed beside SDL3.
+	// Older 3-file owner builds remain compatible with this reader.
+	allowed := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "libiconv-2.dll":20 << 20}
+	if len(reader.File) < len(required) || len(reader.File) > len(allowed) {
+		return nil, errors.New("quantidade de arquivos incorreta")
+	}
+	contents := make(map[string][]byte, len(reader.File))
 	for _, entry := range reader.File {
-		max, ok := required[entry.Name]
+		max, ok := allowed[entry.Name]
 		if !ok || entry.UncompressedSize64 > max || entry.FileInfo().IsDir() {
 			return nil, fmt.Errorf("arquivo privado inválido: %s", entry.Name)
 		}
@@ -63,6 +69,14 @@ func readPayload(executable string) (map[string][]byte, error) {
 		r.Close()
 		if err != nil || uint64(len(b)) != entry.UncompressedSize64 { return nil, errors.New("arquivo extraído inválido") }
 		contents[entry.Name] = b
+	}
+	for name := range required {
+		if _, ok := contents[name]; !ok {
+			return nil, fmt.Errorf("arquivo obrigatório ausente: %s", name)
+		}
+	}
+	if optional, ok := contents["libiconv-2.dll"]; ok && !bytes.HasPrefix(optional, []byte("MZ")) {
+		return nil, errors.New("libiconv Windows inválida")
 	}
 	romHash := sha256.Sum256(contents["game.nds"])
 	if hex.EncodeToString(romHash[:]) != romSHA256 { return nil, errors.New("esta versão exige Dusk USA original") }

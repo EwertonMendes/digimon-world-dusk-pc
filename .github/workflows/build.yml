@@ -30,6 +30,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_v016_diagnostics.py -v
           python3 -m unittest discover -s tests -p test_apply_dusk_patches.py -v
           python3 -m unittest discover -s tests -p test_verified_aot.py -v
+          python3 -m unittest discover -s tests -p test_restore_verified_hotpaths.py -v
           python3 -m unittest discover -s tests -p test_verified_overlays.py -v
           python3 -m unittest discover -s tests -p test_merge_verified_profiles.py -v
           python3 -m unittest discover -s tests -p test_verified_aot_delta.py -v

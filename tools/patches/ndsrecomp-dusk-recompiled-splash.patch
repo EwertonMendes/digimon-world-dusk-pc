@@ -94,7 +94,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 @@ -4550,5 +4622,5 @@
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)
--                presentation.dusk.enabled ? "Digimon World Dusk | PC - " + fps_text + governor_text :
-+                presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24 - " + fps_text + governor_text :
+-                presentation.dusk.enabled ? "Digimon World Dusk | PC" :
++                presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24" :
  #endif
                  !savestate_notice.empty()

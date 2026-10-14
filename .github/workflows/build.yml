@@ -30,6 +30,29 @@ jobs:
           python3 -m unittest discover -s tests -p test_v016_diagnostics.py -v
           python3 -m unittest discover -s tests -p test_apply_dusk_patches.py -v
           python3 -m unittest discover -s tests -p test_verified_aot.py -v
+          python3 - <<'PY'
+          import base64, json, pathlib, zlib
+          path=pathlib.Path('tools/evidence/owner-v019-verified-roots-compact.b64')
+          obj=json.loads(zlib.decompress(base64.b64decode(path.read_bytes())))
+          print('v019 proof schema:',repr(obj.get('s')),'top keys:',sorted(obj))
+          print('banks type:',type(obj.get('b')).__name__)
+          if isinstance(obj.get('b'),dict):
+              print('bank summary:',[(k,len(v), len(v[0]) if v and isinstance(v[0],list) else '?') for k,v in obj['b'].items()])
+          print('copies structure:',[(k,len(v)) for k,v in obj.get('c',{}).items()] if isinstance(obj.get('c'),dict) else type(obj.get('c')).__name__)
+          PY
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,'tools')
+          from pathlib import Path
+          from restore_verified_hotpaths import load_evidence, merge_safe_supplement
+          base=load_evidence(Path('tools/evidence/owner-v019-verified-roots-compact.b64'))
+          extra=load_evidence(Path('tools/evidence/owner-v019-arm7-root-supplement.b64'))
+          joined=merge_safe_supplement(base,extra)
+          count=len(joined['banks']['dusk_arm7_main'])
+          print('Owner ARM7 root proof merged without mismatched page generations:',count)
+          assert 3500 < count <= 4096
+          PY
+          python3 -m unittest discover -s tests -p test_restore_verified_hotpaths.py -v
           python3 -m unittest discover -s tests -p test_verified_overlays.py -v
           python3 -m unittest discover -s tests -p test_merge_verified_profiles.py -v
           python3 -m unittest discover -s tests -p test_verified_aot_delta.py -v

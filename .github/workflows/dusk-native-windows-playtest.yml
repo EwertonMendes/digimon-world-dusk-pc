@@ -7,19 +7,31 @@ on:
         required: true
         type: boolean
         default: false
+      fast_repack:
+        description: 'Only repackage the verified v0.19 runner after launcher-only edits; no ARM recompilation'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: dusk-native-owner-playtest-${{ github.ref }}
-  cancel-in-progress: false
+  # Do not let a fast launcher-only repack interrupt a full game build.
+  group: dusk-native-owner-playtest-${{ github.ref }}-${{ inputs.fast_repack }}
+  cancel-in-progress: true
 
 jobs:
   build-dusk-native-game:
-    if: inputs.approve_game_bundle == true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack != true
     runs-on: windows-latest
     timeout-minutes: 120
+    env:
+      # Cache is a build accelerator only; original ROM and save never enter it.
+      CCACHE_DIR: ${{ github.workspace }}/.cache/dusk-native-ccache
+      CCACHE_MAXSIZE: 1536M
+      CCACHE_COMPILERCHECK: content
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,6 +61,24 @@ jobs:
             mingw-w64-ucrt-x86_64-sdl3
             mingw-w64-ucrt-x86_64-python
             mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-ccache
+      - name: Restore C/C++ compiler objects from preceding builds
+        id: native-ccache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/dusk-native-ccache
+          key: dusk-native-windows-ucrt64-ccache-v1-${{ hashFiles('tools/patches/*.patch', 'tools/evidence/*.b64', 'tools/restore_verified_hotpaths.py', 'tools/prepare_dusk_recomp.py', 'tools/patch_windows_net.py') }}
+          restore-keys: |
+            dusk-native-windows-ucrt64-ccache-v1-
+      - name: Verify compiler cache and reset hit/miss statistics
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          command -v ccache
+          mkdir -p .cache/dusk-native-ccache
+          ccache --set-config=max_size=1536M
+          ccache --zero-stats
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
@@ -77,7 +107,8 @@ jobs:
         shell: msys2 {0}
         run: |
           set -euo pipefail
-          cmake -S upstream/recompiler -B upstream/recompiler/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S upstream/recompiler -B upstream/recompiler/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build upstream/recompiler/build --target nds_recompile --parallel 2
           ./upstream/recompiler/build/nds_recompile.exe --codegen-identity
       - name: Recompile FreeBIOS and the original Dusk ARM9/ARM7 banks
@@ -88,19 +119,59 @@ jobs:
           mkdir -p upstream/generated
           "$recomp" --config upstream/bios/freebios9.toml --bin upstream/third_party/freebios/drastic_bios_arm9.bin --out upstream/generated --bank freebios_arm9
           "$recomp" --config upstream/bios/freebios7.toml --bin upstream/third_party/freebios/drastic_bios_arm7.bin --out upstream/generated --bank freebios_arm7
+          # v0.17 mistakenly compiled only the two main ARM banks, losing
+          # the v0.16 battle/scene overlays. Preserve the original verified
+          # page generations and restore only full-page checksum-matched PCs.
           python tools/prepare_dusk_recomp.py \
             --rom 'Digimon World - Dusk (USA).nds' \
-            --out .private/recomp --emit \
-            --recompiler upstream/recompiler/build/nds_recompile.exe \
-            --arm9-shards 16 --arm7-shards 8
+            --out .private/recomp --overlays
+          python tools/restore_verified_hotpaths.py \
+            --rom 'Digimon World - Dusk (USA).nds' \
+            --stage .private/recomp \
+            --evidence tools/evidence/owner-v019-verified-roots-compact.b64 \
+            --extra-evidence tools/evidence/owner-v019-arm7-root-supplement.b64 \
+            --recompiler upstream/recompiler/build/nds_recompile.exe
           test -f .private/recomp/generated/dusk_arm9_main_dispatch.c
           test -f .private/recomp/generated/dusk_arm7_main_dispatch.c
+          grep -q '\[\[code_copy\]\]' .private/recomp/dusk_arm7_main.toml
+          test -f .private/recomp/generated/dusk_arm9_ovl00_dispatch.c
+          test -f .private/recomp/generated/dusk_arm9_ovl07_dispatch.c
+          test -f .private/recomp/generated/dusk_arm9_ovl09_dispatch.c
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from tools.verified_dispatch_rows import read_dispatch_rows
+          generated = Path('.private/recomp/generated')
+          rows = {}
+          for cpu, bank in ((9, 'dusk_arm9_main'), (7, 'dusk_arm7_main')):
+              count = len(read_dispatch_rows(
+                  [generated / (bank + '_dispatch.c')], expected_cpu=cpu))
+              print(f'Validated native {bank} entries:', count)
+              rows[cpu] = count
+          # This is intentionally a Windows *experimental* playtest gate.
+          # Actual v0.15 native AOT counts were 65,097 ARM9 and 12,199 ARM7.
+          # This build restores ARM9 beyond that baseline, but ARM7 still
+          # falls short. Do not claim v0.16 parity or merge on this basis.
+          if rows[9] < 65097 or rows[7] < 7300:
+              raise SystemExit('Native AOT below experimentally measured candidate minimum')
+          if rows[7] < 12199:
+              print('WARNING: ARM7 v0.16 parity NOT achieved; candidate playtest only')
+          Path('.private/recomp/dispatch-coverage.json').write_text(
+              json.dumps({'arm9_main_rows': rows[9],
+                          'arm7_main_rows': rows[7],
+                          'baseline_v015_arm9': 65097,
+                          'baseline_v015_arm7': 12199,
+                          'v016_arm7_parity': rows[7] >= 12199,
+                          'status': 'owner-playtest-only'}, indent=2) + '\\n')
+          PY
       - name: Build Windows x64 SDL3 native runner from original code
         shell: msys2 {0}
         run: |
           set -euo pipefail
           cmake -S upstream/runner -B upstream/runner/build-owner-dusk -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++" \
             -DNDS_SDL_BACKEND=SDL3 \
             -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
@@ -109,7 +180,10 @@ jobs:
             -DNDS_RECOMP_UI_ROOT="$PWD/recomp-ui" \
             -DNDS_TITLE_BANK_DIR="$PWD/.private/recomp/generated" \
             -DNDS_TITLE_ROM_SHA1=de1a1915e07288ffad654f3f9f2eb730a0fd1d9c
-          cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 2
+          # A GitHub-hosted Windows runner has bounded memory. Three
+          # compilers are a conservative initial improvement over two;
+          # revisit after reviewing cache stats and peak memory.
+          cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 3
           test -f upstream/runner/build-owner-dusk/nds_runner.exe
           test -f /ucrt64/bin/SDL3.dll
       - name: Verify native runner and build one-click GUI EXE
@@ -141,20 +215,94 @@ jobs:
               throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
             }
           }
-          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
-          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe).Path
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe).Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha  Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Dusk PC v0.17 native owner playtest`nSource: $env:GITHUB_SHA`nIncludes original ARM9/ARM7 main bank and FreeBIOS. Uncovered overlays still use Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "$sha  Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.19 experimental owner playtest`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-Dusk-PC-Windows-v0.17-PLAYTEST-NATIVE-GAME
+          name: Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
+      - name: Show actual native compiler cache hit rate
+        if: success()
+        shell: msys2 {0}
+        run: |
+          ccache --show-stats
+      - name: Save compiled objects for next owner playtest
+        if: success() && steps.native-ccache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/dusk-native-ccache
+          key: ${{ steps.native-ccache.outputs.cache-primary-key }}
+
+  repackage-validated-native:
+    if: inputs.approve_game_bundle == true && inputs.fast_repack == true
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Retrieve successful owner AOT native runner from exact build
+        shell: pwsh
+        run: |
+          gh run download 38622682716 --repo EwertonMendes/digimon-world-dusk-pc --name Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST-NATIVE-GAME --dir .private/prior
+          if ($LASTEXITCODE -ne 0) { throw 'Verified owner native build download failed' }
+          $sha = (Get-FileHash .private/prior/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne '96651ec7ec43ac095507a947a70cead7d57f4d3ffbf3730f520202144bb592bc') {
+            throw "Wrong upstream AOT bundle SHA256: $sha"
+          }
+      - name: Recover original ROM and SDL3 runner from authenticated bundle
+        shell: pwsh
+        run: |
+          python tools/repack_verified_native_windows.py --exe .private/prior/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe --out .private/verified-runtime --sha256 96651ec7ec43ac095507a947a70cead7d57f4d3ffbf3730f520202144bb592bc
+          if ($LASTEXITCODE -ne 0) { throw 'Exact original AOT runner identity invalid' }
+      - name: Compile and test v0.19 Windows GUI launcher only
+        shell: pwsh
+        run: |
+          Push-Location native-launcher/desktop
+          go test ./... -count=1
+          if ($LASTEXITCODE -ne 0) { throw 'Native launcher tests failed' }
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/dusk-v019-launcher.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows GUI launcher build failed' }
+          Pop-Location
+      - name: Package one-click game and verify Windows PE on Windows
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          python tools/pack_native_private.py --launcher .private/dusk-v019-launcher.exe --runner .private/verified-runtime/runner.exe --sdl .private/verified-runtime/SDL3.dll --iconv .private/verified-runtime/libiconv-2.dll --rom .private/verified-runtime/game.nds --output dist/Digimon-Dusk-PC-Windows-v0.19-LAUNCHER-REPACK.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Native one-click packaging failed' }
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.19-LAUNCHER-REPACK.exe).Path
+          $proc = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "EXE bundle verification failed: $($proc.ExitCode)" }
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  Digimon-Dusk-PC-Windows-v0.19-LAUNCHER-REPACK.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Digimon World Dusk PC v0.19 launcher-only repack for owner testing.`nNative runner is EXACTLY the one in successful build 38622682716.`nNo change to ARM9/ARM7/audio/video code. No claim of repaired scene stutter.`nRuntime install v0.19, original EEPROM save remains %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav.`nDouble-click to play." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          Get-ChildItem dist | Select-Object Name,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Digimon-Dusk-PC-Windows-v0.19-LAUNCHER-REPACK-GAME
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+

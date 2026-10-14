@@ -22,6 +22,7 @@ DESKTOP = NATIVE_UI + (
     "ndsrecomp-dusk-immersive-ui.patch",
     "ndsrecomp-dusk-immersive-ui-hotfix.patch",
     "ndsrecomp-dusk-ux-polish-v2.patch",
+    "ndsrecomp-dusk-transition-audio-headroom.patch",
     "ndsrecomp-dusk-pc-menu-input-capture.patch",
 )
 

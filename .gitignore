@@ -37,3 +37,9 @@ __pycache__/
 .idea/
 .vscode/
 external/
+
+# Private gameplay instrumentation (RAM code pages, host stacks, local paths)
+game-coverage-*.json
+performance-*.jsonl
+hostprof-*.ndshp
+*.ndshp

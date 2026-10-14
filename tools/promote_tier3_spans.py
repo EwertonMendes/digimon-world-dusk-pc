@@ -232,14 +232,15 @@ def main() -> None:
     raw=args.rom.read_bytes()
     if hashlib.sha256(raw).hexdigest()!=ROM_SHA256 or hashlib.sha1(raw).hexdigest()!=ROM_SHA1:
         ap.error("Exact Dusk USA ROM identity required")
-    import sys
-    sys.path.insert(0,str(args.upstream/"tools"))
-    from ingest_coverage_manifests import read_dispatch_rows
+    # Upstream's historical regex also counted NdsStaticValidation initializers
+    # as rows; only parse actual g_dispatch_* arrays and enforce declared length.
+    from verified_dispatch_rows import read_dispatch_rows
     ingest=json.loads((args.ingest/"ingest-report.json").read_text())
     if ingest["rom_sha1"]!=ROM_SHA1 or ingest["manifests_accepted"]!=len(args.coverage) or ingest["manifests_incomplete"]:
         ap.error("Ingest evidence incomplete or incompatible")
     hot=json.loads((args.ingest/"interpreted-ranges.json").read_text())
-    owned={9:read_dispatch_rows(args.dispatch_arm9),7:read_dispatch_rows(args.dispatch_arm7)}
+    owned={9:read_dispatch_rows(args.dispatch_arm9, expected_cpu=9),
+           7:read_dispatch_rows(args.dispatch_arm7, expected_cpu=7)}
     if not all(owned.values()):
         ap.error("Missing native dispatch baseline for one CPU")
     pages=load_pages(args.coverage,ROM_SHA1)

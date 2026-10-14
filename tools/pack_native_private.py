@@ -10,10 +10,20 @@ from pathlib import Path
 import struct
 import zipfile
 
+from verified_dispatch_rows import verify_dispatch_growth
+
 MAGIC = b'DUSKPACKv1!!'
 ROM_SHA256 = 'df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb'
 
-def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path) -> dict:
+def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
+          baseline: Path | None = None, candidate: Path | None = None) -> dict:
+    if (baseline is None) != (candidate is None):
+        raise ValueError('Provide both --baseline-dispatch and --candidate-dispatch')
+    # Game-derived banks are not uploaded. Compare byte-validated C dispatch
+    # tables locally before accepting an owner-private one-click executable.
+    dispatch_report = (verify_dispatch_growth(baseline, candidate)
+                       if baseline is not None else None)
+
     files = {
         'runner.exe': runner.read_bytes(),
         'SDL3.dll': sdl.read_bytes(),
@@ -40,6 +50,7 @@ def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path) -> d
     output.write_bytes(binary + data + MAGIC + struct.pack('<Q', len(data)) +
                        hashlib.sha256(data).digest())
     return {
+        'dispatch_check': dispatch_report,
         'exe': str(output),
         'bytes': output.stat().st_size,
         'sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
@@ -51,8 +62,11 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     for key in ('launcher', 'runner', 'sdl', 'rom', 'output'):
         p.add_argument('--' + key, type=Path, required=True)
+    p.add_argument('--baseline-dispatch', type=Path)
+    p.add_argument('--candidate-dispatch', type=Path)
     args = p.parse_args()
-    print(build(args.launcher, args.runner, args.sdl, args.rom, args.output))
+    print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
+                args.baseline_dispatch, args.candidate_dispatch))
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,30 @@
+{
+  "id": "continue-existing-save",
+  "actions": [
+    {
+      "type": "button",
+      "name": "start",
+      "settle": 220
+    },
+    {
+      "type": "checkpoint",
+      "name": "continue-title-menu"
+    },
+    {
+      "type": "button",
+      "name": "down",
+      "settle": 80
+    },
+    {
+      "type": "button",
+      "name": "a",
+      "settle": 600
+    },
+    {
+      "type": "checkpoint",
+      "name": "continued-story",
+      "changed_since": "continue-title-menu",
+      "retry_frames": 10
+    }
+  ]
+}

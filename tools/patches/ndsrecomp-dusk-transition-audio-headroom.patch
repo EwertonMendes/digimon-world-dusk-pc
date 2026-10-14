@@ -1,0 +1,14 @@
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -668,8 +668,13 @@
+ constexpr int kWindowScale = 2;
+ constexpr uint64_t kSystemCyclesPerFrame = 2130ull * 263ull;
+ constexpr int kAudioFrequency = 33513982 / 1024;
+-constexpr uint32_t kAudioQueueFrames = 2048;
++// Do not exhaust the entire 63-ms steady-state playback queue on a single
++// complex DS scene/menu change. The owner-recorded transition frames can run
++// far beyond one 16.7-ms guest frame and SDL keeps consuming sound while
++// ARM9/ARM7 execute. Reserve ~188 ms at the unchanged original sample rate;
++// never fake SPU samples, skip virtual frames, or slow down guest audio.
++constexpr uint32_t kAudioQueueFrames = 6144;
+ // Playback starts only once kAudioStartFrames (~1.5 s) are queued. The cold

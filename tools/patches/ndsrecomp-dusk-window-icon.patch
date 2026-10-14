@@ -1,0 +1,24 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1462,6 +1462,19 @@ SDL_Window* create_window(const char* title, int x, int y, int w, int h,
+         title, w, h, static_cast<SDL_WindowFlags>(flags));
+     if (window)
+         SDL_SetWindowPosition(window, x, y);
++    // Optional Dusk-only art: keep the base NDSRecomp frontend unchanged.
++    if (window) {
++        const char* icon_path = std::getenv("NDS_DUSK_ICON_PATH");
++        if (icon_path && icon_path[0] != '\0') {
++            SDL_Surface* icon = SDL_LoadBMP(icon_path);
++            if (icon) {
++                if (!SDL_SetWindowIcon(window, icon))
++                    std::fprintf(stderr, "[dusk-icon] SDL_SetWindowIcon: %s\n", SDL_GetError());
++                SDL_DestroySurface(icon);
++            } else {
++                std::fprintf(stderr, "[dusk-icon] loading BMP: %s\n", SDL_GetError());
++            }
++        }
++    }
+     return window;
+ #else
+     return SDL_CreateWindow(title, x, y, w, h, static_cast<uint32_t>(flags));

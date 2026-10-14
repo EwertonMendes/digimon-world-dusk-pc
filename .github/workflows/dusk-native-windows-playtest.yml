@@ -76,8 +76,6 @@ jobs:
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
-          # apply_dusk_patches.py already installs the title -O1 patch;
-          # do not apply the same patch twice.
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
           git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
           python tools/patch_windows_net.py upstream
@@ -135,12 +133,10 @@ jobs:
             -DNDS_SDL_BACKEND=SDL3 \
             -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
             -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON \
-            -DNDS_TITLE_BANK_OPT_LEVEL=1 \
             -DNDS_BOOTSTRAP_FIRMWARE=ON \
             -DNDS_RECOMP_UI_ROOT="$PWD/recomp-ui" \
             -DNDS_TITLE_BANK_DIR="$PWD/.private/recomp/generated" \
             -DNDS_TITLE_ROM_SHA1=de1a1915e07288ffad654f3f9f2eb730a0fd1d9c
-          grep -q "NDS_TITLE_BANK_OPT_LEVEL:STRING=1" upstream/runner/build-owner-dusk/CMakeCache.txt
           cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 2
           test -f upstream/runner/build-owner-dusk/nds_runner.exe
           test -f /ucrt64/bin/SDL3.dll

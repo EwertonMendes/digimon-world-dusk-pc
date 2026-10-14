@@ -1,0 +1,117 @@
+{
+  "id": "intro-to-first-map",
+  "actions": [
+    {
+      "type": "button",
+      "name": "start",
+      "settle": 220
+    },
+    {
+      "type": "button",
+      "name": "a",
+      "settle": 80
+    },
+    {
+      "type": "button",
+      "name": "a",
+      "settle": 80
+    },
+    {
+      "type": "touch",
+      "x": 20,
+      "y": 78,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 20,
+      "y": 78,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 20,
+      "y": 78,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 20,
+      "y": 78,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 213,
+      "y": 175,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 70,
+      "y": 143,
+      "settle": 160
+    },
+    {
+      "type": "checkpoint",
+      "name": "starter-selection"
+    },
+    {
+      "type": "button",
+      "name": "a",
+      "settle": 60
+    },
+    {
+      "type": "touch",
+      "x": 125,
+      "y": 108,
+      "settle": 180
+    },
+    {
+      "type": "touch",
+      "x": 213,
+      "y": 175,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 70,
+      "y": 143,
+      "settle": 120
+    },
+    {
+      "type": "touch",
+      "x": 213,
+      "y": 175,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 70,
+      "y": 143,
+      "settle": 120
+    },
+    {
+      "type": "touch",
+      "x": 213,
+      "y": 175,
+      "settle": 70
+    },
+    {
+      "type": "touch",
+      "x": 70,
+      "y": 143,
+      "settle": 120
+    },
+    {
+      "type": "frames",
+      "count": 60
+    },
+    {
+      "type": "checkpoint",
+      "name": "first-story-map",
+      "retry_frames": 12,
+      "changed_since": "starter-selection"
+    }
+  ]
+}

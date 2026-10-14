@@ -1,0 +1,16 @@
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -3084,9 +3084,12 @@
+                 NdsSavestateSlotCommand state_command{};
+                 const unsigned function_key = savestate_function_key(scancode);
+                 const bool state_shortcut = nds_savestate_slot_shortcut(
+                     function_key, sdl_event_shift(event), false,
+                     &state_command);
+-                if (state_shortcut) {
++                // Dusk PC temporarily supports only the original cartridge
++                // save menu. Suppress save-state hotkeys in owner builds.
++                if (state_shortcut &&
++                    std::getenv("NDS_DUSK_DISABLE_SAVESTATES") == nullptr) {
+                     const NdsSavestateSlotResult result =
+                         nds_savestate_slot_execute(
+                             options.savestate_directory,

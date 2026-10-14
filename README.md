@@ -113,3 +113,30 @@ existing optimized title banks while improving usability and collecting
 rate-limited performance logs. The occasional stutters have not been
 proven fixed. Full graphical and audio validation of v0.6 is pending the
 owner's Windows test. See [native desktop notes](docs/native-desktop.md).
+
+
+## Private Windows v0.14: original in-game save / gameplay regression (candidate)
+
+This iteration enables **Dusk's original EEPROM save** in the private
+Windows SDL3 launcher. The app passes `--save-path` and a Dusk-USA-specific
+64 KiB EEPROM configuration. Player data now resides at the stable path
+`%LOCALAPPDATA%\\DuskNativePC\\userdata\\A6RE\\saves\\dusk.sav`,
+independent of the `v0.14` runtime installation. It makes a backup
+before each game launch, preserves verified legacy saves and firmware
+identity, and prevents simultaneous writers.
+
+Save states / memory snapshots **are not part of this feature**. A guarded
+upstream SDL3 patch blocks their hotkeys for newly compiled private native
+runners. The interim private test executable can reuse the verified v0.13
+runner; it does not configure a save-state directory, but old shortcuts
+may still show a disabled-state notice until the runtime is rebuilt.
+
+Gameplay verification now includes the ROM-private, deterministic scenario
+driver `tools/dusk_gameplay_scenarios.py` and
+`tests/scenarios/intro-to-first-map.json`. Real save-menu roundtrip and
+campaign-wide validation **still require Windows gameplay tests**; CI
+proves launcher save safety, not an end-to-end Dusk save.
+
+See [save / story acceptance guide](docs/native-save-and-gameplay-qa.md).
+The public GitHub Actions artifact remains ROM-free and is **not** a playable
+game. Do not upload commercial game content or personal saves to this repo.

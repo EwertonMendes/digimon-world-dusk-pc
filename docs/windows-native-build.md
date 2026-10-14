@@ -29,7 +29,9 @@ It is separate from the ROM-free CI workflow.
 4. SDL3 native Windows UCRT64 runner with the existing Dusk interface patches
    and original EEPROM 64KiB support.
 5. Go Windows GUI launcher `v0.17` wraps the actual runner, SDL3.dll and
-   matching ROM into one SHA-256-verified PE file.
+   matching ROM into one SHA-256-verified PE file. If the MSYS2 SDL3 DLL
+   imports `libiconv-2.dll`, that redistributable DLL is also embedded
+   into the same EXE and installed next to SDL3; the player installs nothing.
 6. A `--verify-bundle` subprocess checks the resulting executable before
    upload. This checks packaging identity, **not** gameplay compatibility.
 
@@ -41,6 +43,10 @@ binary-specific AOT coverage/overlays and private generated banks were not
 part of the Git repo. This initial workflow emits the two main title banks;
 runtime overlay gaps continue through Tier3. It may perform worse than v0.16
 until verified overlay generations are reconstructed from owner captures.
+
+The Windows build gates unexpected runtime DLL imports. If SDL3's
+transitive dependencies change, packaging fails until the declared
+bundled dependency list is updated and verified.
 
 No automated full story QA or Windows on-screen interaction is performed by
 the CI runner. The owner must validate visual rendering, sound, in-game

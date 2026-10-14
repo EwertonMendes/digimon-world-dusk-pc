@@ -79,6 +79,18 @@ jobs:
           mkdir -p .cache/dusk-native-ccache
           ccache --set-config=max_size=1536M
           ccache --zero-stats
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate and validate approved cross-platform icon assets
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Pillow install failed' }
+          python tools/generate_icons.py
+          if ($LASTEXITCODE -ne 0) { throw 'Icon generation failed' }
+          python -m unittest discover -s tests -p test_icon_assets.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Icon verification failed' }
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
@@ -206,6 +218,10 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist, .private/staging | Out-Null
+          $windres = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/windres.exe'
+          if (!(Test-Path -LiteralPath $windres)) { throw 'MinGW windres not found' }
+          & $windres -i assets/icons/generated/windows/dusk.rc -O coff -o native-launcher/desktop/dusk_icon_windows_amd64.syso
+          if ($LASTEXITCODE -ne 0) { throw 'Windows launcher icon resource compilation failed' }
           Push-Location native-launcher/desktop
           go test ./... -count=1
           if ($LASTEXITCODE -ne 0) { throw 'Launcher unit tests failed' }
@@ -231,19 +247,19 @@ jobs:
               throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
             }
           }
-          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING.exe
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --window-icon assets/icons/generated/windows/window-icon.bmp --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.22-DUSK-ICON.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
-          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING.exe).Path
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.22-DUSK-ICON.exe).Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha  Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Dusk PC v0.21 precise frame pacing owner playtest (audio queue/cadence/SPU unchanged)`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "$sha  Digimon-Dusk-PC-Windows-v0.22-DUSK-ICON.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.22 branded icon + precise frame pacing owner playtest (audio queue/cadence/SPU unchanged)`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-Dusk-PC-Windows-v0.21-PRECISE-VIDEO-PACING-NATIVE-GAME
+          name: Digimon-Dusk-PC-Windows-v0.22-DUSK-ICON-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7

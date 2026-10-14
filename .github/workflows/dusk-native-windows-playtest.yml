@@ -132,7 +132,7 @@ jobs:
           $objdump = 'C:/msys64/ucrt64/bin/objdump.exe'
           if (!(Test-Path $objdump)) { throw 'Windows PE import auditor missing' }
           foreach ($binary in @($runner, $sdl)) {
-            $imports = (& $objdump -p $binary | Select-String 'DLL Name:').ToString()
+            $imports = ((& $objdump -p $binary | Select-String 'DLL Name:' | ForEach-Object { $_.Line }) -join "`n")
             Write-Host "Windows PE imports for $binary"
             Write-Host $imports
             if ($imports -match 'libstdc\\+\\+|libgcc_s|libwinpthread|msys-2\\.0|libiconv|libintl') {

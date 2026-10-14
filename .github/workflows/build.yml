@@ -25,7 +25,7 @@ jobs:
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
         run: |
-          python3 -m py_compile tools/test_dusk_native_story.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py
+          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py
           python3 -m unittest discover -s tests -p test_native_perf.py -v
           python3 -m unittest discover -s tests -p test_verified_aot.py -v
           python3 -m unittest discover -s tests -p test_verified_overlays.py -v
@@ -33,6 +33,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_verified_aot_delta.py -v
           python3 -m unittest discover -s tests -p test_refresh_shipped_overlays.py -v
           python3 -m unittest discover -s tests -p test_promote_tier3_spans.py -v
+          python3 -m unittest discover -s tests -p test_dusk_gameplay_scenarios.py -v
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
@@ -307,6 +308,9 @@ jobs:
       - name: Go unit tests (synthetic fixtures)
         shell: pwsh
         run: go test ./... -count=1 -v
+      - name: Verify Windows GUI launcher (vet)
+        shell: pwsh
+        run: go vet ./...
       - name: Compile Windows GUI launcher (private payload added only locally)
         shell: pwsh
         run: go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../build-native/Dusk-PC-Native-Launcher-ROM-Free.exe .
@@ -366,6 +370,9 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
+          grep -q 'NDS_DUSK_DISABLE_SAVESTATES' upstream/runner/src/frontend.cpp
       - name: Build ROM-free geometry and touch tests
         run: |
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \

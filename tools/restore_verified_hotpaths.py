@@ -191,6 +191,74 @@ def emit(stage: Path, recompiler: Path, arm9_shards: int = 16, arm7_shards: int 
     return built
 
 
+
+def load_evidence(path: Path) -> dict:
+    data = path.read_bytes()
+    if path.suffix != ".b64":
+        return json.loads(data)
+    if len(data) > 500_000:
+        raise ValueError("Unbounded owner evidence")
+    # Small, byte-free diagnostic metadata, never ROM, screenshots or RAM.
+    decoded = base64.b64decode(data, validate=False)
+    decompressor = zlib.decompressobj()
+    raw = decompressor.decompress(decoded, 3 * 1024 * 1024)
+    if not decompressor.eof or decompressor.unconsumed_tail:
+        raise ValueError("Oversized/truncated compressed evidence")
+    metadata = json.loads(raw)
+    if metadata.get("s") != 3:
+        raise ValueError("Unsupported compact proof schema")
+    hashes = metadata["h"]
+    if not isinstance(hashes, list) or len(hashes) > 4096 or any(
+        not isinstance(h, str) or not re.fullmatch("[0-9a-f]{40}", h)
+        for h in hashes
+    ):
+        raise ValueError("Invalid code-page checksum dictionary")
+    def digest(index: int) -> str:
+        if not isinstance(index, int) or not 0 <= index < len(hashes):
+            raise ValueError("Unknown code-page checksum")
+        return hashes[index]
+    banks = {}
+    if not isinstance(metadata["b"], dict) or len(metadata["b"]) > 32:
+        raise ValueError("Invalid bank manifest")
+    for bank, entries in metadata["b"].items():
+        if not BANK_RE.fullmatch(bank) or len(entries) > 256:
+            raise ValueError("Invalid bank/root count")
+        roots = []
+        for entry in entries:
+            if not isinstance(entry, list) or len(entry) not in (3, 4):
+                raise ValueError("Invalid execution-root tuple")
+            pc, mode, sha_index = entry[:3]
+            if not isinstance(pc, int) or pc < 0 or pc > 0xFFFFFFFF or mode not in (0, 1):
+                raise ValueError("Invalid executed address/mode")
+            root = {"pc": f"0x{pc:08X}", "mode": "thumb" if mode else "arm",
+                    "page_sha1": digest(sha_index)}
+            if len(entry) == 4:
+                if not isinstance(entry[3], int) or entry[3] < 0:
+                    raise ValueError("Invalid code-copy source offset")
+                root["source_page_offset"] = f"0x{entry[3]:X}"
+            roots.append(root)
+        banks[bank] = roots
+    copies = {}
+    for bank, mappings in metadata.get("c", {}).items():
+        if bank != "dusk_arm7_main" or len(mappings) > 64:
+            raise ValueError("Unsupported relocated copied-code bank")
+        copies[bank] = []
+        for mapping in mappings:
+            if not isinstance(mapping, list) or len(mapping) != 4:
+                raise ValueError("Invalid code-copy geometry tuple")
+            run, source, length, page_hashes = mapping
+            if any(not isinstance(x, int) or x < 0 for x in (run, source, length)):
+                raise ValueError("Invalid code-copy location")
+            copies[bank].append({
+                "runtime_start": f"0x{run:08X}",
+                "source_start": f"0x{source:08X}",
+                "size": length,
+                "pages": [digest(x) for x in page_hashes],
+            })
+    return {"schema": 2, "rom_sha256": ROM_SHA256,
+            "banks": banks, "code_copies": copies}
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--rom", type=Path, required=True)
@@ -198,13 +266,7 @@ def main() -> None:
     p.add_argument("--evidence", type=Path, required=True)
     p.add_argument("--recompiler", type=Path, required=True)
     args = p.parse_args()
-    payload = args.evidence.read_bytes()
-    if args.evidence.suffix == ".b64":
-        # Version-2 evidence is compressed metadata, never ROM/RAM content.
-        payload = zlib.decompress(base64.b64decode(payload, validate=True))
-        if len(payload) > 3 * 1024 * 1024:
-            raise ValueError("Unbounded compressed root evidence")
-    report = recover(args.stage, json.loads(payload), args.rom.read_bytes())
+    report = recover(args.stage, load_evidence(args.evidence), args.rom.read_bytes())
     print("Verified root entries:", report, flush=True)
     outputs = emit(args.stage, args.recompiler)
     overlays = [n for n in outputs if "_ovl" in n]

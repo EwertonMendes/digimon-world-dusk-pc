@@ -85,7 +85,7 @@ def read_hostprof(path: Path) -> dict:
     # Read metadata only; binary stack data and module paths are never exported.
     with path.open("rb") as stream:
         header = stream.readline(1024 * 1024)
-    if not header.endswith(b"\\n"):
+    if not header.endswith(b"\n"):
         raise ValueError(f"Host profiler header exceeds limit in {path.name}")
     doc = json.loads(header)
     if doc.get("format") != "ndsrecomp-hostprof" or doc.get("version") != 1:
@@ -164,7 +164,7 @@ def main() -> None:
     args = ap.parse_args()
     report = summarize(args.perf, args.coverage, args.hostprof)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+    args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report["totals"], indent=2))
 
 

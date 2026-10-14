@@ -1,0 +1,141 @@
+name: Dusk native Windows game (owner playtest)
+on:
+  workflow_dispatch:
+    inputs:
+      approve_game_bundle:
+        description: 'I authorize packaging the uploaded ROM into a downloadable Windows EXE'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dusk-native-owner-playtest-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-dusk-native-game:
+    if: inputs.approve_game_bundle == true
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Gate exact game identity and document source revision
+        shell: pwsh
+        run: |
+          $rom = 'Digimon World - Dusk (USA).nds'
+          if (!(Test-Path -LiteralPath $rom)) { throw 'Dusk game ROM absent from this checkout' }
+          $hash = (Get-FileHash -LiteralPath $rom -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne 'df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb') {
+            throw "ROM checksum mismatch: $hash"
+          }
+          $size = (Get-Item -LiteralPath $rom).Length
+          if ($size -ne 67108864) { throw "ROM size mismatch: $size" }
+          Write-Host "Verified original Dusk USA ROM hash and size; game build revision: $env:GITHUB_SHA"
+      - name: Set up pinned MSYS2 UCRT64 compiler, SDL3 and Ninja
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-SDL3
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-pkgconf
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Checkout pinned NDSRecomp and recomp-ui
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
+          git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
+          git -C upstream submodule update --init --recursive
+          git clone --no-checkout https://github.com/RetroPortingToolKit/recomp-ui.git recomp-ui
+          git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
+          python tools/apply_dusk_patches.py --upstream upstream --component desktop
+          git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
+          python tools/patch_windows_net.py upstream
+      - name: Compile native ARM static recompiler
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cmake -S upstream/recompiler -B upstream/recompiler/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build upstream/recompiler/build --target nds_recompile --parallel 2
+          ./upstream/recompiler/build/nds_recompile.exe --codegen-identity
+      - name: Recompile FreeBIOS and the original Dusk ARM9/ARM7 banks
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          recomp=./upstream/recompiler/build/nds_recompile.exe
+          mkdir -p upstream/generated
+          "$recomp" --config upstream/bios/freebios9.toml --bin upstream/third_party/freebios/drastic_bios_arm9.bin --out upstream/generated --bank freebios_arm9
+          "$recomp" --config upstream/bios/freebios7.toml --bin upstream/third_party/freebios/drastic_bios_arm7.bin --out upstream/generated --bank freebios_arm7
+          python tools/prepare_dusk_recomp.py \
+            --rom 'Digimon World - Dusk (USA).nds' \
+            --out .private/recomp --emit \
+            --recompiler upstream/recompiler/build/nds_recompile.exe \
+            --arm9-shards 16 --arm7-shards 8
+          test -f .private/recomp/generated/dusk_arm9_main_dispatch.c
+          test -f .private/recomp/generated/dusk_arm7_main_dispatch.c
+      - name: Build Windows x64 SDL3 native runner from original code
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cmake -S upstream/runner -B upstream/runner/build-owner-dusk -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DNDS_SDL_BACKEND=SDL3 \
+            -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
+            -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON \
+            -DNDS_RECOMP_UI_ROOT="$PWD/recomp-ui" \
+            -DNDS_TITLE_BANK_DIR="$PWD/.private/recomp/generated" \
+            -DNDS_TITLE_ROM_SHA1=de1a1915e07288ffad654f3f9f2eb730a0fd1d9c
+          cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 2
+          test -f upstream/runner/build-owner-dusk/nds_runner.exe
+          test -f /ucrt64/bin/SDL3.dll
+      - name: Verify native runner and build one-click GUI EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist, .private/staging | Out-Null
+          Push-Location native-launcher/desktop
+          go test ./... -count=1
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher unit tests failed' }
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/staging/dusk-launcher.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Native GUI launcher build failed' }
+          Pop-Location
+          $runner = 'upstream/runner/build-owner-dusk/nds_runner.exe'
+          $sdl = 'C:/msys64/ucrt64/bin/SDL3.dll'
+          if (!(Test-Path $runner) -or !(Test-Path $sdl)) {
+            throw 'NDSRecomp SDL3 executable or matching SDL3.dll missing'
+          }
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe).Path
+          $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.17 native owner playtest`nSource: $env:GITHUB_SHA`nIncludes original ARM9/ARM7 main bank and FreeBIOS. Uncovered overlays still use Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          Get-ChildItem dist | Select-Object Name, Length
+      - name: Upload actual Windows game with original ROM and SDL3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Digimon-Dusk-PC-Windows-v0.17-PLAYTEST-NATIVE-GAME
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

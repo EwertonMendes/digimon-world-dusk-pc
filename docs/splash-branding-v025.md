@@ -44,7 +44,7 @@ como validada antes de confirmar build, abertura, controles e saves.
 
 O build completo recompila o NDSRecomp/ARM e faz link do runner. A primeira
 v0.24 fez 250 compilações sem cache anterior, por isso levou ~20 minutos.
-O workflow `dusk-recompiled-fast-repack.yml` recompila apenas o launcher
+O modo `fast_repack=true` do workflow `dusk-native-windows-playtest.yml` recompila apenas o launcher
 Go e os recursos cosméticos (ícones/splash) e reutiliza o último runner
 cujo EXE e artefato são fixados por SHA-256 em
 `tools/native-windows-runtime-pin.json`.

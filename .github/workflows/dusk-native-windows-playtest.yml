@@ -215,19 +215,19 @@ jobs:
               throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
             }
           }
-          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
-          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe).Path
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS.exe).Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha  Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Dusk PC v0.19 experimental owner playtest`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "$sha  Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.20 battle-frame diagnostic playtest (v0.19 audio unchanged)`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST-NATIVE-GAME
+          name: Digimon-Dusk-PC-Windows-v0.20-BATTLE-FRAME-DIAGNOSTICS-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7

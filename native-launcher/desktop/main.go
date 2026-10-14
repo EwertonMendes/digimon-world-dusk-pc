@@ -75,7 +75,11 @@ func provision(path string, files map[string][]byte) error {
 	for name, b := range files {
 		dst := filepath.Join(path, name)
 		old, err := os.ReadFile(dst)
-		if err == nil && sha256.Sum256(old) == sha256.Sum256(b) { continue }
+		if err == nil {
+            if sha256.Sum256(old) == sha256.Sum256(b) { continue }
+            return fmt.Errorf("a instalação %s já contém um runtime diferente; atualize appVersion em vez de sobrescrever o executável existente", path)
+        }
+        if !errors.Is(err, os.ErrNotExist) { return err }
 		tmp, err := os.CreateTemp(path, name+".*.tmp")
 		if err != nil { return err }
 		temp := tmp.Name()
@@ -86,6 +90,9 @@ func provision(path string, files map[string][]byte) error {
 		// Windows rename cannot replace an open existing file. A failed update
 		// is explicit; never fall back to executing stale/unverified code.
 		if err = os.Rename(temp, dst); err != nil { os.Remove(temp); return err }
+        verified := sha256.Sum256(b)
+        diskBytes, readErr := os.ReadFile(dst)
+        if readErr != nil || sha256.Sum256(diskBytes) != verified { return fmt.Errorf("arquivo instalado não passou na validação SHA-256: %s (%v)", name, readErr) }
 	}
 	return nil
 }
@@ -125,6 +132,19 @@ func main() {
 	release, err := acquireSaveSession()
 	if err != nil { fatal(err) }
 	defer release()
+    if len(os.Args) == 2 && strings.EqualFold(os.Args[1], "--manage-saves") {
+        if err := manageSaves(p); err != nil { fatal(err) }
+        return
+    }
+    if len(os.Args) == 2 && strings.HasPrefix(os.Args[1], "--restore-backup=") {
+        if err := ensureGameDirectories(p); err != nil { fatal(err) }
+        if err := recoverInterruptedRestore(p); err != nil { fatal(err) }
+        name := strings.TrimPrefix(os.Args[1], "--restore-backup=")
+        if err := restoreBackup(p,name); err != nil { fatal(err) }
+        fmt.Println("Backup validado e restaurado:", name)
+        return
+    }
+    if len(os.Args) != 1 { fatal(errors.New("argumento de inicialização desconhecido")) }
 	if err := prepareGameData(p, base); err != nil { fatal(err) }
 	if err := provision(p.install, files); err != nil { fatal(err) }
 	if err := launch(p); err != nil { fatal(err) }

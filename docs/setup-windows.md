@@ -1,39 +1,36 @@
-# Windows setup and testing
+# Windows — executar jogo ou desenvolver
 
-## Download CI prototype
+## Para jogar
 
-Go to GitHub Actions > `Build and test - ROM free` > successful run > Artifacts > `dusk-pc-windows-presentation-prototype`. Unzip and run `dusk_pc.exe` (no ROM required). Requires Windows 10/11 x64. It is **not** a Digimon game executable yet.
+Use o **executável privado do jogo completo**, fornecido pelo
+responsável pelo projeto. Dois cliques, sem WSL/ROM externa/compilação.
+O pacote v0.16 tem tela nativa SDL3, PC Options, gamepad e save de EEPROM
+original. O pacote v0.17 ainda deve ser reconstruído e testado.
 
-## Build from sources
+Os downloads da aba Actions chamados `dusk-pc-windows-presentation-prototype`
+são testes de um **protótipo sintético**, não o jogo.
 
-Install Git, CMake >=3.20 and Visual Studio 2022 C++ Build Tools or Visual Studio with C++ desktop workload. From Developer PowerShell:
+## Para desenvolver ou validar o código público
+
+No Windows 10/11 x64, instale Git, CMake 3.20+ e Visual Studio C++ Build
+Tools (apenas no PC de desenvolvimento):
 
 ```powershell
-cmake -S . -B build
+cmake -S . -B build -DDUSK_BUILD_TESTS=ON
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-For the ROM analyzer:
+O repositório público testa a geometria e o parsing de ROM; o jogo real
+requer uma compilação privada dos bancos ARM9/ARM7 derivados, SDL3 e
+ROM autenticada, descrita em [recompilation.md](recompilation.md).
 
-```powershell
-.\build\Release\dusk_rom_info.exe "C:\path\to\Digimon World - Dusk (USA).nds" --json
-.\build\Release\dusk_rom_info.exe "C:\path\to\Digimon World - Dusk (USA).nds" --extract-code .private\extracted
-```
+## Perfis persistentes
 
-The application accepts the ROM path as an optional argument but only **checks its identity**. No game code is executed. Do not place the ROM in the repository or CI.
+O save oficial do cartucho fica em
+`%LOCALAPPDATA%\\DuskNativePC\\userdata\\A6RE\\saves\\dusk.sav`.
+Não apague ou sobrescreva manualmente; utilize as opções de backup da
+build apropriada. O gamepad, PiP e demais configurações host são
+independentes do save original.
 
-## Controls
-
-`F1` help, `F2` secondary toggle, `F3` layout selection, `F11` fullscreen, `+`/`-` floating scale, drag floating screen with mouse, `Esc` exits fullscreen.
-
-Settings are persisted in `%APPDATA%\DuskPC\presentation-settings.txt`.
-
-## Research tool setup
-
-- Ghidra: <https://github.com/NationalSecurityAgency/ghidra>
-- NTRGhidra: <https://github.com/pedro-javierf/NTRGhidra>
-- NDSRecomp: <https://github.com/RetroPortingToolKit/ndsrecomp>
-- REA: <https://github.com/morluto/rea>
-
-REA on Windows cannot analyze a Nintendo DS ARM ROM directly. Setup for REA is optional and not required for this prototype. Use native Ghidra/NTRGhidra for DS binaries.
+Consulte [windows-oneclick.md](windows-oneclick.md).

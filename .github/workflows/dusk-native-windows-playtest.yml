@@ -18,7 +18,8 @@ permissions:
   actions: read
 
 concurrency:
-  group: dusk-native-owner-playtest-${{ github.ref }}
+  # Do not let a fast launcher-only repack interrupt a full game build.
+  group: dusk-native-owner-playtest-${{ github.ref }}-${{ inputs.fast_repack }}
   cancel-in-progress: true
 
 jobs:

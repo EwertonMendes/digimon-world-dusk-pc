@@ -51,6 +51,8 @@ class SplashTests(unittest.TestCase):
         self.assertNotIn("SDL_EVENT_MOUSE_BUTTON_DOWN", native)
         self.assertNotIn("SDL_EVENT_GAMEPAD_BUTTON_DOWN", native)
         self.assertIn('"NDS_DUSK_SPLASH_DURATION_MS=5000"', desktop_launcher)
+        self.assertIn("NDS_DUSK_WINDOW_TITLE=", desktop_launcher)
+        self.assertIn("dusk_project_title()", native)
 
         self.assertIn("SDL_RenderTexture", native)
 

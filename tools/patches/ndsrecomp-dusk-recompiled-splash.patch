@@ -8,10 +8,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24" :
  #endif
          presentation.separate ? "ndsrecomp - Top Screen"
-@@ -2390,7 +2390,72 @@
-     return ticks;
- }
- 
+@@ -2390,4 +2390,69 @@
 +#if defined(NDS_HAVE_SDL3)
 +// Host-only splash: ROM/guest frames, timing and save state are untouched.
 +// BMP is generated from approved artwork at build time and integrity-checked

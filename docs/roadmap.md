@@ -42,3 +42,29 @@
 - [ ] Validate save device, native save persistence and compatibility.
 - [ ] Build the fully independent **Windows x64** native runner with
   locally derived game banks, then attach the full native host frontend.
+
+
+## Current Dusk Native Windows v0.14 gates (2026-10-13)
+
+- [x] Private Windows v0.13 SDL3 native gameplay approved by the owner;
+      old roadmap references to Windows/native being pending are historical.
+- [x] Original in-game Dusk cartridge backup plumbing in public launcher
+      (explicit 64 KiB EEPROM, stable user profile, pre-launch backups,
+      conservative legacy migration, concurrency guard).
+- [x] Public pinned upstream patch for save-state shortcut suppression; apply
+      when rebuilding the private Windows SDL3 runtime.
+- [x] ROM-free tests for save geometry, corruption refusal, migration,
+      backup copy, stable path and runner flags.
+- [x] Deterministic gameplay scenario runner and known intro-to-first-map
+      script without save states or manual gameplay rewriting.
+- [ ] Real owner's Windows **in-game Save -> quit -> Continue** roundtrip with
+      confirmation of inventory, party, location and quest flags.
+- [ ] Confirm same save in a second, rebuilt release (not only restart v0.14).
+- [ ] Rebuild the private native SDL3 game runner with the new save-state
+      suppression patch; interim v0.14 test package may reuse v0.13 runtime.
+- [ ] Extend reproducible checks to battle, items, rewards, maps,
+      digivolution, story ending and long-play sound integrity.
+- [ ] AOT long-tail route coverage and elimination of remaining Tier3 paths.
+
+Do not mark the original full campaign proven just because ROM-free CI
+and a first-story-map regression pass.

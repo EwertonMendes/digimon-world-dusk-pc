@@ -249,6 +249,12 @@ jobs:
           $exe = (Resolve-Path "dist/$env:RELEASE_FILENAME").Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
+          $meta = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
+          if ($meta.ProductName -ne 'Digimon World Dusk Recompiled' -or
+              $meta.FileDescription -ne 'Digimon World Dusk Recompiled' -or
+              $meta.ProductVersion -ne 'v0.24') {
+            throw "Windows PE branding incorrect: $($meta.ProductName) / $($meta.FileDescription) / $($meta.ProductVersion)"
+          }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$sha  $env:RELEASE_FILENAME" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
           "Digimon World Dusk Recompiled v0.24 - Recompiled by Tblack. Native startup splash (skippable), verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt

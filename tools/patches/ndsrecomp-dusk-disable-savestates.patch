@@ -1,6 +1,6 @@
 --- a/runner/src/frontend.cpp
 +++ b/runner/src/frontend.cpp
-@@ -3084,10 +3084,13 @@
+@@ -3084,9 +3084,12 @@
                  NdsSavestateSlotCommand state_command{};
                  const unsigned function_key = savestate_function_key(scancode);
                  const bool state_shortcut = nds_savestate_slot_shortcut(

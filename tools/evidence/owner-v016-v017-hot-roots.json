@@ -1,0 +1,548 @@
+{
+  "schema": 1,
+  "rom_sha256": "df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb",
+  "notes": "Owner Oct 13-14 five session observations. Only PCs, modes, and code page SHA1; no game data. Each root bit was checked in its captured generation and ROM image locally. Build always verifies ROM SHA256 and complete page hash then emits live-byte guarded code.",
+  "banks": {
+    "dusk_arm9_main": [
+      {
+        "pc": "0x02009B80",
+        "mode": "arm",
+        "page_sha1": "7a4a4c0fcb1f895128addb32671ae5e4c09e0913"
+      },
+      {
+        "pc": "0x02009C2C",
+        "mode": "arm",
+        "page_sha1": "7a4a4c0fcb1f895128addb32671ae5e4c09e0913"
+      },
+      {
+        "pc": "0x02019AC8",
+        "mode": "arm",
+        "page_sha1": "2b842a466ffd80ca5d1d42b5ab985a705a0ba055"
+      },
+      {
+        "pc": "0x02028D40",
+        "mode": "arm",
+        "page_sha1": "239215dbbc95c1edab305a675a3829c285049900"
+      },
+      {
+        "pc": "0x02028F04",
+        "mode": "arm",
+        "page_sha1": "239215dbbc95c1edab305a675a3829c285049900"
+      },
+      {
+        "pc": "0x0204D2BC",
+        "mode": "arm",
+        "page_sha1": "535e562fc04ff00c47ad5d802fff6e00d9942261"
+      },
+      {
+        "pc": "0x0204F518",
+        "mode": "arm",
+        "page_sha1": "2c8af233ec5360e84c5e468f7cd2a3ac9889e35e"
+      },
+      {
+        "pc": "0x0204FBF8",
+        "mode": "arm",
+        "page_sha1": "2c8af233ec5360e84c5e468f7cd2a3ac9889e35e"
+      },
+      {
+        "pc": "0x02062418",
+        "mode": "arm",
+        "page_sha1": "1edeeefbc1fef222ea2e79972f6ddd58d450d8fc"
+      },
+      {
+        "pc": "0x020624B0",
+        "mode": "arm",
+        "page_sha1": "1edeeefbc1fef222ea2e79972f6ddd58d450d8fc"
+      },
+      {
+        "pc": "0x02062830",
+        "mode": "arm",
+        "page_sha1": "1edeeefbc1fef222ea2e79972f6ddd58d450d8fc"
+      },
+      {
+        "pc": "0x02063A24",
+        "mode": "arm",
+        "page_sha1": "eb5575e8da1eae214c6e6f795d4f33e1bf20cf11"
+      },
+      {
+        "pc": "0x02075514",
+        "mode": "arm",
+        "page_sha1": "f9eba5642d478e097d8bbc7e8564fcf412e7421c"
+      },
+      {
+        "pc": "0x0207589C",
+        "mode": "arm",
+        "page_sha1": "f9eba5642d478e097d8bbc7e8564fcf412e7421c"
+      },
+      {
+        "pc": "0x02075368",
+        "mode": "arm",
+        "page_sha1": "f9eba5642d478e097d8bbc7e8564fcf412e7421c"
+      },
+      {
+        "pc": "0x020757FC",
+        "mode": "arm",
+        "page_sha1": "f9eba5642d478e097d8bbc7e8564fcf412e7421c"
+      },
+      {
+        "pc": "0x0207B1F4",
+        "mode": "arm",
+        "page_sha1": "258d9185b19e5d80b8107f79ed5ccb111b8184ac"
+      },
+      {
+        "pc": "0x0207C51C",
+        "mode": "arm",
+        "page_sha1": "728ba212504fcb186fcac490a2288c4a28e4843e"
+      },
+      {
+        "pc": "0x0207D7FC",
+        "mode": "arm",
+        "page_sha1": "8c7c1685b4c7931aae3f37efc6eaa58656a78c6c"
+      },
+      {
+        "pc": "0x020C79E8",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7F90",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7D04",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7750",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7CF4",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7DDC",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7F9C",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C7DBC",
+        "mode": "arm",
+        "page_sha1": "ba6e46657f24e682db075261d3ab5be4e6cabecc"
+      },
+      {
+        "pc": "0x020C8114",
+        "mode": "arm",
+        "page_sha1": "43177290cd4ab8b4293430fe8872e9b069fd8345"
+      },
+      {
+        "pc": "0x020C820C",
+        "mode": "arm",
+        "page_sha1": "43177290cd4ab8b4293430fe8872e9b069fd8345"
+      },
+      {
+        "pc": "0x020C80E8",
+        "mode": "arm",
+        "page_sha1": "43177290cd4ab8b4293430fe8872e9b069fd8345"
+      },
+      {
+        "pc": "0x020C8180",
+        "mode": "arm",
+        "page_sha1": "43177290cd4ab8b4293430fe8872e9b069fd8345"
+      },
+      {
+        "pc": "0x020C81A8",
+        "mode": "arm",
+        "page_sha1": "43177290cd4ab8b4293430fe8872e9b069fd8345"
+      }
+    ],
+    "dusk_arm9_ovl00": [
+      {
+        "pc": "0x021FE91C",
+        "mode": "arm",
+        "page_sha1": "1fce79be1af5fb759eba35c1869262e12583aad2"
+      },
+      {
+        "pc": "0x021FE870",
+        "mode": "arm",
+        "page_sha1": "1fce79be1af5fb759eba35c1869262e12583aad2"
+      },
+      {
+        "pc": "0x021FF8CC",
+        "mode": "arm",
+        "page_sha1": "55ea79bb9f1c0480669b7842066ff1cb3b577019"
+      },
+      {
+        "pc": "0x0220064C",
+        "mode": "arm",
+        "page_sha1": "746ca7f422c89e64b9f1b60c71a7a75422a0ef04"
+      },
+      {
+        "pc": "0x02201DC0",
+        "mode": "arm",
+        "page_sha1": "cf78e12c2d249c101d6aa450e2d3df2b6a357e27"
+      },
+      {
+        "pc": "0x02202544",
+        "mode": "arm",
+        "page_sha1": "b1c9c2d977abcdd73d79ac5327342e620f410e51"
+      },
+      {
+        "pc": "0x02203C0C",
+        "mode": "arm",
+        "page_sha1": "2b608acbafdda9a47155de11bacf7dbc52abc143"
+      },
+      {
+        "pc": "0x02203A38",
+        "mode": "arm",
+        "page_sha1": "2b608acbafdda9a47155de11bacf7dbc52abc143"
+      },
+      {
+        "pc": "0x022040C0",
+        "mode": "arm",
+        "page_sha1": "c30302a384f7c6c40805d1893978670ccf715ec5"
+      },
+      {
+        "pc": "0x0220461C",
+        "mode": "arm",
+        "page_sha1": "c30302a384f7c6c40805d1893978670ccf715ec5"
+      },
+      {
+        "pc": "0x02204B88",
+        "mode": "arm",
+        "page_sha1": "c30302a384f7c6c40805d1893978670ccf715ec5"
+      },
+      {
+        "pc": "0x02204FDC",
+        "mode": "arm",
+        "page_sha1": "c30302a384f7c6c40805d1893978670ccf715ec5"
+      },
+      {
+        "pc": "0x02205078",
+        "mode": "arm",
+        "page_sha1": "bf903b679e8bb3b6d1b767d1e4fc31e090779ab3"
+      },
+      {
+        "pc": "0x022056F8",
+        "mode": "arm",
+        "page_sha1": "bf903b679e8bb3b6d1b767d1e4fc31e090779ab3"
+      },
+      {
+        "pc": "0x02205CC0",
+        "mode": "arm",
+        "page_sha1": "bf903b679e8bb3b6d1b767d1e4fc31e090779ab3"
+      },
+      {
+        "pc": "0x02205B2C",
+        "mode": "arm",
+        "page_sha1": "bf903b679e8bb3b6d1b767d1e4fc31e090779ab3"
+      }
+    ],
+    "dusk_arm9_ovl01": [
+      {
+        "pc": "0x021FC04C",
+        "mode": "arm",
+        "page_sha1": "bd3b53abf5418fbc6a33f98d967e577b59ddde4f"
+      },
+      {
+        "pc": "0x021FDAF4",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FDBD4",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FDC1C",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FD0A0",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FD458",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FDABC",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FD2C0",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FD678",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FD85C",
+        "mode": "arm",
+        "page_sha1": "55d38a08a691ccc0205c91ef8dc21caf8adb3aa4"
+      },
+      {
+        "pc": "0x021FE91C",
+        "mode": "arm",
+        "page_sha1": "08bbbec2d7836f281e0dda3782df19d3018c6054"
+      },
+      {
+        "pc": "0x021FE870",
+        "mode": "arm",
+        "page_sha1": "08bbbec2d7836f281e0dda3782df19d3018c6054"
+      }
+    ],
+    "dusk_arm9_ovl02": [
+      {
+        "pc": "0x022294F8",
+        "mode": "arm",
+        "page_sha1": "04c1d9dee9c13e53dcdbf9269f001aaebdc24566"
+      },
+      {
+        "pc": "0x022294A4",
+        "mode": "arm",
+        "page_sha1": "04c1d9dee9c13e53dcdbf9269f001aaebdc24566"
+      },
+      {
+        "pc": "0x0222948C",
+        "mode": "arm",
+        "page_sha1": "04c1d9dee9c13e53dcdbf9269f001aaebdc24566"
+      },
+      {
+        "pc": "0x022294D4",
+        "mode": "arm",
+        "page_sha1": "04c1d9dee9c13e53dcdbf9269f001aaebdc24566"
+      },
+      {
+        "pc": "0x022294B0",
+        "mode": "arm",
+        "page_sha1": "04c1d9dee9c13e53dcdbf9269f001aaebdc24566"
+      }
+    ],
+    "dusk_arm9_ovl06": [
+      {
+        "pc": "0x022871D4",
+        "mode": "arm",
+        "page_sha1": "e2228ffdecf1f932c68e1482dba49f8a35ab04bd"
+      },
+      {
+        "pc": "0x0228DD58",
+        "mode": "arm",
+        "page_sha1": "150cdcabf123953e20d8b3ec8030f2ba572288a5"
+      },
+      {
+        "pc": "0x0228DE80",
+        "mode": "arm",
+        "page_sha1": "150cdcabf123953e20d8b3ec8030f2ba572288a5"
+      },
+      {
+        "pc": "0x0228D4F0",
+        "mode": "arm",
+        "page_sha1": "150cdcabf123953e20d8b3ec8030f2ba572288a5"
+      },
+      {
+        "pc": "0x0228D4EC",
+        "mode": "arm",
+        "page_sha1": "150cdcabf123953e20d8b3ec8030f2ba572288a5"
+      },
+      {
+        "pc": "0x0228D480",
+        "mode": "arm",
+        "page_sha1": "150cdcabf123953e20d8b3ec8030f2ba572288a5"
+      },
+      {
+        "pc": "0x0228E2E8",
+        "mode": "arm",
+        "page_sha1": "e321b46f69e0badc242e221125833829dff95dfa"
+      }
+    ],
+    "dusk_arm9_ovl07": [
+      {
+        "pc": "0x0228B924",
+        "mode": "arm",
+        "page_sha1": "eb9334ee472ed99c36f29f9150d496f9fbfe1d29"
+      },
+      {
+        "pc": "0x0228DD58",
+        "mode": "arm",
+        "page_sha1": "3ac17b1abe499c981dd0bcf63d01fd5b8fb5c370"
+      },
+      {
+        "pc": "0x0228D19C",
+        "mode": "arm",
+        "page_sha1": "3ac17b1abe499c981dd0bcf63d01fd5b8fb5c370"
+      },
+      {
+        "pc": "0x0228FC9C",
+        "mode": "arm",
+        "page_sha1": "0f7e0008d568bf50eedbd9dcc25e876d48e970d2"
+      },
+      {
+        "pc": "0x0228F2D4",
+        "mode": "arm",
+        "page_sha1": "0f7e0008d568bf50eedbd9dcc25e876d48e970d2"
+      },
+      {
+        "pc": "0x02293A08",
+        "mode": "arm",
+        "page_sha1": "359d4f55275362e7565a9404434e8749d58c5259"
+      },
+      {
+        "pc": "0x02294520",
+        "mode": "arm",
+        "page_sha1": "f9f8b2fd4d250ec069411e34b2b0391ba3baf56b"
+      },
+      {
+        "pc": "0x0229AD60",
+        "mode": "arm",
+        "page_sha1": "4508e78c9b72e9ee1ec604eee386e1df251b362a"
+      },
+      {
+        "pc": "0x0229DE08",
+        "mode": "arm",
+        "page_sha1": "3596b24d10255503bc248039034bf6c7f1005ddc"
+      },
+      {
+        "pc": "0x0229EB3C",
+        "mode": "arm",
+        "page_sha1": "122948c2ee8306eac33708bf5c7c9612d766e8b5"
+      },
+      {
+        "pc": "0x0229EAE8",
+        "mode": "arm",
+        "page_sha1": "122948c2ee8306eac33708bf5c7c9612d766e8b5"
+      },
+      {
+        "pc": "0x0229FF40",
+        "mode": "arm",
+        "page_sha1": "7a2ab7510be7be0fb01a8b5d9f7ba95823ca87eb"
+      },
+      {
+        "pc": "0x0229FA00",
+        "mode": "arm",
+        "page_sha1": "7a2ab7510be7be0fb01a8b5d9f7ba95823ca87eb"
+      },
+      {
+        "pc": "0x0229F7A8",
+        "mode": "arm",
+        "page_sha1": "7a2ab7510be7be0fb01a8b5d9f7ba95823ca87eb"
+      },
+      {
+        "pc": "0x022A03F0",
+        "mode": "arm",
+        "page_sha1": "c32a371b6cb7fd4095b0faf524980c3009940a7f"
+      },
+      {
+        "pc": "0x022A008C",
+        "mode": "arm",
+        "page_sha1": "c32a371b6cb7fd4095b0faf524980c3009940a7f"
+      },
+      {
+        "pc": "0x022A01F4",
+        "mode": "arm",
+        "page_sha1": "c32a371b6cb7fd4095b0faf524980c3009940a7f"
+      },
+      {
+        "pc": "0x022A021C",
+        "mode": "arm",
+        "page_sha1": "c32a371b6cb7fd4095b0faf524980c3009940a7f"
+      },
+      {
+        "pc": "0x022A2C84",
+        "mode": "arm",
+        "page_sha1": "d2c6d7ebc784ad518ecc0237b169f8073ba40e31"
+      },
+      {
+        "pc": "0x022A302C",
+        "mode": "arm",
+        "page_sha1": "253f9effe3f46206532ffd1fcad6097dd4cfad70"
+      }
+    ],
+    "dusk_arm9_ovl09": [
+      {
+        "pc": "0x022841B4",
+        "mode": "arm",
+        "page_sha1": "7971ad534b5f5c6d782b315db9f52e07cd28bb79"
+      },
+      {
+        "pc": "0x02285A68",
+        "mode": "arm",
+        "page_sha1": "630f8e5bdbef9f061272528fad34859195f9342d"
+      },
+      {
+        "pc": "0x022868DC",
+        "mode": "arm",
+        "page_sha1": "3844366e251ad9938ae8c3d746435e4ae6263ec0"
+      },
+      {
+        "pc": "0x02287F4C",
+        "mode": "arm",
+        "page_sha1": "16467e9f08ca6796c9bf24082ccc4c1dbce719bf"
+      },
+      {
+        "pc": "0x02288A84",
+        "mode": "arm",
+        "page_sha1": "6e2aa31b3e6d17dc734e8a5fd37a8913c66d6187"
+      },
+      {
+        "pc": "0x02289C58",
+        "mode": "arm",
+        "page_sha1": "d2f0dc53b332ec0407a3a1085fc93a28a03db2fe"
+      },
+      {
+        "pc": "0x02289860",
+        "mode": "arm",
+        "page_sha1": "d2f0dc53b332ec0407a3a1085fc93a28a03db2fe"
+      },
+      {
+        "pc": "0x0228A6CC",
+        "mode": "arm",
+        "page_sha1": "988bb428b11adb880d1f2ccfeb5e6b287129ae82"
+      },
+      {
+        "pc": "0x0228DAF0",
+        "mode": "arm",
+        "page_sha1": "9c1cbf4e56eb95bcbcf12285ff3a24ed08fcd701"
+      },
+      {
+        "pc": "0x0228E7B0",
+        "mode": "arm",
+        "page_sha1": "6fdaced97c073a5ba7c7696b174596be8fb1d0b5"
+      },
+      {
+        "pc": "0x0228E988",
+        "mode": "arm",
+        "page_sha1": "6fdaced97c073a5ba7c7696b174596be8fb1d0b5"
+      },
+      {
+        "pc": "0x0228E53C",
+        "mode": "arm",
+        "page_sha1": "6fdaced97c073a5ba7c7696b174596be8fb1d0b5"
+      }
+    ],
+    "dusk_arm9_ovl17": [
+      {
+        "pc": "0x022A6B20",
+        "mode": "arm",
+        "page_sha1": "d3dd7b4b3d4b4a80000f29949d7eb21a08165663"
+      }
+    ]
+  }
+}

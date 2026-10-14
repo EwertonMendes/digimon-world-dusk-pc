@@ -159,3 +159,32 @@ was built from unchanged v0.15 AOT banks, with the verified original ROM;
 the public repository contains no ROM, generated game C, owner game
 save or full Windows payload. Same permanent A6RE in-game save profile as
 previous builds. Keep v0.15 available for rollback.
+
+
+## PC Options exclusive controller input — menu input fix
+
+The original DS simulation, video and audio **continue normally** while the PC
+Options overlay is displayed. The overlay exclusively owns the host inputs:
+
+- **Left stick** and D-pad: up/down select from all 10 PC Options rows;
+  left/right changes the selected value. The left stick uses a 55% entry
+  deadzone, 37% release hysteresis and controlled repeat (first repeat after
+  18 presented frames, then every fifth frame), matching normal PC menus.
+- **A / Enter:** applies. **B / Start / Back / Esc / F10:** close the
+  overlay, or cancel the Quit Game confirmation as appropriate.
+- **Quit Game confirmation:** left/right choose Cancel/Quit; A confirms.
+- **Right stick touch, mouse, keypad, DS button masks and virtual stylus** do
+  not feed the guest while the overlay is active. Opening the overlay clears
+  all held guest inputs, including those already pressed when it was opened,
+  and releases any active touchscreen contact; closing restores normal
+  controls. The menu itself does **not** pause the original DS scheduler,
+  audio playback or render updates.
+- Implemented by additive pinned-source patch
+  `tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch`. CI requires
+  the patch to apply after v2 UX polish and runs the ROM-free
+  `tests/native_pc_menu_input.cpp` analog navigation/edge/repeat tests.
+
+The bundled v0.16 Windows test executable uses the same permanent A6RE
+in-game save and original v0.15 ARM9/ARM7 banks. This fix changes *host input
+routing only*, not guest game logic or EEPROM geometry. PR remains draft
+until the owner confirms input capture works in real gameplay.

@@ -59,6 +59,39 @@ them on every one-line Python/workflow edit is wasted work.
    to avoid wasting a runner on an outdated game revision. A finished build is
    never silently substituted into a newer version.
 
+### Measured results and one-minute boundary (2026-10-14)
+
+Reproduced on **actual Windows GitHub-hosted runners** with the v0.20
+battle-diagnostic candidate (same pinned NDSRecomp, same generated title
+banks). Source: [cold run 38629961367](https://github.com/EwertonMendes/digimon-world-dusk-pc/actions/runs/38629961367),
+[warmed run 38633028382](https://github.com/EwertonMendes/digimon-world-dusk-pc/actions/runs/38633028382),
+[fast runner repack 38633917442](https://github.com/EwertonMendes/digimon-world-dusk-pc/actions/runs/38633917442).
+
+| Mode | Actual CI job time | Cache evidence |
+| --- | --- | --- |
+| Cold complete native runner | 19m01s | 5 / 255 ccache hits; no stored C cache at start |
+| Warm complete native runner | **3m24s** | 254 / 255 ccache hits (99.61%); the expensive native C/C++ compile step itself took **12s** |
+| Exact pinned Windows runner + warm Go cache, launcher only | **50s** | original runner hash verified before repack, Go build cache restored, PE bundle check passed |
+
+The mode that meets the **one-minute target** is therefore *launcher-only
+repack when the native code is unchanged*. The full native build is no
+longer 19 minutes once its cache has warmed, but **3m24s is still not
+one minute**, in part because Windows/MSYS2 package setup takes ~90s.
+Do not promise a 60s cold build on stock GitHub-hosted Windows runners.
+Substantially faster clean native builds would require a persistent,
+pre-provisioned runner with enough cores/RAM or a prebuilt verified native
+runner from exactly matching input hashes; neither permits silently
+reusing stale audio/emulator code.
+
+The native object cache is saved **as soon as the C/C++ runner succeeds**,
+before Go launcher/PE packaging or upload failure can discard compilation
+work. The fast repack prefers an installed Go toolchain (with 1.23+
+verification and setup-go fallback) and caches Go stdlib/launcher build
+objects by compiler version and launcher source. The game ROM, EEPROM
+save and real DS audio timing are completely outside those optimizations.
+The fast path must verify both the pinned bundle SHA and launcher version;
+a v0.19 runner must never be labelled as containing v0.20 instrumentation.
+
 **Expected impact:** a cold full build can still be slow; later builds with
 unchanged generated C should reuse objects and become faster. Actual speed
 must be taken from GitHub job timings and `ccache --show-stats`, not assumed.
@@ -80,8 +113,8 @@ stays at
 Hold Shift at launch for save/backups management.
 
 The v0.19 native AOT profile builds more ARM9 dispatch coverage than the
-v0.15 baseline but does **not** yet restore the ARM7 baseline. That is why
-the existing PR remains **draft**. The `--verify-bundle` and CI success
+v0.15 baseline but does **not** yet restore the ARM7 baseline. The owner has approved the corrected v0.19 audio and merged PR #21. The
+minor battle-HP/stat video microhitch remains isolated in draft PR #22. The `--verify-bundle` and CI success
 checks verify generated binaries, package integrity and test fixtures; they
 do **not** prove no audio/video frame hitches. Re-test area transitions,
 S-menu/submenus, battle entrance and HP/MP changes on Windows before merging.

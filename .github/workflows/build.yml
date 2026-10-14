@@ -34,6 +34,22 @@ jobs:
       - name: Install pinned icon-generation dependency
         if: runner.os == 'Linux'
         run: python -m pip install Pillow==11.3.0
+      - name: Export reviewable splash PNG without compiling game
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/generate_splash.py
+          python3 - <<'PY'
+          from PIL import Image
+          with Image.open('assets/splash/generated/dusk-splash.bmp') as art:
+              assert art.size == (1280, 720)
+              art.save('dusk-splash-preview.png', optimize=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: Tblack-Splash-PREVIEW-PNG
+          path: dusk-splash-preview.png
+          retention-days: 30
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
         run: |

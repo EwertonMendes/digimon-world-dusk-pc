@@ -25,6 +25,7 @@ DESKTOP = NATIVE_UI + (
     "ndsrecomp-dusk-transition-audio-headroom.patch",
     "ndsrecomp-dusk-pc-menu-input-capture.patch",
     "ndsrecomp-dusk-battle-frame-spikes.patch",
+    "ndsrecomp-dusk-precise-pacing.patch",
 )
 
 

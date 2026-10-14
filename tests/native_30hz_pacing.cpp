@@ -8,7 +8,8 @@
 int main() {
     using namespace dusk_native;
     Config c{};
-    // Immersive PC defaults to full visual rate; the 30fps option is opt-in.\n    assert(!c.half_present);
+    // Immersive PC defaults to full visual rate; the 30fps option is opt-in.
+    assert(!c.half_present);
     std::uint64_t rendered_30=0, rendered_60=0;
     constexpr std::uint64_t virtual_guest_frames=1200;
     for(std::uint64_t n=0;n<virtual_guest_frames;++n) {

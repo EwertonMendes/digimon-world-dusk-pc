@@ -105,6 +105,7 @@ jobs:
             -DNDS_SDL_BACKEND=SDL3 \
             -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
             -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON \
+            -DNDS_BOOTSTRAP_FIRMWARE=ON \
             -DNDS_RECOMP_UI_ROOT="$PWD/recomp-ui" \
             -DNDS_TITLE_BANK_DIR="$PWD/.private/recomp/generated" \
             -DNDS_TITLE_ROM_SHA1=de1a1915e07288ffad654f3f9f2eb730a0fd1d9c

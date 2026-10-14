@@ -191,3 +191,18 @@ func prepareGameData(p gamePaths, base string) error {
     if err := migrateLegacyIdentity(p, base); err != nil { return err }
     return backupSave(p)
 }
+
+
+func runnerArgs(p gamePaths) []string {
+    // Original Dusk DS menu saves only. The patched SDL frontend disables
+    // save-state hotkeys independently; never pass --no-save here.
+    return []string{
+        p.console, "--rom", filepath.Join(p.install, "game.nds"),
+        "--interactive", "--boot", "direct", "--generated-firmware", "--freebios",
+        "--network", "off", "--config", p.config,
+        "--save-path", p.save, "--firmware-state-path", p.firmware,
+        "--screen-layout", "stacked", "--fullscreen", "off",
+        "--diagnostics", "on", "--diagnostics-dir", p.diagnostics,
+        "--diagnostics-interval-ms", "1000",
+    }
+}

@@ -77,7 +77,7 @@ class DispatchTests(unittest.TestCase):
             self.write(b,"dusk_arm7_main_dispatch.c",source("dusk_arm7_main"))
             with self.assertRaisesRegex(ValueError,"Missing original bank"):
                 verify_dispatch_growth(a,b)
-            with self.assertRaises(ValueError):
+            with self.assertRaises(FileNotFoundError):
                 read_dispatch_rows([a/"missing_dispatch.c"])
 
 if __name__ == "__main__":

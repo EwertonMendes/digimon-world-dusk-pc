@@ -334,19 +334,25 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  }
  #endif
  
-@@ -1977,7 +2110,10 @@
+@@ -1977,9 +2110,15 @@
      // Fullscreen is applied only after both separate-layout windows have their
      // final placement. The primary combined/top window is deliberately the
      // sole target so the separate touch window remains usable.
 -    if (!set_window_fullscreen(presentation.windows[0], options.fullscreen)) {
-+    if (!set_window_fullscreen(presentation.windows[0],
-+          presentation.dusk.enabled ? (presentation.dusk.cfg.fullscreen
-+                ? NdsFullscreenMode::Borderless : NdsFullscreenMode::Off)
-+                : options.fullscreen)) {
++    NdsFullscreenMode dusk_fullscreen_choice=options.fullscreen;
++#if defined(NDS_HAVE_SDL3)
++    if(presentation.dusk.enabled)
++        dusk_fullscreen_choice=presentation.dusk.cfg.fullscreen
++            ? NdsFullscreenMode::Borderless : NdsFullscreenMode::Off;
++#endif
++    if (!set_window_fullscreen(presentation.windows[0],dusk_fullscreen_choice)) {
          std::fprintf(stderr, "[sdl] fullscreen (%s) failed: %s\n",
-                      nds_fullscreen_mode_name(options.fullscreen),
+-                     nds_fullscreen_mode_name(options.fullscreen),
++                     nds_fullscreen_mode_name(dusk_fullscreen_choice),
                       SDL_GetError());
-@@ -2184,20 +2320,27 @@
+         destroy_presentation(presentation);
+         return false;
+@@ -2184,20 +2323,27 @@
  #if defined(NDS_HAVE_SDL3)
          if(presentation.dusk.enabled) {
              const auto geo=dusk_geometry(presentation);
@@ -383,7 +389,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              ticks.draw+=SDL_GetPerformanceCounter()-start;
              start=SDL_GetPerformanceCounter();
              SDL_RenderPresent(renderer);
-@@ -3251,39 +3394,91 @@
+@@ -3251,39 +3397,91 @@
          SDL_Event event{};
          while (SDL_PollEvent(&event)) {
  #if defined(NDS_HAVE_SDL3)
@@ -507,7 +513,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              }
  #endif
              convert_mouse_event_to_logical_coordinates(event, presentation);
-@@ -4338,7 +4533,7 @@
+@@ -4338,7 +4536,7 @@
                      : "";
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)

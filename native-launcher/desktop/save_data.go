@@ -11,11 +11,10 @@ import (
     "sort"
     "strconv"
     "strings"
-    "time"
 )
 
 const (
-    appVersion = "v0.16"
+    appVersion = "v0.17"
     // NTR-A6RE-USA: 512-kbit cartridge EEPROM. No save states are used.
     duskSaveSize = 64 * 1024
     duskCartridgeConfig = "[cartridge]\nsave_type = \"eeprom\"\nsave_size = 65536\n"
@@ -169,23 +168,11 @@ func migrateLegacyIdentity(p gamePaths, base string) error {
     return nil
 }
 
-func backupSave(p gamePaths) error {
-    exists, err := validSave(p.save)
-    if err != nil || !exists { return err }
-    digest, err := hashFile(p.save)
-    if err != nil { return err }
-    dest := filepath.Join(p.profile, "backups", fmt.Sprintf("dusk-%s-%s.sav", time.Now().UTC().Format("20060102T150405.000000000Z"), digest[:12]))
-    if err := copyNewFile(dest, p.save); err != nil { return fmt.Errorf("backup pré-jogo falhou, execução bloqueada: %w", err) }
-    copiedHash, err := hashFile(dest)
-    if err != nil || copiedHash != digest {
-        os.Remove(dest)
-        return fmt.Errorf("backup pré-jogo divergiu do save de origem: %v", err)
-    }
-    return nil
-}
+func backupSave(p gamePaths) error { return makeBackup(p) }
 
 func prepareGameData(p gamePaths, base string) error {
     if err := ensureGameDirectories(p); err != nil { return err }
+    if err := recoverInterruptedRestore(p); err != nil { return err }
     if err := writeGameConfig(p); err != nil { return err }
     if err := migrateLegacySave(p, base); err != nil { return err }
     if err := migrateLegacyIdentity(p, base); err != nil { return err }

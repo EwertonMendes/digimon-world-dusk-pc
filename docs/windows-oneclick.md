@@ -1,76 +1,71 @@
-# Windows native one-click preview (v0.4)
+# Windows x64 — pacote privado de um clique (v0.16 / v0.17)
 
-## User experience
+## Jogador: sem preparação nem compilação
 
-The **privately bundled** `Digimon-Dusk-PC-Windows-v0.4.exe` is a standalone **Windows x64** entrypoint. Double-click it. No WSL, Python, user-provided ROM file, compiler, or build steps are required on the tester's computer. On launch it:
+O executável de jogo completo é criado **em ambiente privado** com o runner
+NDSRecomp ARM9/ARM7 recompilado, a ROM de Dusk verificada e SDL3. Basta dar
+dois cliques. Não é necessário abrir navegador, instalar WSL, instalar
+ferramentas de desenvolvimento nem selecionar uma ROM externa.
 
-1. Validates a cryptographically authenticated, appended private archive.
-2. Verifies the exact Dusk USA ROM SHA-256 and a Windows AMD64 runtime.
-3. Extracts the required private NDSRecomp executable and ROM to `%LOCALAPPDATA%\DuskNativePC\v0.4`.
-4. Creates and persists a locally administered generated firmware identity.
-5. Starts the Windows x64 **recompiled** ARM9/ARM7 runner and its local debug socket.
-6. Opens the default browser to a loopback-only interface, fullscreen/layout capable.
-7. Uses keyboard/touch to drive the **actual game** via the runner. No streamed remote gaming, nor a substituted emulator executable.
+O executável público `dusk_pc.exe` produzido pelo CMake/CI **é apenas
+uma demonstração de apresentação**, não o jogo verdadeiro.
 
-**Important:** The Windows binary was compiled and validated as a Windows PE/AMD64 file, but interactive boot and renderer correctness **have not yet been tested on the user's Windows machine**. The earlier full title-to-first-map route is validated on **Linux x64** only. The Windows executable is an experimental alpha, **not** a verified complete game port. Audio, saves, battles and long sessions are unverified/disabled.
+## Instalador e persistência
 
-## Repository and legal boundary
+- v0.16 já possui uma build privada Windows x64 testada pelo jogador.
+- v0.17 está em desenvolvimento na PR #17. Mudanças no launcher não produzem
+  automaticamente uma build nova do runner ARM com as mesmas alterações.
+- Cada nova versão instala o runtime em
+  `%LOCALAPPDATA%\\DuskNativePC\\v0.XX`.
+- O **save original de 64 KiB** permanece em
+  `%LOCALAPPDATA%\\DuskNativePC\\userdata\\A6RE\\saves\\dusk.sav`.
+- Identidade de firmware, dados pessoais e backups ficam no perfil estável
+  `userdata/A6RE`, não no diretório do executável.
+- O launcher verifica assinatura SHA-256 do arquivo zip incorporado e a
+  variante correta do jogo, recusando pacotes incompatíveis.
 
-**NEVER** commit or upload ROMs, proprietary assets, extracted game code, generated ARM C, privately packaged Windows executable or saves. This GitHub repository is public.
+### Novos backups v0.17
 
-The public build workflow builds the ROM-free Go launcher template, using:
+O launcher evita backups idênticos em aberturas repetidas, mantém 20 versões
+automáticas distintas e recusa restaurações cujo hash ou tamanho de EEPROM
+esteja incorreto. O processo exige exclusividade de acesso ao perfil.
+
+O comando `Digimon-Dusk-PC-Windows-v0.17.exe --manage-saves` abre um
+pequeno diálogo nativo Windows para restaurar o backup **mais recente** ou
+abrir a pasta com backups antigos. Isso **ainda não é uma tela integrada
+ao PC Options** e só estará disponível após empacotamento privado v0.17.
+
+## Criar pacote privado (máquina de desenvolvimento)
+
+O repositório público contém o empacotador, mas **não** a ROM, arquivos
+ARM derivados ou o runtime Windows completo. Exemplo:
 
 ```sh
-cd native-launcher
-go test ./...
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o ../DuskPC-Launcher-Windows-x64.exe .
+python tools/pack_native_private.py \
+  --launcher /private/launcher-v017.exe \
+  --runner /private/runner.exe \
+  --sdl /private/SDL3.dll \
+  --rom /private/game.nds \
+  --output /private/Digimon-Dusk-PC-Windows-v0.17.exe \
+  --baseline-dispatch /private/v016_dispatch \
+  --candidate-dispatch /private/v017_dispatch
 ```
 
-GitHub Actions uploads `dusk-windows-one-click-launcher-rom-free`. **This template alone is not playable.** The private Linux/Windows native runner, compiled title banks and the user's own ROM are inserted locally by the packaging command below.
+O empacotador valida ROM, formato de executáveis, dependência de SDL3 e
+integridade do despacho se fornecidos os dois diretórios. A geração AOT
+exige acesso à ROM original e aos bancos validados da build anterior.
 
-## Private one-click packaging for each subsequent test build
+**Não** anexar ROM, jogo empacotado, código gerado ou saves ao workflow
+público por padrão. Direitos do jogo original e a PolyForm Noncommercial
+1.0.0 do NDSRecomp são obrigações independentes.
 
-Prerequisites **on the developer/packaging machine only** (never on the tester's PC):
+## Controles
 
-- The verified Dusk USA ROM: SHA-256 `df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb`.
-- A Windows x64 NDSRecomp runner compiled with that exact ROM's private ARM7/ARM9 banks, pinned upstream `3a57236bb23d25dcb4caad7d58d733311062ff5e`.
-- The ROM-free Windows launcher template, built from public source/CI.
+Consultar [PC Options v0.16](native-immersive-ui-v016.md).
+`Esc/F10` abre o menu do host; `F11` alterna fullscreen; teclado,
+mouse e gamepad controlam o jogo, incluindo touchscreen virtual e PiP.
 
-Create private `Digimon-Dusk-PC-Windows-v0.4.exe` in **one packaging command**:
+## Erros
 
-```sh
-python native-launcher/tools/pack_private.py \
-  --launcher DuskPC-Launcher-Windows-x64.exe \
-  --runner /private/build/nds_runner.exe \
-  --rom /private/Digimon-World-Dusk-USA.nds \
-  --out /private/releases/Digimon-Dusk-PC-Windows-v0.4.exe
-```
-
-The produced PE contains an appended ZIP archive with the ROM and native runtime, plus a fixed-length trailer containing the compressed archive's length and SHA-256. The launcher verifies all archive contents and exact ROM identity before extracting. The packer validates both executable PE architectures. It produces a truly self-contained one-click test binary for Windows, not another WSL development kit.
-
-The private bundle is distributed directly to the user and must never be uploaded to this public GitHub repository or Actions artifacts. The corresponding modified NDSRecomp sources, private generated C and frontend sources should accompany privately shared builds to satisfy licenses and preserve reproducibility.
-
-## Controls
-
-- Z / X: DS A / B
-- Enter: Start
-- Arrows or WASD: D-pad
-- Q / E: shoulders L/R
-- Mouse click/touchscreen: lower DS screen
-- Tab: hide/show secondary display
-- F11: browser fullscreen
-- Screen layout dropdown: modern, floating, side by side, classic or main-only.
-
-## Diagnostics
-
-Windows runner logs are at `%LOCALAPPDATA%\DuskNativePC\v0.4\native-preview.log`. The launcher writes to a user-writable directory and binds both its debug and browser servers to localhost; no inbound public networking is required.
-
-No production saves are performed in this alpha (`--no-save`), so progress from tests is temporary.
-
-## Cross-platform follow-up
-
-The native launcher is written in Go and the runner in portable C/C++. The packaging format can be extended for Linux/macOS after platform-specific runner binaries and validation exist. **Do not call the current Windows PE multi-platform**.
-
-## Current engineering caveat
-
-The public repository's Windows ROM-free runner feasibility job has separately encountered upstream POSIX network porting issues; the private Windows runner was cross-compiled from an explicitly patched tree with Zig 0.14.1 and includes the title banks. This proves a Windows PE was linked, not that its runtime boot logic is already verified on Windows.
+Consultar [resolução de problemas](troubleshooting.md) e os diagnósticos
+sob a pasta de instalação versionada em `%LOCALAPPDATA%`.

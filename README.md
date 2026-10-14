@@ -1,142 +1,88 @@
-# Digimon World Dusk PC — native port research
+# Digimon World Dusk PC — recompilação nativa
 
-**Status (2026-10-13): real Dusk ARM9/ARM7 code compiled and privately tested through the first in-game story map. The public Windows `dusk_pc.exe` remains a synthetic presentation demo. An experimental real-game Linux/WSL browser-display package exists for the original ROM owner, but a standalone Windows executable and complete playthrough are not yet validated.**
+Projeto de recompilação estática do **Digimon World Dusk (Nintendo DS)**,
+preservando o código ARM9/ARM7 original. Não é uma reescrita de batalhas,
+menus ou campanha em linguagem de alto nível.
 
-This repository contains original, ROM-free code for investigating a native PC port of *Digimon World Dusk* (Nintendo DS). The technical goal is static recompilation (NDSRecomp where feasible), a compatible runtime, and a desktop presentation compositor.
+## Estado verificável — 14/10/2026
 
-## Completed in this iteration
+- **v0.16**: build privada Windows x64 jogável, com SDL3 nativo, Focus + PiP,
+  janela/tela cheia, PC Options, teclado, mouse, gamepad e save de cartucho
+  EEPROM 64 KiB. Os testes do proprietário continuam durante o gameplay;
+  não há alegação de campanha inteira certificada.
+- **v0.17 (em desenvolvimento)**: consolidação segura de cobertura AOT,
+  telemetria de sessões reais, retenção e restauração de saves, documentação
+  e melhorias progressivas de arquitetura. Consulte a [PR #17](https://github.com/EwertonMendes/digimon-world-dusk-pc/pull/17)
+  e [roadmap](docs/roadmap.md) para itens aprovados e pendentes.
+- O `dusk_pc.exe` produzido no CI público é **somente a demonstração
+  gráfica sintética**, não o jogo completo.
+- O GitHub público não publica o executável com ROM nem código ARM derivado.
+  A ferramenta de empacotamento privada cria um **Windows EXE de um clique**,
+  com runtime SDL3 e ROM verificada já incluídos, sem WSL ou compilação no
+  computador de quem joga.
 
-- C++20/CMake cross-platform core and unit tests.
-- `dusk_rom_info`: identify/validate Nintendo DS ROM, SHA-256, header CRC16, ARM9/ARM7 segment maps, 18 ARM9 overlays, FAT mapping. Explicit optional private extraction of code segments.
-- `dusk_pc.exe` **Windows presentation-only** sample with synthetic frames, fullscreen, five layouts, auxiliary-screen drag/scale/toggle, settings persistence, touchscreen coordinate mapping in the core.
-- GitHub Actions Windows/Linux builds that **do not require or contain ROMs**.
-- Isolated Python helper to clone/build/test upstream NDSRecomp's *recompiler*. **The research build has now generated Dusk title banks locally and registered them with the native runner; this integration is not published with game-derived content.**
+## Como jogar uma build privada Windows
 
-## Windows: download and run
+Execute o pacote Windows x64 entregue pelo responsável pelo projeto.
+O launcher verifica os arquivos, configura o runtime local e abre o jogo.
+Não é necessário selecionar ROM, abrir navegador, instalar compiladores
+ou executar comandos.
 
-1. Open the repo's **Actions** tab and the successful `Build and test - ROM free` run.
-2. Download `dusk-pc-windows-presentation-prototype` from **Artifacts** and unzip.
-3. Run `dusk_pc.exe`. This is a screen-layout demonstration, not gameplay. No installation or ROM needed.
-4. Press `F1` for controls, `F2` to toggle the second screen, `F3` to rotate layouts, `F11` for fullscreen, `+`/`-` to resize the floating screen; drag the second screen while Floating is active.
-5. Optionally run `dusk_rom_info.exe "C:\\path\\to\\your-game.nds" --json` in Terminal to validate your legally obtained ROM. **Do not upload the ROM to GitHub.**
+Seus dados são persistidos entre versões em:
 
-## Local build
+```text
+%LOCALAPPDATA%\DuskNativePC\userdata\A6RE\saves\dusk.sav
+```
 
-Requires CMake 3.20+, C++20 compiler. No external graphics library is necessary for the Win32 presentation backend. On Linux, the build includes the ROM inspector and headless tests, not a GUI.
+O salvamento utiliza o menu original do jogo, **não save states**.
+Em builds v0.17 com o novo launcher, `--manage-saves` abre o diálogo
+de backup/restauração antes do jogo; use apenas quando o jogo estiver fechado.
+
+Controles e PC Options: [interface v0.16](docs/native-immersive-ui-v016.md).
+[Guia de pacote Windows](docs/windows-oneclick.md).
+
+## Arquitetura
+
+```text
+Dusk original ARM9/ARM7 + overlays
+  -> bancos AOT com verificação de bytes em tempo de execução
+  -> NDSRecomp fixado + fallback Tier3 para código não coberto
+  -> SDL3 (vídeo, áudio, controles e PC Options)
+  -> launcher Windows de um clique + EEPROM persistente
+```
+
+O relógio simulado do Nintendo DS permanece em aproximadamente **59,826 Hz**.
+O seletor de apresentação 30/60 FPS não acelera nem desacelera a simulação.
+`16:9 FILL` estica a imagem original: não expande a câmera do jogo.
+
+Documentos: [arquitetura](docs/architecture.md),
+[recompilação](docs/recompilation.md),
+[pesquisa v0.16 segura](docs/research/2026-10-14-v016-owner-sessions-safe.md).
+
+## Desenvolvimento e testes
+
+O CI público testa o núcleo C++20, layouts, controles sintéticos, ferramentas
+Python, regras do NDSRecomp fixado e o launcher Go **sem ROM**.
+Um runner com o jogo completo só pode ser montado no ambiente privado que
+possui a ROM, bancos derivados e DLLs corretas. **Um CI verde não prova
+que uma build completa do jogo foi gerada.**
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DDUSK_BUILD_TESTS=ON
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Using the user's copy of a ROM locally, never from CI:
+Para testar o launcher Windows em CI, use `cd native-launcher/desktop && go test ./...`
+em Windows; para compilar sem executá-lo, pode-se usar cross-compilation Go.
 
-```sh
-./build/dusk_rom_info "path/to/Digimon World - Dusk (USA).nds" --json
-./build/dusk_rom_info "path/to/Digimon World - Dusk (USA).nds" --extract-code .private/extracted
-python tools/bootstrap_recompiler.py
-```
+## Código e distribuição
 
-On Windows the executables may be under `build/Release/`. `bootstrap_recompiler.py` needs an internet connection to clone the upstream source and its CMake/toolchain dependencies. It **only compiles upstream recompiler tests**; no ROM-based banks can be generated by this bootstrap alone.
+O upstream [NDSRecomp](https://github.com/RetroPortingToolKit/ndsrecomp)
+na revisão fixada `3a57236bb23d25dcb4caad7d58d733311062ff5e`
+usa **PolyForm Noncommercial 1.0.0**. É necessária a observância também
+dos direitos associados ao jogo original, independentemente da licença do
+código do launcher. Evite publicar aqui ROMs, BIOS, código extraído,
+bancos ARM gerados, perfis completos de RAM, saves ou pacotes privados.
 
-## ROM handling and scope
-
-- The ROM, firmware/BIOS dumps, extracted assets, code banks and user saves are **never committed or uploaded**.
-- The exact US reference has game code `A6RE`, MD5 `35b6209cf0a69b68a5f78c07d9433c27`, SHA-256 `df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb`.
-- The **public GitHub frontend demonstration** does not run ARM7/ARM9 or display Digimon assets. A **separately built private native runner** now executes the original Dusk ARM9/ARM7 code and renders real game frames; its binaries/derived sources are never committed here. Long-term gameplay, saves and audio are not validated.
-- The repository is public as initially created. Keep only legally distributable original tooling in Git.
-
-## Engineering notes
-
-See `docs/architecture.md`, `docs/recompilation.md`, `docs/research/rom-structure.md`, `docs/setup-windows.md`, and `docs/roadmap.md`. Requirements and decisions are documented in `AGENTS.md`.
-
-## Current recompilation status
-
-We now provide a ROM-hash-verified private bank generator at `tools/prepare_dusk_recomp.py`. Its inputs are the verified US ROM, its outputs are ignored ARM9/ARM7 bank images/configs and, optionally, NDSRecomp-generated C. The 18 overlays can be prepared for investigation but are not automatically dispatched. See `docs/recompilation.md` for local commands. A separate private proof-of-concept runtime has progressed from the title screen through player creation and starter selection into the first story scene. It uses recompiled original code, FreeBIOS, and generated firmware on Linux x64. The full Windows native port, sound, saves, multiplayer, and complete progression remain unproven. The public `dusk_pc.exe` is still synthetic.
-
-## Verified private native gameplay research
-
-The local ARM9/ARM7 runner produced actual frames, accepted START/A/touch controls,
-and reached the first story map. A reproducible local-only script is provided
-under `tools/test_dusk_native_story.py`. The exact-ROM evidence, cycles and
-limitations are documented at
-[`docs/research/native-story-2026-10-13.md`](docs/research/native-story-2026-10-13.md).
-
-An experimental local-browser presentation can interact with the native Linux
-runtime (via WSL2 on Windows), without executing a conventional external emulator.
-That private binary and generated game code are distributed separately to the
-ROM owner. **Do not confuse this with the public synthetic Windows demo, and do
-not upload ROM-derived artifacts here.**
-
-## Windows one-click native alpha — v0.4 (private tester artifact)
-
-The private Windows x64 alpha release now has a **single `.exe` launcher containing both the original ROM supplied by its owner and the recompiled ARM9/ARM7 game runtime**, with a browser-based fullscreen/display interface. The tester does **not** need WSL, Python, a separate ROM, or a build toolchain. See [`docs/windows-oneclick.md`](docs/windows-oneclick.md).
-
-**This private binary is deliberately NOT hosted by public GitHub Actions or committed to this public repository.** It is delivered directly to the ROM owner outside GitHub. CI builds and uploads only a ROM-free Windows launcher template, and `native-launcher/tools/pack_private.py` combines that template with the locally generated private title runtime and verified ROM to produce subsequent one-click builds. This establishes the repeatable release process without publicly redistributing commercial game data.
-
-A successful Windows PE x64 build and private bundled ROM integrity test have been performed. **Actual Windows gameplay must still be validated on the user's Windows computer; Linux reached the first story scene earlier.** Save and audio support remain disabled in this alpha.
-
-## Native Windows desktop preview v0.5 (no browser)
-
-We have a private owner-only Windows x64 build that compiles **the original Dusk ARM9/ARM7 guest code statically** and presents the game with the NDSRecomp **SDL3 native** frontend (`--interactive`). It no longer uses the previous `--serve` / HTTP / PNG / browser path, and the user's verified USA ROM is bundled directly in the private one-click GUI EXE. The ROM and generated title banks are never committed to this public repository.
-
-The Windows GUI launcher sources and tests are in `native-launcher/desktop`. The owner-only assembler is `tools/pack_native_private.py`; the isolated upstream title-bank optimization patch is `tools/patches/ndsrecomp-title-opt-level.patch`. Detailed provenance, performance measurements and exact release steps are in [docs/native-desktop.md](docs/native-desktop.md).
-
-**Current limits:** the real Windows GUI still needs human testing for FPS and compatibility; saves are disabled, gameplay/battles/audio are not fully validated, and native SDL initially presents stacked DS screens (PC-modern floating and adaptive layout remains to implement in SDL). Linux first-60-VBlank diagnostics measured ~22.4/s with unoptimized title banks, ~32.4/s with -O1. These are not Windows in-game FPS claims. The ROM-free executable downloadable from GitHub Actions is **only the launcher**, not playable Dusk; the complete private EXE is provided directly to the owner.
-
-## Dusk Native v0.6: modern layouts inside the Windows game window
-
-The new owner-private Windows x64 build (delivered directly in ChatGPT,
-**not** uploaded to the public GitHub) runs the SDL3 native frontend
-without a browser. It replaces the vertical-only presentation and
-`ndsrecomp firmware preview` window title with **Digimon World Dusk | PC**.
-
-- Five layouts: Modern (large lower game screen + upper information panel),
-  Floating (drag the auxiliary panel), Classic, Horizontal and Main Only.
-- Native toolbar: MODE, AUX, FULLSCREEN, HELP.
-- Shortcuts: F4 layout, F5 upper-screen visibility, F6 floating size,
-  F7 floating corner, F11 or Alt+Enter fullscreen, F1 help.
-- Resizable window and proportional scaling, precise touchscreen coordinate
-  mapping, persistent display preferences stored under SDL's user folder.
-- Frame-time diagnostics for intermittent CPU frames exceeding 70 ms.
-
-The isolated upstream native compositor patch is at
-`tools/patches/ndsrecomp-dusk-native-ui.patch`; the ROM-free geometry
-regression test is at `tests/native_layout_geometry.cpp`. This feature
-is opt-in using `NDS_DUSK_NATIVE_UI=1`, set by the dedicated v0.6 launcher,
-so other titles retain upstream presentation behavior.
-
-**Performance status:** the user has observed about 58-60 FPS in many
-v0.5 scenes, with occasional transition stutters. v0.6 preserves the
-existing optimized title banks while improving usability and collecting
-rate-limited performance logs. The occasional stutters have not been
-proven fixed. Full graphical and audio validation of v0.6 is pending the
-owner's Windows test. See [native desktop notes](docs/native-desktop.md).
-
-
-## Private Windows v0.14: original in-game save / gameplay regression (candidate)
-
-This iteration enables **Dusk's original EEPROM save** in the private
-Windows SDL3 launcher. The app passes `--save-path` and a Dusk-USA-specific
-64 KiB EEPROM configuration. Player data now resides at the stable path
-`%LOCALAPPDATA%\\DuskNativePC\\userdata\\A6RE\\saves\\dusk.sav`,
-independent of the `v0.14` runtime installation. It makes a backup
-before each game launch, preserves verified legacy saves and firmware
-identity, and prevents simultaneous writers.
-
-Save states / memory snapshots **are not part of this feature**. A guarded
-upstream SDL3 patch blocks their hotkeys for newly compiled private native
-runners. The interim private test executable can reuse the verified v0.13
-runner; it does not configure a save-state directory, but old shortcuts
-may still show a disabled-state notice until the runtime is rebuilt.
-
-Gameplay verification now includes the ROM-private, deterministic scenario
-driver `tools/dusk_gameplay_scenarios.py` and
-`tests/scenarios/intro-to-first-map.json`. Real save-menu roundtrip and
-campaign-wide validation **still require Windows gameplay tests**; CI
-proves launcher save safety, not an end-to-end Dusk save.
-
-See [save / story acceptance guide](docs/native-save-and-gameplay-qa.md).
-The public GitHub Actions artifact remains ROM-free and is **not** a playable
-game. Do not upload commercial game content or personal saves to this repo.
+Veja [AGENTS.md](AGENTS.md) para as regras de contribuição.

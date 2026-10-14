@@ -25,8 +25,10 @@ jobs:
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
         run: |
-          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/verified_dispatch_rows.py tools/pack_native_private.py
+          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/analyze_v016_sessions.py tools/apply_dusk_patches.py tools/verified_dispatch_rows.py tools/pack_native_private.py
           python3 -m unittest discover -s tests -p test_native_perf.py -v
+          python3 -m unittest discover -s tests -p test_v016_diagnostics.py -v
+          python3 -m unittest discover -s tests -p test_apply_dusk_patches.py -v
           python3 -m unittest discover -s tests -p test_verified_aot.py -v
           python3 -m unittest discover -s tests -p test_verified_overlays.py -v
           python3 -m unittest discover -s tests -p test_merge_verified_profiles.py -v
@@ -340,8 +342,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-ui.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-ui.patch
+          python3 tools/apply_dusk_patches.py --upstream upstream --component native-ui
           test -f upstream/runner/src/dusk_native_ui.h
       - name: Test native viewport, touchscreen and aspect math
         run: |
@@ -365,24 +366,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-ui.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-ui.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-screen-swap.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-screen-swap.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-30hz.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
-          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch
+          python3 tools/apply_dusk_patches.py --upstream upstream --component desktop
           grep -q 'd.menu_stick.poll(lx,ly)' upstream/runner/src/frontend.cpp
           grep -q 'clear_gameplay_input_for_runtime_menu();' upstream/runner/src/frontend.cpp
           grep -q 'SDL_SYSTEM_CURSOR_NWSE_RESIZE' upstream/runner/src/frontend.cpp

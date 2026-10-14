@@ -16,7 +16,8 @@ MAGIC = b'DUSKPACKv1!!'
 ROM_SHA256 = 'df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb'
 
 def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
-          baseline: Path | None = None, candidate: Path | None = None) -> dict:
+          baseline: Path | None = None, candidate: Path | None = None,
+          iconv: Path | None = None) -> dict:
     if (baseline is None) != (candidate is None):
         raise ValueError('Provide both --baseline-dispatch and --candidate-dispatch')
     # Game-derived banks are not uploaded. Compare byte-validated C dispatch
@@ -29,9 +30,13 @@ def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
         'SDL3.dll': sdl.read_bytes(),
         'game.nds': rom.read_bytes(),
     }
+    if iconv is not None:
+        files['libiconv-2.dll'] = iconv.read_bytes()
     if hashlib.sha256(files['game.nds']).hexdigest() != ROM_SHA256:
         raise ValueError('Expected the verified Dusk USA ROM')
-    for name in ('runner.exe', 'SDL3.dll'):
+    for name in ('runner.exe', 'SDL3.dll', 'libiconv-2.dll'):
+        if name not in files:
+            continue
         if not files[name].startswith(b'MZ'):
             raise ValueError(f'Not a Windows PE file: {name}')
     if b'SDL3.dll' not in files['runner.exe']:
@@ -64,9 +69,10 @@ def main() -> None:
         p.add_argument('--' + key, type=Path, required=True)
     p.add_argument('--baseline-dispatch', type=Path)
     p.add_argument('--candidate-dispatch', type=Path)
+    p.add_argument('--iconv', type=Path, help='Windows libiconv-2.dll needed by certain SDL3 builds')
     args = p.parse_args()
     print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
-                args.baseline_dispatch, args.candidate_dispatch))
+                args.baseline_dispatch, args.candidate_dispatch, args.iconv))
 
 if __name__ == '__main__':
     main()

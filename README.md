@@ -38,6 +38,14 @@ O salvamento utiliza o menu original do jogo, **não save states**.
 Em builds v0.17 com o novo launcher, `--manage-saves` abre o diálogo
 de backup/restauração antes do jogo; use apenas quando o jogo estiver fechado.
 
+### Gerar novas builds Windows sem instalar ferramentas
+
+O workflow **[Dusk native Windows game (owner playtest)](https://github.com/EwertonMendes/digimon-world-dusk-pc/actions/workflows/dusk-native-windows-playtest.yml)**
+faz a compilação real ARM9/ARM7 + SDL3 e entrega o EXE de teste em
+*Artifacts* quando executado com autorização explícita.
+O pacote é um candidato de testes; os overlays não convertidos continuam
+usando o interpretador Tier3. Ver [instruções completas](docs/windows-native-build.md).
+
 Controles e PC Options: [interface v0.16](docs/native-immersive-ui-v016.md).
 [Guia de pacote Windows](docs/windows-oneclick.md).
 

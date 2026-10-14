@@ -275,7 +275,7 @@ jobs:
 
 
   fast-cosmetic-repack:
-    if: inputs.approve_game_bundle == true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack == true
     runs-on: windows-latest
     timeout-minutes: 20
     env:

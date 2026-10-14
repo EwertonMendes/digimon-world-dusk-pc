@@ -25,7 +25,7 @@ jobs:
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
         run: |
-          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/verified_dispatch_rows.py
+          python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/verified_dispatch_rows.py tools/pack_native_private.py
           python3 -m unittest discover -s tests -p test_native_perf.py -v
           python3 -m unittest discover -s tests -p test_verified_aot.py -v
           python3 -m unittest discover -s tests -p test_verified_overlays.py -v
@@ -34,6 +34,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_refresh_shipped_overlays.py -v
           python3 -m unittest discover -s tests -p test_promote_tier3_spans.py -v
           python3 -m unittest discover -s tests -p test_verified_dispatch_rows.py -v
+          python3 -m unittest discover -s tests -p test_private_packer_gate.py -v
           python3 -m unittest discover -s tests -p test_dusk_gameplay_scenarios.py -v
           python3 -m unittest discover -s tests -p test_dusk_gameplay_save_fixture.py -v
       - name: Configure (Linux)

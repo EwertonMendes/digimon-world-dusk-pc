@@ -74,7 +74,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
      }
  }
  static dusk_native::Geometry dusk_geometry(const FrontendPresentation& p) {
-@@ -1469,83 +1487,188 @@
+@@ -1469,83 +1487,198 @@
                           float(r.w)+2.f,float(r.h)+2.f};
      SDL_RenderRect(renderer,&rect);
  }
@@ -112,7 +112,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +}
 +static dusk_native::Rect dusk_menu_panel(const dusk_native::Geometry& g) {
 +    const int w=std::min(610,std::max(280,g.play.w-24));
-+    const int h=std::min(620,std::max(300,g.play.h-24));
++    const int h=std::min(620,std::max(190,g.play.h-18));
 +    return {(g.play.w-w)/2,(g.play.h-h)/2,w,h};
 +}
 +static const char* dusk_label(int row) {
@@ -165,27 +165,32 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    dusk_fill(r,{panel.x+4,panel.y+4,panel.w-8,panel.h-8},49,17,108,255);
 +    dusk_outline(r,panel,182,88,245);
 +    dusk_fill(r,{panel.x+12,panel.y+14,panel.w-24,54},86,24,154);
-+    dusk_text(r,panel.x+26,panel.y+26,"DIGIMON WORLD DUSK",1.65f);
-+    dusk_text(r,panel.x+26,panel.y+54,"PC OPTIONS     -     DISPLAY SETTINGS",1.f);
-+    const int row_y=panel.y+83;
-+    const int step=std::max(24,std::min(43,(panel.h-145)/9));
++    if(panel.h>=400) {
++        dusk_text(r,panel.x+26,panel.y+26,"DIGIMON WORLD DUSK",1.65f);
++        dusk_text(r,panel.x+26,panel.y+54,"PC OPTIONS    -    DISPLAY SETTINGS",1.f);
++    } else dusk_text(r,panel.x+20,panel.y+20,"DUSK - PC OPTIONS",1.2f);
++    const int row_y=panel.y+(panel.h<400?52:83);
++    const int step=std::max(11,std::min(43,(panel.h-(panel.h<400?115:145))/9));
 +    for(int i=0;i<9;++i) {
 +        const int y=row_y+i*step;
 +        if(i==p.dusk.selected) {
 +            dusk_fill(r,{panel.x+13,y-2,panel.w-26,step-1},121,49,196);
 +            dusk_outline(r,{panel.x+13,y-2,panel.w-26,step-1},209,138,250);
 +        }
-+        dusk_text(r,panel.x+29,y+6,dusk_label(i),1.16f);
++        dusk_text(r,panel.x+23,y+3,dusk_label(i),panel.h<400?.95f:1.16f);
 +        const auto value=dusk_value(p,i);
 +        if(!value.empty()) {
-+            const int right=panel.x+panel.w-26-int(value.size()*9);
-+            dusk_text(r,std::max(panel.x+215,right),y+6,value.c_str(),1.02f);
++            const float scale=panel.w<400?.82f:1.02f;
++            const int right=panel.x+panel.w-20-int(value.size()*8*scale);
++            dusk_text(r,right,y+3,value.c_str(),scale);
 +        }
 +    }
-+    dusk_text(r,panel.x+23,panel.y+panel.h-49,"ARROWS: SELECT    LEFT/RIGHT: CHANGE",.98f);
-+    dusk_text(r,panel.x+23,panel.y+panel.h-30,"ENTER: APPLY      ESC/F10: RESUME",.98f);
-+    if(p.dusk.cfg.fill_wide)
-+        dusk_text(r,panel.x+23,panel.y+panel.h-68,"* 16:9 STRETCHES ORIGINAL 4:3 GAME PIXELS",.84f);
++    if(panel.h>=400) {
++        dusk_text(r,panel.x+23,panel.y+panel.h-49,"ARROWS: SELECT    LEFT/RIGHT: CHANGE",.98f);
++        dusk_text(r,panel.x+23,panel.y+panel.h-30,"ENTER: APPLY      ESC/F10: RESUME",.98f);
++        if(p.dusk.cfg.fill_wide)
++            dusk_text(r,panel.x+23,panel.y+panel.h-68,"* 16:9 STRETCHES ORIGINAL 4:3 GAME PIXELS",.84f);
++    } else dusk_text(r,panel.x+16,panel.y+panel.h-26,"ENTER: APPLY    ESC: BACK",.9f);
 +}
 +static void dusk_pip_chrome(SDL_Renderer* r,const FrontendPresentation& p,
 +                           const dusk_native::Geometry& g) {
@@ -261,10 +266,11 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    if(p.dusk.menu_open) {
 +        if(down && ev.button.button==SDL_BUTTON_LEFT) {
 +            const auto panel=dusk_menu_panel(g);
-+            const int step=std::max(24,std::min(43,(panel.h-145)/9));
-+            const int row=int((y-panel.y-83)/step);
++            const int start=(panel.h<400?52:83);
++            const int step=std::max(11,std::min(43,(panel.h-(panel.h<400?115:145))/9));
++            const int row=int((y-panel.y-start)/step);
 +            if(x>=panel.x+12 && x<panel.x+panel.w-12 &&
-+               y>=panel.y+83 && row>=0 && row<9) {
++               y>=panel.y+start && row>=0 && row<9) {
 +                p.dusk.selected=row;
 +                dusk_menu_action(p,row,1);
 +            }
@@ -320,11 +326,15 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 -    return (down||up) && ev.button.button==SDL_BUTTON_LEFT && y<g.toolbar.h;
 +    if(focus && p.dusk.cfg.auxiliary &&
 +       dusk_native::contains(g.pip_bar,x,y))return true;
++    // Upper PiP is not a touchscreen. Never send mouse clicks through it
++    // into the larger physical bottom screen drawn behind this overlay.
++    if(focus && !p.dusk.cfg.focus_top && p.dusk.cfg.auxiliary &&
++       dusk_native::contains(g.top,x,y))return true;
 +    return false;
  }
  #endif
  
-@@ -1977,7 +2100,10 @@
+@@ -1977,7 +2110,10 @@
      // Fullscreen is applied only after both separate-layout windows have their
      // final placement. The primary combined/top window is deliberately the
      // sole target so the separate touch window remains usable.
@@ -336,7 +346,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
          std::fprintf(stderr, "[sdl] fullscreen (%s) failed: %s\n",
                       nds_fullscreen_mode_name(options.fullscreen),
                       SDL_GetError());
-@@ -2184,20 +2310,27 @@
+@@ -2184,20 +2320,27 @@
  #if defined(NDS_HAVE_SDL3)
          if(presentation.dusk.enabled) {
              const auto geo=dusk_geometry(presentation);
@@ -373,7 +383,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              ticks.draw+=SDL_GetPerformanceCounter()-start;
              start=SDL_GetPerformanceCounter();
              SDL_RenderPresent(renderer);
-@@ -3251,39 +3384,91 @@
+@@ -3251,39 +3394,91 @@
          SDL_Event event{};
          while (SDL_PollEvent(&event)) {
  #if defined(NDS_HAVE_SDL3)
@@ -497,7 +507,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              }
  #endif
              convert_mouse_event_to_logical_coordinates(event, presentation);
-@@ -4338,7 +4523,7 @@
+@@ -4338,7 +4533,7 @@
                      : "";
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)

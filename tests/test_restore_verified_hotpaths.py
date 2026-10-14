@@ -108,9 +108,9 @@ class RecoveryContractTests(unittest.TestCase):
             evidence = Path(td) / "owner-compact.b64"
             evidence.write_bytes(base64.b64encode(
                 zlib.compress(json.dumps(compact).encode())))
-            parsed = hot.load_evidence(evidence)
-            self.assertEqual(parsed["schema"], 2)
             with patch.object(hot, "ROM_SHA256", hashlib.sha256(b"synthetic").hexdigest()):
+                parsed = hot.load_evidence(evidence)
+                self.assertEqual(parsed["schema"], 2)
                 accepted = hot.recover(stage, parsed, b"synthetic")
             self.assertEqual(accepted, {name: 1})
             config = tomllib.loads((stage / (name + ".toml")).read_text())

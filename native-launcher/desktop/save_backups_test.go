@@ -87,6 +87,20 @@ func TestRecoverInterruptedRestore(t *testing.T) {
     }
 }
 
+func TestCompleteInterruptedSuccessfulRestore(t *testing.T) {
+    p := pathsFor(t.TempDir())
+    putSave(t, p.save, 0x77, duskSaveSize)
+    if err := makeBackup(p); err != nil { t.Fatal(err) }
+    putSave(t, p.save+".restore-rollback", 0x77, duskSaveSize)
+    putSave(t, p.save, 0x55, duskSaveSize)
+    if err := recoverInterruptedRestore(p); err != nil { t.Fatal(err) }
+    active, err := os.ReadFile(p.save)
+    if err != nil || active[0] != 0x55 { t.Fatal("restored save changed", err) }
+    if _, err := os.Stat(p.save+".restore-rollback"); !os.IsNotExist(err) {
+        t.Fatal("verified old rollback not cleaned up")
+    }
+}
+
 func TestRestoreDoesNotOverwriteMalformedExistingSave(t *testing.T) {
     p := pathsFor(t.TempDir())
     putSave(t, p.save, 0x11, duskSaveSize)

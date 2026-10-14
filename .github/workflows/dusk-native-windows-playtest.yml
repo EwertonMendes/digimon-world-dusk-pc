@@ -64,7 +64,6 @@ jobs:
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-title-opt-level.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
           git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
           python tools/patch_windows_net.py upstream
@@ -99,7 +98,6 @@ jobs:
             -DNDS_SDL_BACKEND=SDL3 \
             -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
             -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON \
-            -DNDS_TITLE_BANK_OPT_LEVEL=2 \
             -DNDS_RECOMP_UI_ROOT="$PWD/recomp-ui" \
             -DNDS_TITLE_BANK_DIR="$PWD/.private/recomp/generated" \
             -DNDS_TITLE_ROM_SHA1=de1a1915e07288ffad654f3f9f2eb730a0fd1d9c

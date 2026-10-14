@@ -32,7 +32,7 @@ class SplashTests(unittest.TestCase):
 
     def test_one_release_identity_is_consistent(self):
         self.assertEqual(APP_NAME, "Digimon World Dusk Recompiled")
-        self.assertEqual(APP_VERSION, "v0.24")
+        self.assertEqual(APP_VERSION, "v0.25")
         self.assertEqual(WINDOW_TITLE, APP_NAME + " | " + APP_VERSION)
         self.assertEqual(WINDOWS_EXE, APP_SLUG + "-" + APP_VERSION + "-Windows.exe")
         desktop = (ROOT / "native-launcher/desktop/save_data.go").read_text()
@@ -41,10 +41,17 @@ class SplashTests(unittest.TestCase):
         self.assertIn("RELEASE_FILENAME: " + WINDOWS_EXE, workflow)
         self.assertIn("--splash assets/splash/generated/dusk-splash.bmp", workflow)
         self.assertIn("python tools/generate_splash.py", workflow)
+        desktop_launcher = (ROOT / "native-launcher/desktop/main.go").read_text()
         native = (ROOT / "tools/patches/ndsrecomp-dusk-recompiled-splash.patch").read_text()
         self.assertIn(WINDOW_TITLE, native)
         self.assertIn("SDL_EVENT_QUIT", native)
         self.assertIn("SDL_EVENT_KEY_DOWN", native)
+        self.assertIn("SDL_SCANCODE_P", native)
+        self.assertIn("NDS_DUSK_SPLASH_DURATION_MS", native)
+        self.assertNotIn("SDL_EVENT_MOUSE_BUTTON_DOWN", native)
+        self.assertNotIn("SDL_EVENT_GAMEPAD_BUTTON_DOWN", native)
+        self.assertIn('"NDS_DUSK_SPLASH_DURATION_MS=5000"', desktop_launcher)
+
         self.assertIn("SDL_RenderTexture", native)
 
 

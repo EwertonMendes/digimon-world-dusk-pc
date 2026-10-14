@@ -1,0 +1,49 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -967,6 +967,27 @@
+ #endif
+ }
+ 
++// Precise SDL3 host pacing: v0.20 had 5,413 intervals >20 ms with
++// only two budget-breaking DS guest frames after boot. Windows SDL_Delay(1)
++// can wake late; bound wake-up jitter while preserving the audio queue
++// watermark, samples, DS scheduler, VBlank and original SPU clock.
++// Half of the measured excess queue time is safe: resample how much is
++// buffered before selecting the next wait. Cap to 2 ms to avoid stalls,
++// but allow longer waits than 0.5 ms to avoid continuous busy-spinning.
++static inline void dusk_audio_pace_wait(uint32_t excess_frames) {
++#if defined(NDS_HAVE_SDL3)
++    const uint64_t excess_ns =
++        static_cast<uint64_t>(excess_frames) * 1000000000ull /
++        static_cast<uint64_t>(kAudioFrequency);
++    const uint64_t wanted_ns = excess_frames ? excess_ns / 2u : 500000ull;
++    const uint64_t bounded_ns = std::clamp(wanted_ns, 250000ull, 2000000ull);
++    SDL_DelayPrecise(bounded_ns);
++#else
++    (void)excess_frames;
++    SDL_Delay(1);
++#endif
++}
++
+ uint32_t drain_audio(const NdsAudioDevice& device, AudioQueue& queue,
+                      bool throttle, uint32_t pace_floor, bool& queue_error) {
+     if (!device) return 0;
+@@ -1015,7 +1036,7 @@
+                     queue_error = true;
+                     return audio_queue_count(device, queue);
+                 }
+-                SDL_Delay(1);
++                dusk_audio_pace_wait(0);
+             }
+         }
+     }
+@@ -1034,7 +1055,7 @@
+     uint32_t queued = audio_queue_count(device, queue);
+     while (throttle && queued > pace_floor) {
+-        SDL_Delay(1);
++        dusk_audio_pace_wait(queued - pace_floor);
+         queued = audio_queue_count(device, queue);
+     }
+     return queued;
+ }

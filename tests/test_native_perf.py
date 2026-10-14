@@ -27,6 +27,35 @@ class PerfTests(unittest.TestCase):
         self.assertEqual(report["below_95pct_target"],1)
         self.assertEqual(report["audio_underruns"],3)
 
+    def test_microhitch_stays_visible_inside_normal_one_second_fps(self):
+        samples = [
+            {"kind":"perf","wall":"16:52:30","frames":100,"fps":59.82,
+             "ms_per_frame":{"emu":4.8,"present":0.33},
+             "frame_spikes":{"gap_gt_20ms":0,"emu_gt_12ms":0,
+                             "emu_over_ds_budget":0,"max_gap_ms":17.0,
+                             "max_emu_ms":8.2,"max_present_ms":0.5}},
+            {"kind":"perf","wall":"16:52:31","frames":160,"fps":59.81,
+             "ms_per_frame":{"emu":5.2,"present":0.34},
+             "frame_spikes":{"gap_gt_20ms":1,"emu_gt_12ms":1,
+                             "emu_over_ds_budget":1,"max_gap_ms":28.0,
+                             "max_emu_ms":22.4,"max_present_ms":0.5,
+                             "last_hitch_frame":153}},
+        ]
+        report = perf.summarize(samples)
+        spikes=report["visual_frame_spikes"]
+        self.assertEqual(spikes["gap_over_20ms"],1)
+        self.assertEqual(spikes["emu_over_ds_budget"],1)
+        self.assertEqual(spikes["peak_session_gap_ms"],28)
+        self.assertEqual(spikes["peak_session_emu_ms"],22.4)
+        self.assertEqual(spikes["worst_windows"][0]["last_hitch_frame"],153)
+        self.assertEqual(report["below_95pct_target"],0)
+
+    def test_legacy_v019_samples_no_frame_spike_fields_are_supported(self):
+        report = perf.summarize([
+            {"kind":"perf","fps":59.8,"ms_per_frame":{"emu":5.0}}])
+        self.assertEqual(report["visual_frame_spikes"]["gap_over_20ms"],0)
+        self.assertEqual(report["visual_frame_spikes"]["worst_windows"],[])
+
     def test_empty_rejected(self):
         with self.assertRaises(ValueError):
             perf.summarize([{"kind":"perf","fps":"invalid"}])

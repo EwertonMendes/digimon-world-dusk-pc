@@ -379,6 +379,11 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
+          grep -q 'SDL_SYSTEM_CURSOR_NWSE_RESIZE' upstream/runner/src/frontend.cpp
+          grep -q 'dusk_render_rounded_screen' upstream/runner/src/frontend.cpp
+          grep -q 'stick.step(rx,ry,dt,allowed)' upstream/runner/src/frontend.cpp
           grep -q 'Unsaved progress will be lost' upstream/runner/src/frontend.cpp
           grep -q 'disable_mph_ui=presentation.dusk.enabled' upstream/runner/src/frontend.cpp
           grep -q 'NDS_DUSK_DISABLE_SAVESTATES' upstream/runner/src/frontend.cpp
@@ -394,6 +399,9 @@ jobs:
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_pip_resize.cpp -o native_pip_resize
           ./native_pip_resize
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_right_stick_touch.cpp -o native_right_stick_touch
+          ./native_right_stick_touch
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
           ./native_30hz_pacing

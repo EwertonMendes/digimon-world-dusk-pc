@@ -1,22 +1,30 @@
 diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 --- a/runner/src/frontend.cpp
 +++ b/runner/src/frontend.cpp
-@@ -1462,6 +1462,20 @@ SDL_Window* create_window(const char* title, int x, int y, int w, int h,
+@@ -1462,6 +1462,28 @@ SDL_Window* create_window(const char* title, int x, int y, int w, int h,
          title, w, h, static_cast<SDL_WindowFlags>(flags));
      if (window)
          SDL_SetWindowPosition(window, x, y);
-+    // Optional Dusk-only art: keep the base NDSRecomp frontend unchanged.
++    // Dusk-specific RGBA32 bytes preserve transparent rounded corners without SDL_image.
 +    if (window) {
 +        const char* icon_path = std::getenv("NDS_DUSK_ICON_PATH");
 +        if (icon_path && icon_path[0] != '\0') {
-+            SDL_Surface* icon = SDL_LoadBMP(icon_path);
-+            if (icon) {
-+                if (!SDL_SetWindowIcon(window, icon))
-+                    std::fprintf(stderr, "[dusk-icon] SDL_SetWindowIcon: %s\n", SDL_GetError());
-+                SDL_DestroySurface(icon);
++            size_t byte_count = 0;
++            void* pixels = SDL_LoadFile(icon_path, &byte_count);
++            if (pixels && byte_count == 128u * 128u * 4u) {
++                SDL_Surface* icon = SDL_CreateSurfaceFrom(
++                    128, 128, SDL_PIXELFORMAT_RGBA32, pixels, 128 * 4);
++                if (icon) {
++                    if (!SDL_SetWindowIcon(window, icon))
++                        std::fprintf(stderr, "[dusk-icon] set window icon: %s\n", SDL_GetError());
++                    SDL_DestroySurface(icon);
++                } else {
++                    std::fprintf(stderr, "[dusk-icon] create surface: %s\n", SDL_GetError());
++                }
 +            } else {
-+                std::fprintf(stderr, "[dusk-icon] loading BMP: %s\n", SDL_GetError());
++                std::fprintf(stderr, "[dusk-icon] missing or invalid 128x128 RGBA icon\n");
 +            }
++            SDL_free(pixels);
 +        }
 +    }
      return window;

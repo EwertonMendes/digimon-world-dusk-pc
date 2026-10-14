@@ -109,6 +109,13 @@ jobs:
           git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
           git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
           git -C upstream submodule update --init --recursive
+      - name: Validate full Dusk SDL patch stack against pinned NDSRecomp
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream worktree add --detach ../dusk-patch-check 3a57236bb23d25dcb4caad7d58d733311062ff5e
+          python3 tools/apply_dusk_patches.py --upstream dusk-patch-check --component desktop
+          git -C upstream worktree remove --force ../dusk-patch-check
       - name: Build the standalone upstream recompiler (no game files)
         run: |
           cmake -S upstream/recompiler -B upstream/recompiler/build -G Ninja -DCMAKE_BUILD_TYPE=Release

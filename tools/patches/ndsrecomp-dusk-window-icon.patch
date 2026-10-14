@@ -1,7 +1,7 @@
 diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 --- a/runner/src/frontend.cpp
 +++ b/runner/src/frontend.cpp
-@@ -1462,6 +1462,19 @@ SDL_Window* create_window(const char* title, int x, int y, int w, int h,
+@@ -1462,6 +1462,20 @@ SDL_Window* create_window(const char* title, int x, int y, int w, int h,
          title, w, h, static_cast<SDL_WindowFlags>(flags));
      if (window)
          SDL_SetWindowPosition(window, x, y);

@@ -25,7 +25,11 @@ def runtime_fingerprint(root: Path = ROOT) -> str:
     h = hashlib.sha256()
     for path in entries:
         h.update(path.relative_to(root).as_posix().encode() + b"\0")
-        h.update(hashlib.sha256(path.read_bytes()).digest())
+        # Windows Git may materialize checked-out text as CRLF while the
+        # pinned Linux CI checkout uses LF. Normalize line endings ONLY;
+        # meaningful source edits must still alter the provenance digest.
+        normalized = path.read_bytes().replace(b"\\r\\n", b"\\n")
+        h.update(hashlib.sha256(normalized).digest())
     return h.hexdigest()
 
 

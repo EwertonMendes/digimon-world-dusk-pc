@@ -192,7 +192,9 @@ def main() -> int:
                      "--bin",str(output/(name+".bin"))]
                 cmd+=["--out",str(output/"generated"),"--bank",name,
                       "--shards",str(args.arm9_shards if bank["cpu"]=="arm9" else args.arm7_shards)] if args.emit else ["--audit"]
-                if args.emit and args.coverage:
+                if args.emit:
+                    # Even header-derived game banks must guard live RAM bytes.
+                    # Dynamic overlays and code-copy aliases can change code at an address.
                     cmd.append("--validate-live-bytes")
                 print("Running",name,"in",("emit" if args.emit else "audit"),"mode",flush=True)
                 subprocess.run(cmd,check=True)

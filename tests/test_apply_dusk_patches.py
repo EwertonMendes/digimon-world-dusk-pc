@@ -23,9 +23,10 @@ class IntegrationTests(unittest.TestCase):
     def test_pacing_patch_only_replaces_host_sleep_without_touching_guest_or_audio(self):
         patch = (p.parent / "patches" /
                  "ndsrecomp-dusk-precise-pacing.patch").read_text()
-        self.assertEqual(patch.count("+        dusk_audio_pace_wait();"), 1)
-        self.assertIn("+                dusk_audio_pace_wait();", patch)
-        self.assertIn("+    SDL_DelayPrecise(500000ull);", patch)
+        self.assertEqual(patch.count("+        dusk_audio_pace_wait(queued - pace_floor);"), 1)
+        self.assertIn("+                dusk_audio_pace_wait(0);", patch)
+        self.assertIn("+    SDL_DelayPrecise(bounded_ns);", patch)
+        self.assertIn("std::clamp(wanted_ns, 250000ull, 2000000ull)", patch)
         self.assertIn("+    SDL_Delay(1);", patch)  # SDL2 compatibility
         self.assertNotIn("kAudioQueueFrames", patch)
         self.assertNotIn("kSystemCyclesPerFrame", patch)

@@ -126,11 +126,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Native GUI launcher build failed' }
           Pop-Location
           $runner = 'upstream/runner/build-owner-dusk/nds_runner.exe'
-          $sdl = 'C:/msys64/ucrt64/bin/SDL3.dll'
+          $sdl = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/SDL3.dll'
           if (!(Test-Path $runner) -or !(Test-Path $sdl)) {
             throw 'NDSRecomp SDL3 executable or matching SDL3.dll missing'
           }
-          $objdump = 'C:/msys64/ucrt64/bin/objdump.exe'
+          $objdump = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/objdump.exe'
           if (!(Test-Path $objdump)) { throw 'Windows PE import auditor missing' }
           foreach ($binary in @($runner, $sdl)) {
             $imports = ((& $objdump -p $binary | Select-String 'DLL Name:' | ForEach-Object { $_.Line }) -join "`n")

@@ -72,7 +72,7 @@ Documentos: [arquitetura](docs/architecture.md),
 O ícone oficial é gerado de uma única [arte aprovada](assets/icons/dusk-icon-master.webp)
 para Windows, Linux, macOS e Android por `tools/generate_icons.py`.
 O launcher Windows e a janela SDL3 do jogo recebem seus respectivos ícones
-nas builds privadas **v0.22**. Os ports Linux/macOS/Android ainda exigem
+nas builds privadas **v0.23**. Os ports Linux/macOS/Android ainda exigem
 integração e compilação próprias. Consulte [recursos e instruções](docs/icon-assets.md).
 
 ## Desenvolvimento e testes

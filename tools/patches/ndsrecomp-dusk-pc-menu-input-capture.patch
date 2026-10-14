@@ -1,0 +1,179 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1327,6 +1327,7 @@
+         bool quit_confirm = false;
+         bool quit_yes = false;
+         bool quit_requested = false;
++        dusk_native::MenuStickNavigation menu_stick{};
+         bool resizing = false;
+         int resize_edges = 0;
+         SDL_Cursor* resize_cursors[4]{};
+@@ -3634,8 +3635,9 @@
+ #if defined(NDS_HAVE_SDL3)
+             if(dusk_handle_mouse(presentation,event)) {
+                 if(presentation.dusk.menu_open){
+-                    keyboard_pressed=controller_pressed=mouse_pressed=stick_pressed=0;
+-                    publish_keys();nds_set_touch(0,0,false);
++                    clear_gameplay_input_for_runtime_menu();
++                    mouse_down=false;
++                    presentation.dusk.stick_touch.down=false;
+                 }
+                 continue;
+             }
+@@ -3650,8 +3652,10 @@
+                             dusk_quit_choose(presentation,false);
+                         } else presentation.dusk.menu_open=!presentation.dusk.menu_open;
+                         if(presentation.dusk.menu_open){
+-                            keyboard_pressed=controller_pressed=mouse_pressed=stick_pressed=0;
+-                            publish_keys();nds_set_touch(0,0,false);
++                            clear_gameplay_input_for_runtime_menu();
++                            mouse_down=false;
++                            presentation.dusk.stick_touch.down=false;
++                            presentation.dusk.menu_stick.reset();
+                         }
+                     }
+                     continue;
+@@ -3740,8 +3744,12 @@
+                 sdl_controller_button(event)==SDL_CONTROLLER_BUTTON_BACK) {
+                 if(event.type==SDL_CONTROLLERBUTTONDOWN)
+                     presentation.dusk.menu_open=!presentation.dusk.menu_open;
+-                keyboard_pressed=controller_pressed=mouse_pressed=stick_pressed=0;
+-                publish_keys();nds_set_touch(0,0,false);
++                if(presentation.dusk.menu_open){
++                    clear_gameplay_input_for_runtime_menu();
++                    mouse_down=false;
++                    presentation.dusk.stick_touch.down=false;
++                    presentation.dusk.menu_stick.reset();
++                }
+                 continue;
+             }
+ #endif
+@@ -4203,6 +4211,24 @@
+             focus_release_pending = false;
+         }
+ 
++#if defined(NDS_HAVE_SDL3)
++        if (presentation.dusk.enabled && presentation.dusk.menu_open) {
++            // PC Options captures ALL gameplay controls, not just discrete
++            // button events. The analog left stick is polled below and must
++            // never be translated into the original DS D-pad here.
++            if (keyboard_pressed || controller_pressed || mouse_pressed ||
++                stick_pressed || mph_prime_pressed || mouse_down ||
++                presentation.dusk.stick_touch.down) {
++                clear_gameplay_input_for_runtime_menu();
++                mouse_down=false;
++                presentation.dusk.stick_touch.down=false;
++                publish_keys();
++                nds_set_touch(0,0,false);
++            }
++        } else if(presentation.dusk.enabled) {
++            presentation.dusk.menu_stick.reset();
++        }
++#endif
+         // ── Gamepad dual-stick poll (once per shown frame) ───────────────
+         mph_pad_frame_x = 0;
+         mph_pad_frame_y = 0;
+@@ -4267,6 +4293,38 @@
+             const float ly = SDL_GameControllerGetAxis(
+                 controller, SDL_CONTROLLER_AXIS_LEFTY) / 32767.0f;
+             const bool menu_open = runtime_menu_open();
++#if defined(NDS_HAVE_SDL3)
++            const bool dusk_pc_options = presentation.dusk.enabled &&
++                presentation.dusk.menu_open;
++            if (dusk_pc_options) {
++                // Direct keyboard/gamepad buttons were consumed in the event
++                // loop. This is the held analog path, polled every frame.
++                // Keep the original guest D-pad and touch completely neutral.
++                if (stick_pressed) {stick_pressed=0;publish_keys();}
++                auto& d=presentation.dusk;
++                const auto navigation=d.menu_stick.poll(lx,ly);
++                if(navigation!=dusk_native::MenuDirection::None) {
++                    if(d.quit_confirm) {
++                        if(navigation==dusk_native::MenuDirection::Left)
++                            d.quit_yes=false;
++                        else if(navigation==dusk_native::MenuDirection::Right)
++                            d.quit_yes=true;
++                        else if(navigation==dusk_native::MenuDirection::Up ||
++                                navigation==dusk_native::MenuDirection::Down)
++                            d.quit_yes=!d.quit_yes;
++                    } else {
++                        if(navigation==dusk_native::MenuDirection::Up)
++                            d.selected=(d.selected+9)%10;
++                        else if(navigation==dusk_native::MenuDirection::Down)
++                            d.selected=(d.selected+1)%10;
++                        else if(navigation==dusk_native::MenuDirection::Left ||
++                                navigation==dusk_native::MenuDirection::Right)
++                            dusk_menu_action(presentation,d.selected,
++                                navigation==dusk_native::MenuDirection::Left?-1:1);
++                    }
++                }
++            } else
++#endif
+             if (menu_open) {
+                 if (stick_pressed != 0) {
+                     stick_pressed = 0;
+@@ -4325,7 +4383,11 @@
+                 stick_dir(ly, 1u << 7, true);    // Down
+             }
+ 
+-            if (!menu_open && virtual_stylus_available &&
++            if (!menu_open &&
++#if defined(NDS_HAVE_SDL3)
++                !(presentation.dusk.enabled && presentation.dusk.menu_open) &&
++#endif
++                virtual_stylus_available &&
+ #if defined(NDS_HAVE_SDL3)
+                 !presentation.dusk.enabled &&
+ #endif
+@@ -4377,7 +4439,11 @@
+                 }
+             }
+ 
+-            if (!menu_open && mph_prime_controls_available) {
++            if (!menu_open &&
++#if defined(NDS_HAVE_SDL3)
++                !(presentation.dusk.enabled && presentation.dusk.menu_open) &&
++#endif
++                mph_prime_controls_available) {
+                 // Right stick -> camera aim; triggers act as bindable
+                 // pseudo-buttons (defaults: RT shoot, LT scan-fire).
+                 const float rx = SDL_GameControllerGetAxis(
+diff --git a/runner/src/dusk_native_ui.h b/runner/src/dusk_native_ui.h
+--- a/runner/src/dusk_native_ui.h
++++ b/runner/src/dusk_native_ui.h
+@@ -174,6 +174,34 @@
+              std::clamp(y,kPiPHeaderHeight,std::max(kPiPHeaderHeight,
+                         viewport.h-height-12)),width,height},target_percent};
+ }
++// PC Options controller navigation lives entirely on the host. The guest DS
++// still ticks normally while its keys/touch remain released.
++enum class MenuDirection : int { None=0, Up, Down, Left, Right };
++struct MenuStickNavigation {
++    MenuDirection held=MenuDirection::None;
++    int frames=0;
++    void reset() {held=MenuDirection::None;frames=0;}
++    MenuDirection poll(float x,float y) {
++        if(!std::isfinite(x) || !std::isfinite(y)) {reset();return MenuDirection::None;}
++        const float ax=std::abs(x),ay=std::abs(y);
++        constexpr float enter=0.55f, leave=0.37f;
++        MenuDirection direction=MenuDirection::None;
++        if(std::max(ax,ay)>enter) {
++            if(ax>ay)direction=x>0.f?MenuDirection::Right:MenuDirection::Left;
++            else direction=y>0.f?MenuDirection::Down:MenuDirection::Up;
++        } else if(held!=MenuDirection::None && std::max(ax,ay)>leave) {
++            if((held==MenuDirection::Right && x>leave) ||
++               (held==MenuDirection::Left && x<-leave) ||
++               (held==MenuDirection::Down && y>leave) ||
++               (held==MenuDirection::Up && y<-leave))direction=held;
++        }
++        if(direction==MenuDirection::None){reset();return direction;}
++        if(direction!=held){held=direction;frames=0;return direction;}
++        ++frames;
++        if(frames==18 || (frames>18 && (frames-18)%5==0))return direction;
++        return MenuDirection::None;
++    }
++};
+ struct RightStickTouch {
+     float x=128.f, y=96.f;
+     bool down=false;

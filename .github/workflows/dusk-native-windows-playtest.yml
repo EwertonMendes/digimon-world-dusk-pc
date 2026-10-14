@@ -57,10 +57,16 @@ jobs:
         shell: msys2 {0}
         run: |
           set -euo pipefail
+          git config --global core.autocrlf false
+          # Both the pinned upstream sources and unified diffs must remain LF.
+          # Windows Git's automatic CRLF conversion prevents git apply.
+          find tools/patches -name '*.patch' -exec sed -i 's/\r$//' {} +
           git clone --no-checkout https://github.com/RetroPortingToolKit/ndsrecomp.git upstream
+          git -C upstream config core.autocrlf false
           git -C upstream checkout 3a57236bb23d25dcb4caad7d58d733311062ff5e
           git -C upstream submodule update --init --recursive
           git clone --no-checkout https://github.com/RetroPortingToolKit/recomp-ui.git recomp-ui
+          git -C recomp-ui config core.autocrlf false
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch

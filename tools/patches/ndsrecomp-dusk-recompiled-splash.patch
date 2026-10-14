@@ -5,10 +5,10 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
      presentation.windows[0] = create_window(
  #if defined(NDS_HAVE_SDL3)
 -        presentation.dusk.enabled ? "Digimon World Dusk | PC" :
-+        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24" :
++        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.25" :
  #endif
          presentation.separate ? "ndsrecomp - Top Screen"
-@@ -2390,4 +2390,69 @@
+@@ -2390,4 +2390,91 @@
 +#if defined(NDS_HAVE_SDL3)
 +// Host-only splash: ROM/guest frames, timing and save state are untouched.
 +// BMP is generated from approved artwork at build time and integrity-checked
@@ -29,12 +29,24 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +        return true;
 +    }
 +    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
-+    constexpr uint64_t duration_ms = 2600;
++    // Five seconds of visible presentation by default. Future cosmetic
++    // releases can alter this bounded value from the launcher alone.
++    uint64_t duration_ms = 5000;
++    if (const char* configured = std::getenv("NDS_DUSK_SPLASH_DURATION_MS")) {
++        char* end = nullptr;
++        const unsigned long requested = std::strtoul(configured, &end, 10);
++        if (end != configured && *end == '\0' && requested >= 4000 && requested <= 15000)
++            duration_ms = requested;
++    }
 +    constexpr uint64_t fade_ms = 300;
 +    const uint64_t start = SDL_GetTicks();
++    uint64_t paused_total = 0;
++    uint64_t paused_at = 0;
++    bool paused = false;
 +    bool cancelled = false;
-+    bool skip = false;
-+    while (!skip && SDL_GetTicks() - start < duration_ms) {
++    while (true) {
++        const uint64_t now = paused ? paused_at : SDL_GetTicks();
++        if (!paused && now - start - paused_total >= duration_ms) break;
 +        SDL_Event event{};
 +        while (SDL_PollEvent(&event)) {
 +            if (event.type == SDL_EVENT_QUIT ||
@@ -42,18 +54,29 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +                cancelled = true;
 +                break;
 +            }
-+            if (event.type == SDL_EVENT_KEY_DOWN ||
-+                event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
-+                event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
-+                skip = true;
-+                break;
++            // Never dismiss the splash on incidental input. P explicitly
++            // freezes/unfreezes it so the player can inspect the artwork.
++            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
++                event.key.scancode == SDL_SCANCODE_P) {
++                const uint64_t tick = SDL_GetTicks();
++                if (paused) {
++                    paused_total += tick - paused_at;
++                    paused = false;
++                } else {
++                    paused_at = tick;
++                    paused = true;
++                }
 +            }
 +        }
-+        if (cancelled || skip) break;
-+        const uint64_t elapsed = SDL_GetTicks() - start;
++        if (cancelled) break;
++        const uint64_t elapsed = (paused ? paused_at : SDL_GetTicks()) -
++                                 start - paused_total;
 +        int width = 1280, height = 720;
-+        SDL_GetRenderOutputSize(renderer, &width, &height);
-+        if (width < 1 || height < 1) break;
++        if (!SDL_GetRenderOutputSize(renderer, &width, &height) ||
++            width < 1 || height < 1) {
++            width = 1280;
++            height = 720;
++        }
 +        const float scale = std::min(float(width) / 1280.f, float(height) / 720.f);
 +        const SDL_FRect destination{
 +            (float(width) - 1280.f * scale) * 0.5f,
@@ -78,7 +101,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  } // namespace
  
  int nds_run_interactive_frontend(const NdsFrontendOptions& initial_options) {
-@@ -2430,5 +2495,12 @@
+@@ -2430,5 +2517,12 @@
      if (!create_presentation(options, presentation)) {
          SDL_Quit();
          return 1;
@@ -91,10 +114,10 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    }
 +#endif
      const int bottom_logical_width = presentation.separate
-@@ -4550,5 +4622,5 @@
+@@ -4550,5 +4644,5 @@
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)
 -                presentation.dusk.enabled ? "Digimon World Dusk | PC" :
-+                presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24" :
++                presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.25" :
  #endif
                  !savestate_notice.empty()

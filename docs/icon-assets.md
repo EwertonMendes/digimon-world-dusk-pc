@@ -1,36 +1,48 @@
-# Dusk PC — cross-platform application icon
+# Ícones do Digimon World Dusk PC
 
-The approved Dusk-themed icon lives in \`assets/icons/dusk-icon-master.webp\`.
-The generated icons include recovered rounded-corner transparency (no black matte); the native SDL3 surface consumes raw 128x128 RGBA32 pixels without losing alpha.\n\nIt is **raster artwork** (not a vector SVG). It is stored as optimized WebP to
-keep the Git repository small. Other images are **derived**, never manually edited.
+A arte aprovada está em `assets/icons/dusk-icon-master.webp`. Ela é uma
+imagem raster, não um SVG vetorial. A versão de origem possui um fundo preto
+apenas nos cantos arredondados. O gerador remove **somente o matte externo**
+e preserva todos os detalhes escuros internos.
 
-Generate all platform assets using Pillow >= 10:
+O único fluxo oficial para exportar ícones é:
 
-\`\`\`sh
-python -m pip install "Pillow>=10,<13"
+```sh
+python -m pip install "Pillow==11.3.0"
 python tools/generate_icons.py
-\`\`\`
+python -m unittest discover -s tests -p test_icon_assets.py -v
+```
 
-### Platforms
+A imagem de saída `assets/icons/generated/dusk-icon-transparent.png` tem canal
+alfa verdadeiro. Todos os formatos são derivados dela e jamais devem
+receber manualmente um fundo preto ou branco.
 
-- **Windows**: \`generated/windows/dusk.ico\` contains sizes 16, 24, 32, 48,
-  64, 128, 256. The owner playtest workflow embeds it into the Go GUI launcher
-  with MinGW \`windres\`; \`generated/windows/window-icon.bmp\` is included in the
-  authenticated game package and loaded with \`SDL_SetWindowIcon\`.
-- **Linux**: hicolor PNGs and an example \`.desktop\` entry. Installation of a
-  real native Linux port is a separate project milestone.
-- **macOS**: \`generated/macos/dusk.icns\` for a future \`.app\` bundle.
-- **Android**: mdpi–xxxhdpi fallback images plus adaptive foreground,
-  background and monochrome themed layer; integrate in an Android project
-  when the Android port exists.
+## Arquivos por plataforma
 
-The Windows player should use the new owner playtest EXE, not the ROM-free
-presentation prototype. Windows packaging never alters original ROM bytes or
-player saves. Use the validated Windows EXE and check both Explorer and the
-SDL3 game window's taskbar icon. The icon artwork must remain optional when
-NDSRecomp is used for any other title.
+- **Windows:** `windows/dusk.ico` contém 16, 24, 32, 48, 64, 128 e 256 px
+  com transparência real. O GitHub Actions compila o ICO como recurso Win32
+  no launcher Go usando `windres`.
+- **Janela SDL3:** `windows/window-icon.rgba` contém exatamente 128 × 128 × 4
+  bytes RGBA32; o launcher verifica e instala o recurso no pacote autenticado,
+  e o runtime nativo cria a superfície com `SDL_CreateSurfaceFrom` e aplica
+  `SDL_SetWindowIcon`. Não requer SDL_image e não descarta o canal alfa.
+- **Linux:** PNGs hicolor de 16 a 512 px e exemplo `.desktop`.
+- **macOS:** `macos/dusk.icns` para um futuro bundle `.app`.
+- **Android:** PNGs mdpi–xxxhdpi e camadas adaptativas de primeiro plano,
+  fundo e monochrome/themed icon.
 
-### Maintenance
+Linux, macOS e Android possuem recursos prontos, mas **não** builds do jogo
+nessas plataformas. A integração ficará para os respectivos ports.
 
-Edit the source artwork, regenerate everything and run the ROM-free icon tests.
-An icon change should not change the original game's timing or rendering.
+## Validação de versão Windows
+
+A compilação privada v0.23 deve usar o workflow
+`dusk-native-windows-playtest.yml`, nunca o protótipo ROM-free. Verificar:
+
+1. ICO correto no Explorador de Arquivos, atalhos e na barra de tarefas.
+2. Cantos transparentes no ícone da **janela do jogo**, não somente no launcher.
+3. O arquivo `--verify-bundle` e os saves EEPROM mantêm o comportamento anterior.
+
+Os testes automáticos validam o alfa nos formatos ICO, PNG, ICNS e no
+recurso RGBA32. Não dependemos de aplicações externas de manipulação de
+imagem na máquina do jogador.

@@ -9,6 +9,7 @@ import (
     "os"
     "path/filepath"
     "sort"
+    "strconv"
     "strings"
     "time"
 )
@@ -104,7 +105,12 @@ func legacyVersionDirs(base string) ([]string, error) {
             dirs = append(dirs, filepath.Join(base, "DuskNativePC", e.Name()))
         }
     }
-    sort.Strings(dirs)
+    sort.Slice(dirs, func(i, j int) bool {
+        vi, ei := strconv.Atoi(strings.TrimPrefix(filepath.Base(dirs[i]), "v0."))
+        vj, ej := strconv.Atoi(strings.TrimPrefix(filepath.Base(dirs[j]), "v0."))
+        if ei == nil && ej == nil { return vi < vj }
+        return dirs[i] < dirs[j]
+    })
     return dirs, nil
 }
 
@@ -129,6 +135,16 @@ func migrateLegacySave(p gamePaths, base string) error {
     }
     if source == "" { return nil }
     if err := copyNewFile(p.save, source); err != nil { return fmt.Errorf("falha na cópia preservando save original: %w", err) }
+    ok, err := validSave(p.save)
+    if err != nil || !ok {
+        os.Remove(p.save)
+        return fmt.Errorf("cópia do save antigo inválida: %v", err)
+    }
+    copiedHash, err := hashFile(p.save)
+    if err != nil || copiedHash != digest {
+        os.Remove(p.save)
+        return fmt.Errorf("save importado não corresponde ao original: %v", err)
+    }
     return nil
 }
 
@@ -160,6 +176,11 @@ func backupSave(p gamePaths) error {
     if err != nil { return err }
     dest := filepath.Join(p.profile, "backups", fmt.Sprintf("dusk-%s-%s.sav", time.Now().UTC().Format("20060102T150405.000000000Z"), digest[:12]))
     if err := copyNewFile(dest, p.save); err != nil { return fmt.Errorf("backup pré-jogo falhou, execução bloqueada: %w", err) }
+    copiedHash, err := hashFile(dest)
+    if err != nil || copiedHash != digest {
+        os.Remove(dest)
+        return fmt.Errorf("backup pré-jogo divergiu do save de origem: %v", err)
+    }
     return nil
 }
 

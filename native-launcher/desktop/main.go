@@ -132,7 +132,7 @@ func main() {
 	release, err := acquireSaveSession()
 	if err != nil { fatal(err) }
 	defer release()
-    if len(os.Args) == 2 && strings.EqualFold(os.Args[1], "--manage-saves") {
+    if (len(os.Args) == 1 && shiftHeld()) || (len(os.Args) == 2 && strings.EqualFold(os.Args[1], "--manage-saves")) {
         if err := manageSaves(p); err != nil { fatal(err) }
         return
     }

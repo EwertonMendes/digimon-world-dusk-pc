@@ -17,7 +17,7 @@ class IconTests(unittest.TestCase):
             generate(SOURCE, out)
             for relative, fmt in (
                 ("windows/dusk.ico", "ICO"),
-                ("windows/window-icon.bmp", "BMP"),
+                
                 ("macos/dusk.icns", "ICNS"),
                 ("linux/hicolor/256x256/apps/dusk-pc.png", "PNG"),
                 ("android/mipmap-xxxhdpi/ic_launcher.png", "PNG"),
@@ -26,6 +26,20 @@ class IconTests(unittest.TestCase):
                 with Image.open(out / relative) as icon:
                     self.assertEqual(icon.format, fmt, relative)
                     icon.verify()
+            for relative in (
+                "dusk-icon-transparent.png",
+                "windows/dusk.ico",
+                "macos/dusk.icns",
+                "linux/hicolor/256x256/apps/dusk-pc.png",
+                "android/drawable-nodpi/ic_launcher_foreground.png",
+            ):
+                with Image.open(out / relative) as icon:
+                    self.assertEqual(icon.convert("RGBA").getpixel((0, 0))[3], 0, relative)
+            raw = (out / "windows/window-icon.rgba").read_bytes()
+            self.assertEqual(len(raw), 128 * 128 * 4)
+            self.assertEqual(raw[3], 0)  # transparent top-left corner
+            self.assertEqual(raw[-1], 0)  # transparent bottom-right corner
+            self.assertEqual(raw[4 * (64 * 128 + 64) + 3], 255)  # opaque central art
             with Image.open(out / "windows/dusk.ico") as icon:
                 self.assertIn((256, 256), icon.info["sizes"])
                 self.assertIn((16, 16), icon.info["sizes"])

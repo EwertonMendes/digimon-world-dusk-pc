@@ -1,0 +1,415 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1324,6 +1324,14 @@
+         bool dragging = false;
+         bool toolbar_pressed = false;
+         bool menu_open = false;
++        bool quit_confirm = false;
++        bool quit_yes = false;
++        bool quit_requested = false;
++        bool resizing = false;
++        int resize_edges = 0;
++        float resize_start_x = 0, resize_start_y = 0;
++        dusk_native::Rect resize_origin{};
++        int resize_start_percent = 36;
+         bool menu_pressed = false;
+         bool menu_hover = false;
+         int selected = 0;
+@@ -1501,8 +1509,8 @@
+ static const char* dusk_label(int row) {
+     static const char* names[]={"SCREEN LAYOUT","MAIN DISPLAY","AUXILIARY SCREEN",
+         "AUXILIARY SIZE","SCREEN RATIO","WINDOW MODE","PRESENTATION FPS",
+-        "PIP POSITION","BACK TO GAME"};
+-    return row>=0 && row<9 ? names[row] : "";
++        "PIP POSITION","BACK TO GAME","QUIT GAME"};
++    return row>=0 && row<10 ? names[row] : "";
+ }
+ static std::string dusk_value(const FrontendPresentation& p,int row) {
+     const auto& c=p.dusk.cfg;
+@@ -1535,7 +1543,9 @@
+         case 6:c.half_present=!c.half_present;break;
+         case 7:c.float_corner=(c.float_corner+4+(delta>=0?1:-1))%4;
+                c.floating_x=-1;c.floating_y=-1;break;
+-        default:p.dusk.menu_open=false;break;
++        case 8:p.dusk.menu_open=false;break;
++        case 9:p.dusk.quit_confirm=true;p.dusk.quit_yes=false;break;
++        default:break;
+     }
+     dusk_save(p);
+ }
+@@ -1553,8 +1563,8 @@
+         dusk_text(r,panel.x+26,panel.y+54,"PC OPTIONS    -    DISPLAY SETTINGS",1.f);
+     } else dusk_text(r,panel.x+20,panel.y+20,"DUSK - PC OPTIONS",1.2f);
+     const int row_y=panel.y+(panel.h<400?52:83);
+-    const int step=std::max(11,std::min(43,(panel.h-(panel.h<400?115:145))/9));
+-    for(int i=0;i<9;++i) {
++    const int step=std::max(11,std::min(43,(panel.h-(panel.h<400?115:145))/10));
++    for(int i=0;i<10;++i) {
+         const int y=row_y+i*step;
+         if(i==p.dusk.selected) {
+             dusk_fill(r,{panel.x+13,y-2,panel.w-26,step-1},121,49,196);
+@@ -1574,6 +1584,33 @@
+         if(p.dusk.cfg.fill_wide)
+             dusk_text(r,panel.x+23,panel.y+panel.h-68,"* 16:9 STRETCHES ORIGINAL 4:3 GAME PIXELS",.84f);
+     } else dusk_text(r,panel.x+16,panel.y+panel.h-26,"ENTER: APPLY    ESC: BACK",.9f);
++}
++static dusk_native::Rect dusk_quit_panel(const dusk_native::Geometry& g) {
++    const int w=std::min(560,std::max(280,g.play.w-32));
++    const int h=std::min(246,std::max(160,g.play.h-24));
++    return {(g.play.w-w)/2,(g.play.h-h)/2,w,h};
++}
++static void dusk_quit_modal(SDL_Renderer* r,const FrontendPresentation& p,
++                            const dusk_native::Geometry& g) {
++    dusk_fill(r,g.play,4,3,13,211);
++    const auto panel=dusk_quit_panel(g);
++    dusk_fill(r,panel,39,13,82,252);
++    dusk_outline(r,panel,197,109,250);
++    dusk_text(r,panel.x+17,panel.y+16,"QUIT GAME?",1.65f);
++    dusk_text(r,panel.x+17,panel.y+65,"Unsaved progress will be lost.",1.05f);
++    dusk_text(r,panel.x+17,panel.y+88,"Do you really want to quit?",1.05f);
++    const int bottom=panel.y+panel.h-58;
++    const dusk_native::Rect no{panel.x+18,bottom,(panel.w-54)/2,40};
++    const dusk_native::Rect yes{no.x+no.w+18,bottom,no.w,40};
++    dusk_fill(r,no,p.dusk.quit_yes?58:109,42,p.dusk.quit_yes?111:186);
++    dusk_fill(r,yes,p.dusk.quit_yes?151:60,37,p.dusk.quit_yes?180:114);
++    dusk_outline(r,p.dusk.quit_yes?yes:no,222,181,252);
++    dusk_text(r,no.x+18,no.y+13,"CANCEL",1.1f);
++    dusk_text(r,yes.x+18,yes.y+13,"QUIT",1.1f);
++}
++static void dusk_quit_choose(FrontendPresentation& p,bool affirmative) {
++    if(affirmative) p.dusk.quit_requested=true;
++    else {p.dusk.quit_confirm=false;p.dusk.quit_yes=false;}
+ }
+ static void dusk_pip_chrome(SDL_Renderer* r,const FrontendPresentation& p,
+                            const dusk_native::Geometry& g) {
+@@ -1591,6 +1628,12 @@
+     dusk_fill(r,g.pip_minimize,109,34,149);
+     dusk_text(r,g.pip_swap.x+7,g.pip_swap.y+8,"S");
+     dusk_text(r,g.pip_minimize.x+9,g.pip_minimize.y+8,"_");
++    // Subtle resize grip at the lower-right border; other edges work too.
++    const auto pip=p.dusk.cfg.focus_top?g.bottom:g.top;
++    SDL_SetRenderDrawColor(r,231,180,255,255);
++    for(int n=0;n<3;++n)
++        SDL_RenderLine(r,float(pip.x+pip.w-5-n*4),float(pip.y+pip.h-2),
++                         float(pip.x+pip.w-2),float(pip.y+pip.h-5-n*4));
+ }
+ static void dusk_corner_options(SDL_Renderer* r,const FrontendPresentation& p,
+                                 const dusk_native::Geometry& g) {
+@@ -1614,19 +1657,34 @@
+     const auto g=dusk_geometry(p);
+     p.dusk.menu_hover=dusk_native::contains(g.settings,x,y);
+     if(down && ev.button.button==SDL_BUTTON_LEFT && p.dusk.menu_hover) {
++        if(p.dusk.quit_confirm) return true;
+         p.dusk.menu_open=!p.dusk.menu_open;
+         p.dusk.menu_pressed=true;
+         p.dusk.dragging=false;
+         return true;
+     }
+     if(p.dusk.menu_open) {
++        if(p.dusk.quit_confirm) {
++            if(down && ev.button.button==SDL_BUTTON_LEFT) {
++                const auto panel=dusk_quit_panel(g);
++                const int bottom=panel.y+panel.h-58;
++                const int cw=(panel.w-54)/2;
++                if(y>=bottom && y<bottom+40) {
++                    if(x>=panel.x+18 && x<panel.x+18+cw)
++                        dusk_quit_choose(p,false);
++                    else if(x>=panel.x+36+cw && x<panel.x+36+2*cw)
++                        dusk_quit_choose(p,true);
++                }
++            }
++            return true;
++        }
+         if(down && ev.button.button==SDL_BUTTON_LEFT) {
+             const auto panel=dusk_menu_panel(g);
+             const int start=(panel.h<400?52:83);
+-            const int step=std::max(11,std::min(43,(panel.h-(panel.h<400?115:145))/9));
++            const int step=std::max(11,std::min(43,(panel.h-(panel.h<400?115:145))/10));
+             const int row=int((y-panel.y-start)/step);
+             if(x>=panel.x+12 && x<panel.x+panel.w-12 &&
+-               y>=panel.y+start && row>=0 && row<9) {
++               y>=panel.y+start && row>=0 && row<10) {
+                 p.dusk.selected=row;
+                 dusk_menu_action(p,row,1);
+             }
+@@ -1647,12 +1705,37 @@
+             p.dusk.cfg.focus_top=!p.dusk.cfg.focus_top;
+             dusk_save(p);p.dusk.menu_pressed=true;return true;
+         }
++        const int edges=dusk_native::pip_resize_edges(g,p.dusk.cfg,x,y);
++        if(edges) {
++            p.dusk.resizing=true;
++            p.dusk.resize_edges=edges;
++            p.dusk.resize_start_x=x;
++            p.dusk.resize_start_y=y;
++            p.dusk.resize_origin=p.dusk.cfg.focus_top?g.bottom:g.top;
++            p.dusk.resize_start_percent=p.dusk.cfg.float_percent;
++            return true;
++        }
+         if(dusk_native::contains(g.pip_bar,x,y)) {
+             p.dusk.dragging=true;
+             p.dusk.drag_dx=int(x)-g.pip_bar.x;
+             p.dusk.drag_dy=int(y)-g.pip_bar.y;
+             return true;
+         }
++    }
++    if(up && p.dusk.resizing){p.dusk.resizing=false;dusk_save(p);return true;}
++    if(p.dusk.resizing && ev.type==SDL_MOUSEMOTION) {
++        const auto& start=p.dusk.resize_origin;
++        const auto new_bounds=dusk_native::resize_pip(g.play,start,
++            p.dusk.resize_edges,x-p.dusk.resize_start_x,
++            y-p.dusk.resize_start_y,p.dusk.resize_start_percent);
++        p.dusk.cfg.float_percent=new_bounds.percent;
++        const auto next=dusk_geometry(p);
++        const auto pip=p.dusk.cfg.focus_top?next.bottom:next.top;
++        const int dx=std::max(1,next.play.w-pip.w-12);
++        const int dy=std::max(1,next.play.h-pip.h-12);
++        p.dusk.cfg.floating_x=std::clamp(float(new_bounds.rect.x)/dx,0.f,1.f);
++        p.dusk.cfg.floating_y=std::clamp(float(new_bounds.rect.y)/dy,0.f,1.f);
++        return true;
+     }
+     if(up && p.dusk.dragging){p.dusk.dragging=false;dusk_save(p);return true;}
+     if(p.dusk.dragging && ev.type==SDL_MOUSEMOTION) {
+@@ -2331,19 +2414,29 @@
+                                  presentation.dusk.cfg.focus_top;
+             if(top_major) {
+                 render_screen(presentation,0,dusk_sdl_rect(geo.top));
+-                if(geo.bottom.w>0)render_screen(presentation,1,bottom);
++                dusk_outline(renderer,geo.top,122,92,213);
++                if(geo.bottom.w>0) {
++                    render_screen(presentation,1,bottom);
++                    dusk_outline(renderer,geo.bottom,84,100,159);
++                }
+             } else {
+                 render_screen(presentation,1,bottom);
+-                if(geo.top.w>0)render_screen(presentation,0,dusk_sdl_rect(geo.top));
+-            }
+-            if(geo.top.w>0)dusk_outline(renderer,geo.top,122,92,213);
+-            if(geo.bottom.w>0)dusk_outline(renderer,geo.bottom,84,100,159);
++                dusk_outline(renderer,geo.bottom,84,100,159);
++                if(geo.top.w>0) {
++                    render_screen(presentation,0,dusk_sdl_rect(geo.top));
++                    dusk_outline(renderer,geo.top,122,92,213);
++                }
++            }
+             if(virtual_stylus_visible)
+                 draw_virtual_stylus(renderer,bottom,virtual_stylus_x,virtual_stylus_y);
+             draw_savestate_notice(renderer,bottom,savestate_notice);
+             dusk_pip_chrome(renderer,presentation,geo);
+             dusk_corner_options(renderer,presentation,geo);
+-            if(presentation.dusk.menu_open)dusk_menu(renderer,presentation,geo);
++            if(presentation.dusk.menu_open) {
++                dusk_menu(renderer,presentation,geo);
++                if(presentation.dusk.quit_confirm)
++                    dusk_quit_modal(renderer,presentation,geo);
++            }
+             ticks.draw+=SDL_GetPerformanceCounter()-start;
+             start=SDL_GetPerformanceCounter();
+             SDL_RenderPresent(renderer);
+@@ -2735,9 +2828,13 @@
+     runtime_menu_config.theme = "nds";
+     runtime_menu_config.accept_label = "A / Enter";
+     runtime_menu_config.back_label = "B / Backspace";
+-    RecompRuntimeUi* runtime_ui =
++    bool disable_mph_ui=false;
++#if defined(NDS_HAVE_SDL3)
++    disable_mph_ui=presentation.dusk.enabled;
++#endif
++    RecompRuntimeUi* runtime_ui = disable_mph_ui ? nullptr :
+         recomp_runtime_ui_create(&runtime_menu_config);
+-    if (!runtime_ui) {
++    if (!runtime_ui && !disable_mph_ui) {
+         std::fprintf(stderr, "[sdl] runtime menu unavailable\n");
+     }
+     bool compute_failed = false;
+@@ -3411,7 +3508,9 @@
+                 const bool toggle=code==SDL_SCANCODE_ESCAPE || code==SDL_SCANCODE_F10;
+                 if(toggle) {
+                     if(down && !event.key.repeat) {
+-                        presentation.dusk.menu_open=!presentation.dusk.menu_open;
++                        if(presentation.dusk.quit_confirm) {
++                            dusk_quit_choose(presentation,false);
++                        } else presentation.dusk.menu_open=!presentation.dusk.menu_open;
+                         if(presentation.dusk.menu_open){
+                             keyboard_pressed=controller_pressed=mouse_pressed=stick_pressed=0;
+                             publish_keys();nds_set_touch(0,0,false);
+@@ -3422,8 +3521,17 @@
+                 if(presentation.dusk.menu_open) {
+                     if(down && !event.key.repeat) {
+                         auto& d=presentation.dusk;
+-                        if(code==SDL_SCANCODE_UP)d.selected=(d.selected+8)%9;
+-                        else if(code==SDL_SCANCODE_DOWN)d.selected=(d.selected+1)%9;
++                        if(d.quit_confirm) {
++                            if(code==SDL_SCANCODE_LEFT || code==SDL_SCANCODE_RIGHT)
++                                d.quit_yes=code==SDL_SCANCODE_RIGHT;
++                            else if(code==SDL_SCANCODE_RETURN || code==SDL_SCANCODE_KP_ENTER)
++                                dusk_quit_choose(presentation,d.quit_yes);
++                            else if(code==SDL_SCANCODE_BACKSPACE)
++                                dusk_quit_choose(presentation,false);
++                            continue;
++                        }
++                        if(code==SDL_SCANCODE_UP)d.selected=(d.selected+9)%10;
++                        else if(code==SDL_SCANCODE_DOWN)d.selected=(d.selected+1)%10;
+                         else if(code==SDL_SCANCODE_LEFT || code==SDL_SCANCODE_RIGHT ||
+                                 code==SDL_SCANCODE_RETURN || code==SDL_SCANCODE_KP_ENTER)
+                             dusk_menu_action(presentation,d.selected,
+@@ -3465,20 +3573,35 @@
+                 if(event.type==SDL_CONTROLLERBUTTONDOWN) {
+                     const uint8_t button=sdl_controller_button(event);
+                     auto& d=presentation.dusk;
+-                    if(button==SDL_CONTROLLER_BUTTON_DPAD_UP)d.selected=(d.selected+8)%9;
+-                    else if(button==SDL_CONTROLLER_BUTTON_DPAD_DOWN)d.selected=(d.selected+1)%9;
++                    if(d.quit_confirm) {
++                        if(button==SDL_CONTROLLER_BUTTON_DPAD_LEFT)
++                            d.quit_yes=false;
++                        else if(button==SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
++                            d.quit_yes=true;
++                        else if(button==SDL_CONTROLLER_BUTTON_A)
++                            dusk_quit_choose(presentation,d.quit_yes);
++                        else if(button==SDL_CONTROLLER_BUTTON_B ||
++                                button==SDL_CONTROLLER_BUTTON_BACK)
++                            dusk_quit_choose(presentation,false);
++                        continue;
++                    }
++                    if(button==SDL_CONTROLLER_BUTTON_DPAD_UP)d.selected=(d.selected+9)%10;
++                    else if(button==SDL_CONTROLLER_BUTTON_DPAD_DOWN)d.selected=(d.selected+1)%10;
+                     else if(button==SDL_CONTROLLER_BUTTON_DPAD_LEFT)dusk_menu_action(presentation,d.selected,-1);
+                     else if(button==SDL_CONTROLLER_BUTTON_DPAD_RIGHT ||
+                             button==SDL_CONTROLLER_BUTTON_A)dusk_menu_action(presentation,d.selected,1);
+                     else if(button==SDL_CONTROLLER_BUTTON_B ||
+-                            button==SDL_CONTROLLER_BUTTON_START)d.menu_open=false;
++                            button==SDL_CONTROLLER_BUTTON_START ||
++                            button==SDL_CONTROLLER_BUTTON_BACK)d.menu_open=false;
+                 }
+                 continue;
+             }
+             if(presentation.dusk.enabled &&
+-                event.type==SDL_CONTROLLERBUTTONDOWN &&
++                (event.type==SDL_CONTROLLERBUTTONDOWN ||
++                 event.type==SDL_CONTROLLERBUTTONUP) &&
+                 sdl_controller_button(event)==SDL_CONTROLLER_BUTTON_BACK) {
+-                presentation.dusk.menu_open=!presentation.dusk.menu_open;
++                if(event.type==SDL_CONTROLLERBUTTONDOWN)
++                    presentation.dusk.menu_open=!presentation.dusk.menu_open;
+                 keyboard_pressed=controller_pressed=mouse_pressed=stick_pressed=0;
+                 publish_keys();nds_set_touch(0,0,false);
+                 continue;
+@@ -3921,6 +4044,13 @@
+                     nds_set_touch(0, 0, false);
+             }
+         }
++#if defined(NDS_HAVE_SDL3)
++        if(presentation.dusk.enabled && presentation.dusk.quit_requested) {
++            release_relative_mouse();
++            running=false;
++            break;
++        }
++#endif
+         if (focus_release_pending) {
+             if (!any_presentation_window_focused()) {
+                 release_relative_mouse();
+@@ -3933,6 +4063,32 @@
+         mph_pad_frame_x = 0;
+         mph_pad_frame_y = 0;
+         if (controller) {
++#if defined(NDS_HAVE_SDL3)
++            if(presentation.dusk.enabled) {
++                // LT selects touch as main; RT selects upper as main.
++                // Physical DS L/R buttons continue through normal mappings.
++                static bool dusk_lt_held=false,dusk_rt_held=false;
++                const bool lt=SDL_GameControllerGetAxis(
++                    controller,SDL_CONTROLLER_AXIS_TRIGGERLEFT)>13000;
++                const bool rt=SDL_GameControllerGetAxis(
++                    controller,SDL_CONTROLLER_AXIS_TRIGGERRIGHT)>13000;
++                if(!presentation.dusk.menu_open && !presentation.dusk.quit_confirm) {
++                    bool updated=false;
++                    if(lt && !dusk_lt_held) {
++                        presentation.dusk.cfg.layout=dusk_native::Layout::Focus;
++                        presentation.dusk.cfg.focus_top=false;
++                        updated=true;
++                    }
++                    if(rt && !dusk_rt_held) {
++                        presentation.dusk.cfg.layout=dusk_native::Layout::Focus;
++                        presentation.dusk.cfg.focus_top=true;
++                        updated=true;
++                    }
++                    if(updated)dusk_save(presentation);
++                }
++                dusk_lt_held=lt;dusk_rt_held=rt;
++            }
++#endif
+             // Left stick -> D-pad, with hysteresis so a stick resting near
+             // a threshold never flickers a direction.
+             const float lx = SDL_GameControllerGetAxis(
+@@ -3998,7 +4154,11 @@
+                 stick_dir(ly, 1u << 7, true);    // Down
+             }
+ 
+-            if (!menu_open && virtual_stylus_available) {
++            if (!menu_open && virtual_stylus_available &&
++#if defined(NDS_HAVE_SDL3)
++                !presentation.dusk.enabled &&
++#endif
++                true) {
+                 const float rx = SDL_GameControllerGetAxis(
+                     controller, SDL_CONTROLLER_AXIS_RIGHTX) / 32767.0f;
+                 const float ry = SDL_GameControllerGetAxis(
+diff --git a/runner/src/dusk_native_ui.h b/runner/src/dusk_native_ui.h
+--- a/runner/src/dusk_native_ui.h
++++ b/runner/src/dusk_native_ui.h
+@@ -114,6 +114,54 @@
+     }
+     return g;
+ }
++// Resize touch zones only on the PiP frame; never on the DS guest surface.
++// Side grips have a 10px tolerance, corners combine two axes.
++enum PiPEdge : int { EdgeNone=0, EdgeLeft=1, EdgeRight=2, EdgeTop=4, EdgeBottom=8 };
++inline Rect focus_pip(const Geometry& g,const Config& c) {
++    return c.focus_top ? g.bottom : g.top;
++}
++inline int pip_resize_edges(const Geometry& g,const Config& c,float x,float y) {
++    if(c.layout!=Layout::Focus || !c.auxiliary) return EdgeNone;
++    const auto r=focus_pip(g,c);
++    if(r.w<40 || r.h<40) return EdgeNone;
++    constexpr float outer=5.f,grip=11.f;
++    if(x<r.x-outer || x>=r.x+r.w+outer || y<r.y-outer || y>=r.y+r.h+outer)
++        return EdgeNone;
++    const bool left=std::abs(x-r.x)<=grip;
++    const bool right=std::abs(x-(r.x+r.w))<=grip;
++    const bool top=std::abs(y-r.y)<=grip;
++    const bool bottom=std::abs(y-(r.y+r.h))<=grip;
++    // Leave header action buttons unobstructed. Its left edge still resizes.
++    if(y>=g.pip_swap.y && y<g.pip_swap.y+g.pip_swap.h &&
++       x>=g.pip_swap.x && x<g.pip_minimize.x+g.pip_minimize.w)
++        return EdgeNone;
++    return (left?EdgeLeft:0)|(right?EdgeRight:0)|
++           (top?EdgeTop:0)|(bottom?EdgeBottom:0);
++}
++struct PiPResizeResult { Rect rect{}; int percent=36; };
++inline PiPResizeResult resize_pip(Rect viewport,Rect initial,int edges,
++                                float dx,float dy,int initial_percent) {
++    if(!edges)return {initial,initial_percent};
++    // Prefer the larger motion measured in native DS 4:3 units.
++    const double delta_x=(edges&EdgeLeft)?-dx:(edges&EdgeRight)?dx:0.f;
++    const double delta_y=(edges&EdgeTop)?-dy*4./3.:(edges&EdgeBottom)?dy*4./3.:0.f;
++    const double delta=(edges&(EdgeLeft|EdgeRight)) && (edges&(EdgeTop|EdgeBottom))
++        ? (std::abs(delta_x)>=std::abs(delta_y)?delta_x:delta_y)
++        : delta_x+delta_y;
++    const double basis=std::min(double(viewport.w),double(viewport.h)*4./3.);
++    const int requested=initial.w+int(std::round(delta));
++    const int target_percent=std::clamp(int(std::round(100.0*requested/
++                                                 std::max(1.0,basis))),25,65);
++    // Match the compositor's actual dimension clamping, not just percentage.
++    const int width=std::min(std::clamp(int(basis*target_percent/100.0),96,
++                                     std::max(96,viewport.w/2)),
++                             std::max(96,std::min(viewport.w/2,viewport.h*2/3)));
++    const int height=std::max(1,int(width*192./256.));
++    const int x=(edges&EdgeLeft)?initial.x+initial.w-width:initial.x;
++    const int y=(edges&EdgeTop)?initial.y+initial.h-height:initial.y;
++    return {{std::clamp(x,0,std::max(0,viewport.w-width)),
++             std::clamp(y,0,std::max(0,viewport.h-height)),width,height},target_percent};
++}
+ inline bool map_touch(const Geometry& g,float x,float y,float& outx,float& outy) {
+     if(!contains(g.bottom,x,y)) return false;
+     outx=std::clamp((x-g.bottom.x)*256.f/g.bottom.w,0.f,255.999f);

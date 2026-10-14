@@ -1,0 +1,389 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1329,6 +1329,10 @@
+         bool quit_requested = false;
+         bool resizing = false;
+         int resize_edges = 0;
++        SDL_Cursor* resize_cursors[4]{};
++        int active_cursor=0;  // 0 default, 1 EW, 2 NS, 3 NWSE, 4 NESW
++        dusk_native::RightStickTouch stick_touch{};
++        uint64_t stick_touch_tick=0;
+         float resize_start_x = 0, resize_start_y = 0;
+         dusk_native::Rect resize_origin{};
+         int resize_start_percent = 36;
+@@ -1495,6 +1499,93 @@
+                          float(r.w)+2.f,float(r.h)+2.f};
+     SDL_RenderRect(renderer,&rect);
+ }
++// Small rounded outlines use SDL3 native geometry: the game texture itself
++// is clipped to the same corners, not covered with opaque corner rectangles.
++static std::vector<SDL_FPoint> dusk_round_points(dusk_native::Rect r,float radius) {
++    const float x=float(r.x),y=float(r.y),w=float(r.w),h=float(r.h);
++    const float rad=std::clamp(radius,0.f,std::min(w,h)*.5f);
++    std::vector<SDL_FPoint> points;
++    points.reserve(25);
++    constexpr float pi=3.14159265358979f;
++    for(int corner=0;corner<4;++corner) {
++        const float cx=x+((corner==0||corner==1)?w-rad:rad);
++        const float cy=y+((corner==1||corner==2)?h-rad:rad);
++        const float start=(float(corner)-1.f)*pi*.5f;
++        for(int i=0;i<=5;++i) {
++            const float angle=start+float(i)*pi/10.f;
++            points.push_back({cx+std::cos(angle)*rad,
++                              cy+std::sin(angle)*rad});
++        }
++    }
++    return points;
++}
++static void dusk_round_geometry(SDL_Renderer* renderer,SDL_Texture* texture,
++                                dusk_native::Rect box,int radius,SDL_FColor color) {
++    if(box.w<1 || box.h<1)return;
++    const auto outline=dusk_round_points(box,float(radius));
++    std::vector<SDL_Vertex> vertices;
++    std::vector<int> indices;
++    vertices.reserve(outline.size()+1);
++    indices.reserve(outline.size()*3);
++    const auto add=[&](SDL_FPoint xy) {
++        vertices.push_back({xy,color,{(xy.x-float(box.x))/float(box.w),
++                                      (xy.y-float(box.y))/float(box.h)}});
++    };
++    add({box.x+box.w*.5f,box.y+box.h*.5f});
++    for(auto xy:outline)add(xy);
++    for(int i=0;i<int(outline.size());++i) {
++        indices.push_back(0);
++        indices.push_back(i+1);
++        indices.push_back((i+1)%int(outline.size())+1);
++    }
++    SDL_RenderGeometry(renderer,texture,vertices.data(),int(vertices.size()),
++                       indices.data(),int(indices.size()));
++}
++static void dusk_round_outline(SDL_Renderer* renderer,dusk_native::Rect box,
++                               int radius,uint8_t red,uint8_t green,uint8_t blue) {
++    auto line=dusk_round_points(box,float(radius));
++    line.push_back(line.front());
++    SDL_SetRenderDrawColor(renderer,red,green,blue,255);
++    SDL_RenderLines(renderer,line.data(),int(line.size()));
++}
++static void dusk_render_rounded_screen(FrontendPresentation& p,int screen,
++                                      dusk_native::Rect box,int radius) {
++    SDL_Renderer* r=p.renderers[0];
++    SDL_Texture* tex=p.textures[screen];
++    if(p.sample_scale>1 && p.sample_targets[screen]) {
++        SDL_SetRenderTarget(r,p.sample_targets[screen]);
++        SDL_SetRenderDrawColor(r,0,0,0,255);
++        SDL_RenderClear(r);
++        SDL_RenderTexture(r,tex,nullptr,nullptr);
++        SDL_SetRenderTarget(r,nullptr);
++        tex=p.sample_targets[screen];
++    }
++    dusk_round_geometry(r,tex,box,radius,{1.f,1.f,1.f,1.f});
++}
++static void dusk_cursor_for_pip(FrontendPresentation& p,int edges) {
++    int next=0;
++    using namespace dusk_native;
++    if((edges&EdgeLeft && edges&EdgeTop) ||
++       (edges&EdgeRight && edges&EdgeBottom))next=3;
++    else if((edges&EdgeLeft && edges&EdgeBottom) ||
++            (edges&EdgeRight && edges&EdgeTop))next=4;
++    else if(edges&(EdgeLeft|EdgeRight))next=1;
++    else if(edges&(EdgeTop|EdgeBottom))next=2;
++    if(p.dusk.active_cursor==next)return;
++    if(next==0)SDL_SetCursor(SDL_GetDefaultCursor());
++    else {
++        SDL_Cursor*& cursor=p.dusk.resize_cursors[next-1];
++        if(!cursor) {
++            const SDL_SystemCursor kind=next==1?SDL_SYSTEM_CURSOR_EW_RESIZE:
++                next==2?SDL_SYSTEM_CURSOR_NS_RESIZE:
++                next==3?SDL_SYSTEM_CURSOR_NWSE_RESIZE:
++                        SDL_SYSTEM_CURSOR_NESW_RESIZE;
++            cursor=SDL_CreateSystemCursor(kind);
++        }
++        if(cursor)SDL_SetCursor(cursor);
++    }
++    p.dusk.active_cursor=next;
++}
+ static void dusk_text(SDL_Renderer* r,int x,int y,const char* str,float scale=1.f) {
+     SDL_SetRenderDrawColor(r,237,229,253,255);
+     SDL_SetRenderScale(r,scale,scale);
+@@ -1622,18 +1713,33 @@
+         return;
+     }
+     if(!g.pip_bar.w)return;
+-    dusk_fill(r,g.pip_bar,37,15,85,237);
+-    dusk_text(r,g.pip_bar.x+8,g.pip_bar.y+8,p.dusk.cfg.focus_top?"TOUCH":"UPPER");
+-    dusk_fill(r,g.pip_swap,84,27,142);
+-    dusk_fill(r,g.pip_minimize,109,34,149);
+-    dusk_text(r,g.pip_swap.x+7,g.pip_swap.y+8,"S");
++    const auto box=g.pip_bar;
++    dusk_round_geometry(r,nullptr,box,dusk_native::kPiPCornerRadius,
++                        {.22f,.08f,.39f,.96f});
++    dusk_fill(r,{box.x,box.y+8,box.w,box.h-8},38,15,82,244);
++    dusk_fill(r,{box.x+6,box.y+3,std::max(0,box.w-70),1},129,81,178,255);
++    dusk_text(r,box.x+10,box.y+8,p.dusk.cfg.focus_top?"TOUCH":"UPPER",1.f);
++    dusk_fill(r,g.pip_swap,75,36,121);
++    dusk_fill(r,g.pip_minimize,75,36,121);
++    // Two opposing arrows communicate swap immediately; no cryptic letter S.
++    const float xx=float(g.pip_swap.x+7), yy=float(g.pip_swap.y+9);
++    SDL_SetRenderDrawColor(r,224,211,255,255);
++    SDL_RenderLine(r,xx,yy,xx+13,yy);
++    SDL_RenderLine(r,xx,yy,xx+3,yy-3);
++    SDL_RenderLine(r,xx,yy,xx+3,yy+3);
++    SDL_RenderLine(r,xx,yy+7,xx+13,yy+7);
++    SDL_RenderLine(r,xx+13,yy+7,xx+10,yy+4);
++    SDL_RenderLine(r,xx+13,yy+7,xx+10,yy+10);
+     dusk_text(r,g.pip_minimize.x+9,g.pip_minimize.y+8,"_");
+-    // Subtle resize grip at the lower-right border; other edges work too.
+-    const auto pip=p.dusk.cfg.focus_top?g.bottom:g.top;
+-    SDL_SetRenderDrawColor(r,231,180,255,255);
+-    for(int n=0;n<3;++n)
+-        SDL_RenderLine(r,float(pip.x+pip.w-5-n*4),float(pip.y+pip.h-2),
+-                         float(pip.x+pip.w-2),float(pip.y+pip.h-5-n*4));
++    const auto pip=dusk_native::focus_pip(g,p.dusk.cfg);
++    dusk_round_outline(r,{box.x-2,box.y-2,pip.w+4,
++                          pip.h+dusk_native::kPiPHeaderHeight+4},
++                       dusk_native::kPiPCornerRadius+2,155,103,210);
++    // Thin corner handle: clear discoverability without obscuring content.
++    SDL_SetRenderDrawColor(r,230,207,255,210);
++    const float right=float(pip.x+pip.w-4),bottom=float(pip.y+pip.h-4);
++    SDL_RenderLine(r,right-8,bottom,right,bottom-8);
++    SDL_RenderLine(r,right-4,bottom,right,bottom-4);
+ }
+ static void dusk_corner_options(SDL_Renderer* r,const FrontendPresentation& p,
+                                 const dusk_native::Geometry& g) {
+@@ -1655,6 +1761,10 @@
+     if(!SDL_RenderCoordinatesFromWindow(p.renderers[0],x,y,&x,&y))return false;
+     p.dusk.cursor_x=x;p.dusk.cursor_y=y;
+     const auto g=dusk_geometry(p);
++    const int hover_edges=p.dusk.resizing?p.dusk.resize_edges:
++        (!p.dusk.menu_open && !p.dusk.dragging?
++         dusk_native::pip_resize_edges(g,p.dusk.cfg,x,y):0);
++    dusk_cursor_for_pip(p,hover_edges);
+     p.dusk.menu_hover=dusk_native::contains(g.settings,x,y);
+     if(down && ev.button.button==SDL_BUTTON_LEFT && p.dusk.menu_hover) {
+         if(p.dusk.quit_confirm) return true;
+@@ -1742,7 +1852,7 @@
+         const auto geo=dusk_geometry(p);
+         const auto pip=p.dusk.cfg.focus_top?geo.bottom:geo.top;
+         const int free_x=std::max(1,geo.play.w-pip.w-12);
+-        const int free_y=std::max(1,geo.play.h-pip.h-12);
++        const int free_y=std::max(1,geo.play.h-pip.h-dusk_native::kPiPHeaderHeight-12);
+         p.dusk.cfg.floating_x=std::clamp((x-p.dusk.drag_dx)/free_x,0.f,1.f);
+         p.dusk.cfg.floating_y=std::clamp((y-p.dusk.drag_dy)/free_y,0.f,1.f);
+         return true;
+@@ -1774,6 +1884,15 @@
+         if (texture) SDL_DestroyTexture(texture);
+         texture = nullptr;
+     }
++#if defined(NDS_HAVE_SDL3)
++    if(presentation.dusk.enabled) {
++        SDL_SetCursor(SDL_GetDefaultCursor());
++        for(SDL_Cursor*& cursor:presentation.dusk.resize_cursors) {
++            if(cursor)SDL_DestroyCursor(cursor);
++            cursor=nullptr;
++        }
++    }
++#endif
+     if (presentation.separate && presentation.renderers[1])
+         SDL_DestroyRenderer(presentation.renderers[1]);
+     if (presentation.renderers[0])
+@@ -2409,23 +2528,42 @@
+             dusk_fill(renderer,{0,0,geo.play.w,geo.play.h},13,8,29);
+             dusk_fill(renderer,geo.play,19,26,41);
+             auto bottom=dusk_sdl_rect(geo.bottom);
+-            // Render major screen first, PiP second; DS touch remains bottom.
+-            const bool top_major=presentation.dusk.cfg.layout==dusk_native::Layout::Focus &&
+-                                 presentation.dusk.cfg.focus_top;
++            // Only Focus PiP gets rounded texture geometry; guest pixels are
++            // mapped in full below its separate 24px header.
++            const bool focus=presentation.dusk.cfg.layout==dusk_native::Layout::Focus;
++            const bool top_major=focus && presentation.dusk.cfg.focus_top;
+             if(top_major) {
+                 render_screen(presentation,0,dusk_sdl_rect(geo.top));
+                 dusk_outline(renderer,geo.top,122,92,213);
+                 if(geo.bottom.w>0) {
+-                    render_screen(presentation,1,bottom);
+-                    dusk_outline(renderer,geo.bottom,84,100,159);
++                    const auto pip=geo.bottom;
++                    dusk_round_geometry(renderer,nullptr,
++                        {pip.x-4,pip.y-dusk_native::kPiPHeaderHeight-2,
++                         pip.w+8,pip.h+dusk_native::kPiPHeaderHeight+8},
++                        dusk_native::kPiPCornerRadius+3,{.04f,.02f,.11f,.84f});
++                    dusk_render_rounded_screen(presentation,1,pip,dusk_native::kPiPCornerRadius);
+                 }
+             } else {
+                 render_screen(presentation,1,bottom);
+                 dusk_outline(renderer,geo.bottom,84,100,159);
+                 if(geo.top.w>0) {
+-                    render_screen(presentation,0,dusk_sdl_rect(geo.top));
+-                    dusk_outline(renderer,geo.top,122,92,213);
++                    if(focus) {
++                        const auto pip=geo.top;
++                        dusk_round_geometry(renderer,nullptr,
++                            {pip.x-4,pip.y-dusk_native::kPiPHeaderHeight-2,
++                             pip.w+8,pip.h+dusk_native::kPiPHeaderHeight+8},
++                            dusk_native::kPiPCornerRadius+3,{.04f,.02f,.11f,.84f});
++                        dusk_render_rounded_screen(presentation,0,pip,
++                                                  dusk_native::kPiPCornerRadius);
++                    } else {
++                        render_screen(presentation,0,dusk_sdl_rect(geo.top));
++                        dusk_outline(renderer,geo.top,122,92,213);
++                    }
+                 }
++            }
++            if(presentation.dusk.stick_touch.down) {
++                draw_virtual_stylus(renderer,bottom,presentation.dusk.stick_touch.x,
++                                    presentation.dusk.stick_touch.y);
+             }
+             if(virtual_stylus_visible)
+                 draw_virtual_stylus(renderer,bottom,virtual_stylus_x,virtual_stylus_y);
+@@ -3607,6 +3745,12 @@
+                 continue;
+             }
+ #endif
++#if defined(NDS_HAVE_SDL3)
++            if(presentation.dusk.enabled &&
++               (event.type==SDL_EVENT_WINDOW_MOUSE_LEAVE ||
++                event.type==SDL_EVENT_WINDOW_FOCUS_LOST))
++                dusk_cursor_for_pip(presentation,0);
++#endif
+             convert_mouse_event_to_logical_coordinates(event, presentation);
+             if (event.type == SDL_QUIT) {
+                 release_relative_mouse();
+@@ -4089,6 +4233,33 @@
+                 dusk_lt_held=lt;dusk_rt_held=rt;
+             }
+ #endif
++#if defined(NDS_HAVE_SDL3)
++            if(presentation.dusk.enabled) {
++                auto& stick=presentation.dusk.stick_touch;
++                const bool was_down=stick.down;
++                const uint64_t tick=SDL_GetPerformanceCounter();
++                const uint64_t prior=presentation.dusk.stick_touch_tick;
++                presentation.dusk.stick_touch_tick=tick;
++                const float dt=prior>0 && tick>prior ?
++                    std::clamp(float(double(tick-prior)/
++                                      double(SDL_GetPerformanceFrequency())),
++                               0.f,.04f):1.f/60.f;
++                const float rx=SDL_GameControllerGetAxis(
++                    controller,SDL_CONTROLLER_AXIS_RIGHTX)/32767.f;
++                const float ry=SDL_GameControllerGetAxis(
++                    controller,SDL_CONTROLLER_AXIS_RIGHTY)/32767.f;
++                const bool allowed=!presentation.dusk.menu_open &&
++                    !presentation.dusk.quit_confirm && !mouse_down &&
++                    any_presentation_window_focused() &&
++                    !relative_mouse.captured() &&
++                    !virtual_stylus_active();
++                if(stick.step(rx,ry,dt,allowed))
++                    nds_set_touch(uint16_t(std::lround(stick.x)),
++                                  uint16_t(std::lround(stick.y)),true);
++                else if(was_down && !mouse_down)
++                    nds_set_touch(0,0,false);
++            }
++#endif
+             // Left stick -> D-pad, with hysteresis so a stick resting near
+             // a threshold never flickers a direction.
+             const float lx = SDL_GameControllerGetAxis(
+@@ -4267,6 +4438,14 @@
+                 }
+             }
+         } else {
++#if defined(NDS_HAVE_SDL3)
++            if(presentation.dusk.enabled) {
++                if(presentation.dusk.stick_touch.down && !mouse_down)
++                    nds_set_touch(0,0,false);
++                presentation.dusk.stick_touch.down=false;
++                presentation.dusk.stick_touch_tick=0;
++            }
++#endif
+             runtime_stick_held = false;
+             runtime_stick_frames = 0;
+             if (stick_pressed != 0) {
+diff --git a/runner/src/dusk_native_ui.h b/runner/src/dusk_native_ui.h
+--- a/runner/src/dusk_native_ui.h
++++ b/runner/src/dusk_native_ui.h
+@@ -8,6 +8,9 @@
+ namespace dusk_native {
+ enum class Layout : int { Modern = 0, Floating = 1, Classic = 2, Horizontal = 3, MainOnly = 4, Focus = 5 };
+ struct Rect { int x=0, y=0, w=0, h=0; };
++inline constexpr int kPiPHeaderHeight=24;
++inline constexpr int kPiPCornerRadius=7;
++
+ struct Config {
+     Layout layout=Layout::Focus;
+     bool auxiliary=true;
+@@ -50,14 +53,17 @@
+         // stretch of the host compositor, not a false claim of 3D widescreen.
+         const Rect major=cfg.fill_wide ? fitted(play,16,9) : fitted(play,cfg.focus_top?top_w:bottom_w,192);
+         const int desired=std::clamp(int(std::min(w,h*4/3)*std::clamp(cfg.float_percent,25,65)/100.),96,std::max(96,w/2));
+-        const int sw=std::min(desired,std::max(96,std::min(w/2,h*2/3)));
++        // PiP content is the entire 256x192 image. Its own chrome lives
++        // ABOVE the content; not a single guest pixel may be overdrawn.
++        const int sw=std::min(desired,std::max(96,std::min(w/2,(h-kPiPHeaderHeight-24)*4/3)));
+         const int sh=std::max(1,int(double(sw)*192/256));
+-        const int free_x=std::max(0,w-sw-12),free_y=std::max(0,h-sh-12);
++        const int free_x=std::max(0,w-sw-12);
++        const int free_y=std::max(0,h-sh-kPiPHeaderHeight-12);
+         const int corner_x=cfg.float_corner%2==0?12:free_x;
+         const int corner_y=cfg.float_corner<2?12:free_y;
+         const int x=cfg.floating_x>=0?int(std::clamp(cfg.floating_x,0.f,1.f)*free_x):corner_x;
+         const int y=cfg.floating_y>=0?int(std::clamp(cfg.floating_y,0.f,1.f)*free_y):corner_y;
+-        const Rect pip={x,y,sw,sh};
++        const Rect pip={x,y+kPiPHeaderHeight,sw,sh};
+         if(cfg.focus_top) {g.top=major; if(show)g.bottom=pip;}
+         else {g.bottom=major; if(show)g.top=pip;}
+         if(show) {
+@@ -122,8 +128,12 @@
+ }
+ inline int pip_resize_edges(const Geometry& g,const Config& c,float x,float y) {
+     if(c.layout!=Layout::Focus || !c.auxiliary) return EdgeNone;
+-    const auto r=focus_pip(g,c);
+-    if(r.w<40 || r.h<40) return EdgeNone;
++    const auto content=focus_pip(g,c);
++    if(content.w<40 || content.h<40) return EdgeNone;
++    // Hit-test the OUTER frame, including the header; image content remains
++    // fully visible inside and all resize cursors match the actual frame.
++    const Rect r{content.x,content.y-kPiPHeaderHeight,
++                 content.w,content.h+kPiPHeaderHeight};
+     constexpr float outer=5.f,grip=11.f;
+     if(x<r.x-outer || x>=r.x+r.w+outer || y<r.y-outer || y>=r.y+r.h+outer)
+         return EdgeNone;
+@@ -155,13 +165,35 @@
+     // Match the compositor's actual dimension clamping, not just percentage.
+     const int width=std::min(std::clamp(int(basis*target_percent/100.0),96,
+                                      std::max(96,viewport.w/2)),
+-                             std::max(96,std::min(viewport.w/2,viewport.h*2/3)));
++                             std::max(96,std::min(viewport.w/2,
++                                 (viewport.h-kPiPHeaderHeight-24)*4/3)));
+     const int height=std::max(1,int(width*192./256.));
+     const int x=(edges&EdgeLeft)?initial.x+initial.w-width:initial.x;
+     const int y=(edges&EdgeTop)?initial.y+initial.h-height:initial.y;
+     return {{std::clamp(x,0,std::max(0,viewport.w-width)),
+-             std::clamp(y,0,std::max(0,viewport.h-height)),width,height},target_percent};
+-}
++             std::clamp(y,kPiPHeaderHeight,std::max(kPiPHeaderHeight,
++                        viewport.h-height-12)),width,height},target_percent};
++}
++struct RightStickTouch {
++    float x=128.f, y=96.f;
++    bool down=false;
++    // Poll one time per presented guest frame; frame-time-independent speed.
++    // Releasing the stick raises the stylus; mouse retains its own priority.
++    bool step(float rx,float ry,float dt,bool allowed) {
++        const float magnitude=std::sqrt(rx*rx+ry*ry);
++        if(!allowed || !std::isfinite(magnitude) || magnitude<=0.23f) {
++            down=false;
++            return false;
++        }
++        const float normalized=std::clamp((magnitude-0.23f)/0.77f,0.f,1.f);
++        const float velocity=155.f*normalized*normalized;
++        const float time=std::clamp(dt,0.f,0.04f);
++        x=std::clamp(x+rx/magnitude*velocity*time,0.f,255.f);
++        y=std::clamp(y+ry/magnitude*velocity*time,0.f,191.f);
++        down=true;
++        return true;
++    }
++};
+ inline bool map_touch(const Geometry& g,float x,float y,float& outx,float& outy) {
+     if(!contains(g.bottom,x,y)) return false;
+     outx=std::clamp((x-g.bottom.x)*256.f/g.bottom.w,0.f,255.999f);

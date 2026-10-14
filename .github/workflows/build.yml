@@ -375,12 +375,40 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch
+          grep -q 'd.menu_stick.poll(lx,ly)' upstream/runner/src/frontend.cpp
+          grep -q 'clear_gameplay_input_for_runtime_menu();' upstream/runner/src/frontend.cpp
+          grep -q 'SDL_SYSTEM_CURSOR_NWSE_RESIZE' upstream/runner/src/frontend.cpp
+          grep -q 'dusk_render_rounded_screen' upstream/runner/src/frontend.cpp
+          grep -q 'stick.step(rx,ry,dt,allowed)' upstream/runner/src/frontend.cpp
+          grep -q 'Unsaved progress will be lost' upstream/runner/src/frontend.cpp
+          grep -q 'disable_mph_ui=presentation.dusk.enabled' upstream/runner/src/frontend.cpp
           grep -q 'NDS_DUSK_DISABLE_SAVESTATES' upstream/runner/src/frontend.cpp
+          grep -q 'DUSK' upstream/runner/src/frontend.cpp
       - name: Build ROM-free geometry and touch tests
         run: |
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_screen_swap.cpp -o native_screen_swap
           ./native_screen_swap
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_focus_pip.cpp -o native_focus_pip
+          ./native_focus_pip
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_pip_resize.cpp -o native_pip_resize
+          ./native_pip_resize
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_right_stick_touch.cpp -o native_right_stick_touch
+          ./native_right_stick_touch
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_pc_menu_input.cpp -o native_pc_menu_input
+          ./native_pc_menu_input
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
           ./native_30hz_pacing

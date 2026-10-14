@@ -31,15 +31,17 @@ def runtime_fingerprint(root: Path = ROOT) -> str:
 
 def verified_pin(path: Path = PIN_FILE, root: Path = ROOT) -> dict:
     pin = json.loads(path.read_text(encoding="utf-8"))
-    for key in ("run_id", "artifact_name", "exe_filename", "exe_sha256", "source_fingerprint"):
+    for key in ("run_id", "artifact_id", "artifact_name", "artifact_digest", "exe_filename", "source_fingerprint"):
         if not pin.get(key):
             raise ValueError(f"Windows runtime pin missing {key}")
     if type(pin["run_id"]) is not int or pin["run_id"] <= 0:
         raise ValueError("Invalid pinned full-build run ID")
     if not pin["artifact_name"].startswith("Digimon-World-Dusk-Recompiled-"):
         raise ValueError("Unexpected pinned artifact name")
-    if len(pin["exe_sha256"]) != 64 or not all(c in "0123456789abcdef" for c in pin["exe_sha256"]):
-        raise ValueError("Expected lowercase source EXE SHA-256")
+    if type(pin["artifact_id"]) is not int or pin["artifact_id"] <= 0:
+        raise ValueError("Invalid pinned artifact ID")
+    if not pin["artifact_digest"].startswith("sha256:") or len(pin["artifact_digest"]) != 71 or not all(c in "0123456789abcdef" for c in pin["artifact_digest"][7:]):
+        raise ValueError("Expected sha256 artifact digest")
     if pin["source_fingerprint"] != runtime_fingerprint(root):
         raise ValueError("Native sources changed: refuse fast repack; full NDSRecomp build required")
     return pin

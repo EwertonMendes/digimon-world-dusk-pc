@@ -76,11 +76,8 @@ jobs:
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
-          # Vital: without this exact patch, diagnostic FreeBIOS builds force
-          # ALL ORIGINAL GAME C BANKS to -O0 even with CMAKE_BUILD_TYPE=Release!
-          # v0.17/v0.18 regressed from optimized v0.16 here.
-          git -C upstream apply --check ../tools/patches/ndsrecomp-title-opt-level.patch
-          git -C upstream apply ../tools/patches/ndsrecomp-title-opt-level.patch
+          # apply_dusk_patches.py already installs the title -O1 patch;
+          # do not apply the same patch twice.
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
           git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
           python tools/patch_windows_net.py upstream

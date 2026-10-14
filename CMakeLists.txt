@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(DuskPC VERSION 0.1.0 LANGUAGES CXX)
+project(DigimonWorldDuskRecompiled VERSION 0.24.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,6 +25,7 @@ target_link_libraries(dusk_rom_info PRIVATE dusk_core)
 if(WIN32)
   add_executable(dusk_pc WIN32 apps/win32_main.cpp)
   target_link_libraries(dusk_pc PRIVATE dusk_core user32 gdi32 shell32)
+  set_target_properties(dusk_pc PROPERTIES OUTPUT_NAME "Digimon-World-Dusk-Recompiled-v0.24-PRESENTATION-PROTOTYPE")
   target_compile_definitions(dusk_pc PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 endif()
 

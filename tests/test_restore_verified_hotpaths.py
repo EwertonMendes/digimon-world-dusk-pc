@@ -3,6 +3,8 @@ from pathlib import Path
 import hashlib
 import importlib.util
 import json
+import base64
+import zlib
 import sys
 import tempfile
 import unittest
@@ -74,6 +76,76 @@ class RecoveryContractTests(unittest.TestCase):
             with patch.object(hot, "ROM_SHA256", manifest["rom_sha256"]):
                 with self.assertRaisesRegex(ValueError, "Invalid root"):
                     hot.recover(stage, manifest, b"synthetic")
+
+
+    def test_compact_root_dictionary_and_arm7_copy_are_full_page_verified(self):
+        import tomllib
+        with tempfile.TemporaryDirectory() as td:
+            stage = Path(td) / "stage"
+            stage.mkdir()
+            name = "dusk_arm7_main"
+            original_base = 0x02380000
+            runtime_base = 0x037F8000
+            # As observed on the real title, the ARM7 code copy source is
+            # *not* page-aligned relative to the original DS bank base.
+            image = bytes(i % 251 for i in range(4 * 4096))
+            (stage / (name + ".bin")).write_bytes(image)
+            (stage / (name + ".toml")).write_text(
+                bank_config(name, "arm7", image, original_base, original_base),
+                encoding="utf-8")
+            (stage / "manifest.json").write_text(json.dumps({"banks":[
+                {"bank":name,"cpu":"arm7","verifiedEntry":True}]}))
+            source_off = 0x1B0
+            hashes = [
+                hashlib.sha1(image[source_off + 4096 * i:
+                                   source_off + 4096 * (i + 1)]).hexdigest()
+                for i in range(2)
+            ]
+            compact = {"s": 3, "h": hashes,
+                       "b": {name: [[runtime_base + 0x120, 0, 0, source_off]]},
+                       "c": {name: [[runtime_base, original_base + source_off,
+                                       8192, [0, 1]]]}}
+            evidence = Path(td) / "owner-compact.b64"
+            evidence.write_bytes(base64.b64encode(
+                zlib.compress(json.dumps(compact).encode())))
+            parsed = hot.load_evidence(evidence)
+            self.assertEqual(parsed["schema"], 2)
+            with patch.object(hot, "ROM_SHA256", hashlib.sha256(b"synthetic").hexdigest()):
+                accepted = hot.recover(stage, parsed, b"synthetic")
+            self.assertEqual(accepted, {name: 1})
+            config = tomllib.loads((stage / (name + ".toml")).read_text())
+            self.assertEqual(len(config["code_copy"]), 1)
+            self.assertEqual(config["code_copy"][0]["runtime_start"], runtime_base)
+            self.assertIn({"addr": runtime_base + 0x120, "mode": "arm",
+                           "name": "verified_arm_037f8120"}, config["entry_point"])
+
+    def test_relocated_page_mismatch_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            stage = Path(td) / "stage"
+            stage.mkdir()
+            name = "dusk_arm7_main"
+            b = 0x02380000
+            image = bytes(i % 255 for i in range(16384))
+            (stage/(name + ".bin")).write_bytes(image)
+            (stage/(name + ".toml")).write_text(
+                bank_config(name, "arm7", image, b, b))
+            (stage/"manifest.json").write_text(json.dumps({"banks":[
+                {"bank":name, "cpu":"arm7", "verifiedEntry":True}]}))
+            # Missing/incorrect full-page relocation proof must never
+            # install an executable candidate.
+            evidence = {"schema": 2,
+                "rom_sha256": hashlib.sha256(b"synthetic").hexdigest(),
+                "banks": {name:[{"pc":"0x037F8120","mode":"arm",
+                                 "page_sha1":"0"*40,
+                                 "source_page_offset":"0x1B0"}]},
+                "code_copies": {name:[{"runtime_start":"0x037F8000",
+                    "source_start":"0x023801B0","size":8192,
+                    "pages":["0"*40,"0"*40]}]}}
+            original = (stage/(name + ".toml")).read_bytes()
+            with patch.object(hot, "ROM_SHA256", evidence["rom_sha256"]):
+                with self.assertRaisesRegex(ValueError, "differs"):
+                    hot.recover(stage, evidence, b"synthetic")
+            self.assertEqual(original,(stage/(name + ".toml")).read_bytes())
 
 
 if __name__ == "__main__":

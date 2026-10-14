@@ -12,6 +12,8 @@ and never modifies the player's existing save or the prior native build.
 from __future__ import annotations
 
 import argparse
+import base64
+import zlib
 import hashlib
 import json
 from pathlib import Path
@@ -29,12 +31,15 @@ BANK_RE = re.compile(r"dusk_arm(9|7)_(main|ovl[0-9]{2})\Z")
 def recover(stage: Path, evidence: dict, rom: bytes) -> dict:
     if hashlib.sha256(rom).hexdigest() != ROM_SHA256:
         raise ValueError("Wrong cartridge; refusing verified AOT recovery")
-    if evidence.get("schema") != 1 or evidence.get("rom_sha256") != ROM_SHA256:
+    if evidence.get("schema") not in (1, 2) or evidence.get("rom_sha256") != ROM_SHA256:
         raise ValueError("Unsupported evidence or cartridge mismatch")
     items = json.loads((stage / "manifest.json").read_text(encoding="utf-8"))
     banks = {b["bank"]: b for b in items["banks"]}
     updates = []
     accepted = {}
+    copies_by_bank = evidence.get("code_copies", {}) if evidence["schema"] == 2 else {}
+    if not isinstance(copies_by_bank, dict):
+        raise ValueError("Invalid verified relocated code-copy manifest")
     for name, roots in sorted(evidence["banks"].items()):
         if not BANK_RE.fullmatch(name) or name not in banks:
             raise ValueError(f"Unknown verified bank: {name}")
@@ -51,6 +56,34 @@ def recover(stage: Path, evidence: dict, rom: bytes) -> dict:
             raise ValueError(f"Stage bank size mismatch: {name}")
         if not isinstance(roots, list) or not roots or len(roots) > 256:
             raise ValueError(f"Unbounded or absent AOT evidence: {name}")
+        # Copied ARM7 executable pages use original-ROM bytes at a distinct
+        # runtime PC. Every 4KiB page of every mapping MUST match the
+        # original image by SHA-1, not just the intended seed instruction.
+        code_copies = []
+        for raw_copy in copies_by_bank.get(name, []):
+            if cpu != 7 or name != "dusk_arm7_main":
+                raise ValueError("Only verified ARM7 main relocation is allowed")
+            run_start = int(raw_copy["runtime_start"], 16)
+            source_start = int(raw_copy["source_start"], 16)
+            length = int(raw_copy["size"])
+            hashes = raw_copy["pages"]
+            source_offset = source_start - base
+            if (run_start % PAGE or length < 2 * PAGE or
+                length % PAGE or len(hashes) != length // PAGE or
+                source_offset < 0 or source_offset + length > len(image)):
+                raise ValueError("Invalid ARM7 copied-code geometry")
+            if any(not re.fullmatch("[a-f0-9]{40}", h) for h in hashes):
+                raise ValueError("Malformed relocated page digest")
+            for ix, digest in enumerate(hashes):
+                off = source_offset + ix * PAGE
+                if hashlib.sha1(image[off:off + PAGE]).hexdigest() != digest:
+                    raise ValueError("ARM7 code-copy page differs from verified ROM")
+            for prev in code_copies:
+                if max(run_start, prev["runtime_start"]) < min(run_start + length, prev["runtime_start"] + prev["size"]):
+                    raise ValueError("Overlapping ARM7 runtime relocations")
+            code_copies.append({"runtime_start":run_start,
+                                "source_start":source_start, "size":length})
+
         valid = []
         seen = set()
         for root in roots:
@@ -64,9 +97,24 @@ def recover(stage: Path, evidence: dict, rom: bytes) -> dict:
                 raise ValueError(f"Duplicate AOT root: {name} {pc:#x}")
             seen.add((pc, mode))
             page = pc & ~(PAGE - 1)
-            at = page - base
-            # Entire RAM page must fit in original bank image; don't accept
-            # a 2/4-byte instruction match or unaligned overlay fragments.
+            if "source_page_offset" in root:
+                # The source offset is an exact 4KiB-page mapping, not a
+                # guessed relocated symbol, and must belong to an accepted
+                # all-pages-verified code_copy interval.
+                if cpu != 7 or name != "dusk_arm7_main":
+                    raise ValueError("Only ARM7 relocations can use source offsets")
+                at = int(root["source_page_offset"], 16)
+                mappings = [
+                    c for c in code_copies
+                    if c["runtime_start"] <= page < c["runtime_start"] + c["size"] and
+                    at == c["source_start"] - base + page - c["runtime_start"]
+                ]
+                if len(mappings) != 1:
+                    raise ValueError(f"Unproved ARM7 runtime/source mapping: {pc:#x}")
+            else:
+                at = page - base
+            # Full 4096-byte observed RAM page must match exact cartridge
+            # image; stale overlay generations and 2-byte-only matches fail.
             if at < 0 or at + PAGE > len(image):
                 raise ValueError(f"Uncovered page for AOT root: {name} {pc:#x}")
             if hashlib.sha1(image[at:at + PAGE]).hexdigest() != digest:
@@ -99,7 +147,7 @@ def recover(stage: Path, evidence: dict, rom: bytes) -> dict:
         if name.endswith("_main"):
             # Retain any validated code-copy mappings from the main-bank
             # stage; do not silently discard ARM7 copy protection.
-            for copy in cfg.get("code_copy", []):
+            for copy in [*cfg.get("code_copy", []), *code_copies]:
                 output.extend(["", "[[code_copy]]"])
                 for key, val in copy.items():
                     output.append(f"{key} = " + (f'0x{val:X}' if isinstance(val, int) else json.dumps(val)))
@@ -150,7 +198,13 @@ def main() -> None:
     p.add_argument("--evidence", type=Path, required=True)
     p.add_argument("--recompiler", type=Path, required=True)
     args = p.parse_args()
-    report = recover(args.stage, json.loads(args.evidence.read_text(encoding="utf-8")), args.rom.read_bytes())
+    payload = args.evidence.read_bytes()
+    if args.evidence.suffix == ".b64":
+        # Version-2 evidence is compressed metadata, never ROM/RAM content.
+        payload = zlib.decompress(base64.b64decode(payload, validate=True))
+        if len(payload) > 3 * 1024 * 1024:
+            raise ValueError("Unbounded compressed root evidence")
+    report = recover(args.stage, json.loads(payload), args.rom.read_bytes())
     print("Verified root entries:", report, flush=True)
     outputs = emit(args.stage, args.recompiler)
     overlays = [n for n in outputs if "_ovl" in n]

@@ -55,7 +55,7 @@ def merge(captures: list[dict]) -> dict:
                     if len(a) > bits_size or len(b) > bits_size:
                         raise ValueError(f"Invalid root bitmap size: {field} at {addr:#x}")
                     union = bytes(x | y for x, y in zip(
-                        a.ljust(bits_size, b"\\x00"), b.ljust(bits_size, b"\\x00")))
+                        a.ljust(bits_size, b"\x00"), b.ljust(bits_size, b"\x00")))
                     if a or b:
                         current[field] = base64.b64encode(union).decode("ascii")
                 # Hits are overlapping observations, not disjoint counters.

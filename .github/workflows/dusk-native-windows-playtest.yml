@@ -270,7 +270,7 @@ jobs:
           # omit the battle frame-spike instrumentation. Fail closed instead
           # of delivering an incorrectly labelled executable.
           $go = Get-Content native-launcher/desktop/save_data.go -Raw
-          if ($go -notmatch 'appVersion\\s*=\\s*"v0\\.19"') {
+          if ($go -notmatch 'appVersion\s*=\s*"v0\.19"') {
             throw 'Fast repackage is pinned to the v0.19 game runner; v0.20 modifies native code. Use a complete native build or update the source artifact and verified SHA first.'
           }
       - name: Retrieve successful owner AOT native runner from exact build

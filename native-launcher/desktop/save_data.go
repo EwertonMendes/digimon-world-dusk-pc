@@ -14,7 +14,7 @@ import (
 )
 
 const (
-    appVersion = "v0.22"
+    appVersion = "v0.23"
     // NTR-A6RE-USA: 512-kbit cartridge EEPROM. No save states are used.
     duskSaveSize = 64 * 1024
     duskCartridgeConfig = "[cartridge]\nsave_type = \"eeprom\"\nsave_size = 65536\n"

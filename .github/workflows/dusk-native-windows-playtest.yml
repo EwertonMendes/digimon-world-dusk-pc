@@ -101,6 +101,7 @@ jobs:
           set -euo pipefail
           cmake -S upstream/runner -B upstream/runner/build-owner-dusk -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
             -DNDS_SDL_BACKEND=SDL3 \
             -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
             -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON \

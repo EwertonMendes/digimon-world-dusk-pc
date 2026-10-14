@@ -101,7 +101,7 @@ jobs:
           set -euo pipefail
           cmake -S upstream/runner -B upstream/runner/build-owner-dusk -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++" \
             -DNDS_SDL_BACKEND=SDL3 \
             -DNDS_ENABLE_COMPUTE_RENDERER=OFF \
             -DNDS_DIAGNOSTIC_FREEBIOS_ONLY=ON \
@@ -128,6 +128,16 @@ jobs:
           $sdl = 'C:/msys64/ucrt64/bin/SDL3.dll'
           if (!(Test-Path $runner) -or !(Test-Path $sdl)) {
             throw 'NDSRecomp SDL3 executable or matching SDL3.dll missing'
+          }
+          $objdump = 'C:/msys64/ucrt64/bin/objdump.exe'
+          if (!(Test-Path $objdump)) { throw 'Windows PE import auditor missing' }
+          foreach ($binary in @($runner, $sdl)) {
+            $imports = (& $objdump -p $binary | Select-String 'DLL Name:').ToString()
+            Write-Host "Windows PE imports for $binary"
+            Write-Host $imports
+            if ($imports -match 'libstdc\\+\\+|libgcc_s|libwinpthread|msys-2\\.0|libiconv|libintl') {
+              throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
+            }
           }
           python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }

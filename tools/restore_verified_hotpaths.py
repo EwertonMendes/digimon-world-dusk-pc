@@ -289,8 +289,21 @@ def merge_safe_supplement(base: dict, supplement: dict) -> dict:
         index = {(x["pc"], x["mode"]): x for x in result["banks"][name]}
         for root in roots:
             key = (root["pc"], root["mode"])
-            if key in index and index[key] != root:
-                raise ValueError(f"Conflicting verified RAM generation at {key}")
+            if key in index:
+                old = index[key]
+                # The base compact proof can carry observation metadata that
+                # the conservative supplemental extractor omits. Equality is
+                # semantic: same CPU, PC, instruction mode, entire 4096-byte
+                # RAM generation hash, and original source-page offset.
+                # Never let a different generation or copy mapping win.
+                old_src = old.get("source_page_offset")
+                new_src = root.get("source_page_offset")
+                if (old["page_sha1"] != root["page_sha1"] or
+                    (old_src is None) != (new_src is None) or
+                    (old_src is not None and
+                     int(old_src, 16) != int(new_src, 16))):
+                    raise ValueError(f"Conflicting verified RAM generation at {key}")
+                continue
             index[key] = root
         if len(index) > 4096:
             raise ValueError("Unbounded supplemental entrypoint expansion")

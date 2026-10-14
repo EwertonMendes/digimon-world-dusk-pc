@@ -19,6 +19,15 @@ class BundleProtectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "both"):
             build(*(Path("missing") for _ in range(5)), baseline=Path("none"))
 
+    def test_rejects_invalid_window_icon_without_private_rom(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            invalid = root / "bad.bmp"
+            invalid.write_bytes(b"not a bitmap")
+            with self.assertRaisesRegex(ValueError, "SDL window icon"):
+                build(*(root / name for name in ("launcher", "runner", "sdl", "rom", "out")),
+                      window_icon=invalid)
+
     def test_dropped_bank_refuses_packaging_before_opening_private_game(self):
         with tempfile.TemporaryDirectory() as td:
             a,b=Path(td)/"old",Path(td)/"new"

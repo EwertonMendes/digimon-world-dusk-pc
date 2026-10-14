@@ -205,6 +205,17 @@ def load_evidence(path: Path) -> dict:
     if not decompressor.eof or decompressor.unconsumed_tail:
         raise ValueError("Oversized/truncated compressed evidence")
     metadata = json.loads(raw)
+    # The newer owner capture packer writes the *expanded*, self-describing
+    # schema-2 proof before zlib/base64. Do not mistake the transfer encoding
+    # for the legacy positional encoding (schema 3 with 's','b','h').
+    # Both formats are authenticated again by recover() against the ROM SHA256,
+    # each observed 4KiB code-page digest and each relocation mapping.
+    if metadata.get("schema") == 2:
+        if (not isinstance(metadata.get("banks"), dict) or
+            len(metadata["banks"]) > 32 or
+            not isinstance(metadata.get("code_copies", {}), dict)):
+            raise ValueError("Invalid expanded owner proof")
+        return metadata
     if metadata.get("s") != 3:
         raise ValueError("Unsupported compact proof schema")
     hashes = metadata["h"]

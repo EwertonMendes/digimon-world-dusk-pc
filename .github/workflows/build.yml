@@ -375,12 +375,18 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-native-30hz-settings-v3.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
           grep -q 'NDS_DUSK_DISABLE_SAVESTATES' upstream/runner/src/frontend.cpp
+          grep -q 'DUSK' upstream/runner/src/frontend.cpp
       - name: Build ROM-free geometry and touch tests
         run: |
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_screen_swap.cpp -o native_screen_swap
           ./native_screen_swap
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_focus_pip.cpp -o native_focus_pip
+          ./native_focus_pip
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
           ./native_30hz_pacing

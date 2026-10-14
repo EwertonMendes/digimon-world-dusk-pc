@@ -41,7 +41,7 @@ def validate_scenario(value: dict) -> dict:
             "frames": {"type", "count"},
             "button": {"type", "name", "settle"},
             "touch": {"type", "x", "y", "settle"},
-            "checkpoint": {"type", "name", "changed_since"},
+            "checkpoint": {"type", "name", "changed_since", "retry_frames"},
         }[kind]
         if set(action) - expected or "type" not in action:
             raise ValueError(f"unexpected action field at {i}")
@@ -66,6 +66,9 @@ def validate_scenario(value: dict) -> dict:
             earlier = action.get("changed_since")
             if earlier is not None and earlier not in checkpoints:
                 raise ValueError(f"checkpoint {name}: changed_since needs a prior checkpoint")
+            retries = action.get("retry_frames", 0)
+            if type(retries) is not int or not 0 <= retries <= 12:
+                raise ValueError(f"invalid checkpoint retry_frames at {i}")
             checkpoints.add(name)
     if not checkpoints:
         raise ValueError("scenario must contain at least one checkpoint")
@@ -86,7 +89,14 @@ def execute_actions(game: Native, scenario: dict, out: Path) -> dict:
         elif kind == "touch":
             game.tap(action["x"], action["y"], action.get("settle", 60))
         else:
-            hashes = game.snap(out, action["name"])
+            for attempt in range(action.get("retry_frames", 0) + 1):
+                try:
+                    hashes = game.snap(out, action["name"])
+                    break
+                except RuntimeError as exc:
+                    if "Potential unrendered screen" not in str(exc) or attempt >= action.get("retry_frames", 0):
+                        raise
+                    game.frames(60)
             baseline = action.get("changed_since")
             if baseline and hashes == snapshots[baseline]:
                 raise RuntimeError(f"checkpoint {action['name']} unexpectedly equals {baseline}")

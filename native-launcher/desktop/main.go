@@ -97,13 +97,7 @@ func launch(p gamePaths) error {
 	defer file.Close()
 	// Firmware identity, firmware state and in-game EEPROM belong to the player,
 	// never to a release folder. No savestate directory is configured.
-	args := []string{p.console, "--rom", filepath.Join(p.install, "game.nds"),
-		"--interactive", "--boot", "direct", "--generated-firmware", "--freebios",
-		"--network", "off", "--config", p.config,
-		"--save-path", p.save, "--firmware-state-path", p.firmware,
-		"--screen-layout", "stacked", "--fullscreen", "off",
-		"--diagnostics", "on", "--diagnostics-dir", p.diagnostics,
-		"--diagnostics-interval-ms", "1000"}
+	args := runnerArgs(p)
 	cmd := exec.Command(filepath.Join(p.install, "runner.exe"), args...)
 	cmd.Dir = p.install
 	cmd.Stdout, cmd.Stderr = file, file

@@ -47,6 +47,20 @@ class RecoveryContractTests(unittest.TestCase):
                                        "page_sha1":hashlib.sha1(overlay[4096:8192]).hexdigest()}],
                 }}
 
+    def test_compressed_expanded_owner_schema_two_is_loaded(self):
+        with tempfile.TemporaryDirectory() as td:
+            stage, image, overlay = self.make_stage(td)
+            payload = self.manifest(image, overlay)
+            payload["schema"] = 2
+            payload["code_copies"] = {}
+            file = Path(td) / "owner-proof.b64"
+            file.write_bytes(base64.b64encode(
+                zlib.compress(json.dumps(payload).encode("utf-8"))))
+            self.assertEqual(hot.load_evidence(file), payload)
+            with patch.object(hot, "ROM_SHA256", payload["rom_sha256"]):
+                self.assertEqual(hot.recover(stage, hot.load_evidence(file),
+                                             b"synthetic")["dusk_arm9_main"], 1)
+
     def test_matching_full_pages_activate_separate_overlay_bank(self):
         with tempfile.TemporaryDirectory() as td:
             stage, image, overlay = self.make_stage(td)

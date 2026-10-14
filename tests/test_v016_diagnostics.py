@@ -16,14 +16,14 @@ class SafeDiagnosticsTest(unittest.TestCase):
             coverage = root / "coverage.json"
             host = root / "host.ndshp"
             cartridge = "a" * 40
-            perf.write_text("\\n".join([
+            perf.write_text("\n".join([
                 json.dumps({"kind": "session", "rom_sha1": cartridge,
                             "host": {"username": "DO_NOT_EXPORT"}}),
                 json.dumps({"kind": "perf", "fps": 59.8, "ms_per_frame": {"emu": 4.5, "present": 1.1},
                             "underruns_delta": 2, "tier3_delta": {"arm9": {"instructions": 12}}}),
                 json.dumps({"kind": "perf", "fps": 45.0, "ms_per_frame": {"emu": 5, "present": 1},
                             "underruns_delta": 0, "tier3_delta": {"arm9": {"instructions": 2}}}),
-            ]) + "\\n", encoding="utf-8")
+            ]) + "\n", encoding="utf-8")
             coverage.write_text(json.dumps({
                 "schema": 4, "kind": "ndsrecomp-tier3-coverage", "rom_sha1": cartridge,
                 "pages": {"entries": [
@@ -36,7 +36,7 @@ class SafeDiagnosticsTest(unittest.TestCase):
                 "format": "ndsrecomp-hostprof", "version": 1,
                 "hist_total": 5, "ring_evicted": 2, "roles": {"emu": 3, "render": 2},
                 "modules": [{"path": "C:\\\\PRIVATE_PATH"}],
-            }) + "\\n").encode() + b"private-host-stack-binary")
+            }) + "\n").encode() + b"private-host-stack-binary")
             result = summarize([perf], [coverage], [host])
             self.assertEqual(result["totals"]["audio_underruns"], 2)
             self.assertEqual(result["totals"]["pages_with_multiple_generations"], 1)
@@ -50,11 +50,11 @@ class SafeDiagnosticsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td)
             a, b, c = p / "a.jsonl", p / "b.json", p / "c.ndshp"
-            a.write_text('{"kind":"session","rom_sha1":"' + "a" * 40 + '"}\\n'
-                         '{"kind":"perf","fps":59.8}\\n', encoding="utf-8")
+            a.write_text('{"kind":"session","rom_sha1":"' + "a" * 40 + '"}\n'
+                         '{"kind":"perf","fps":59.8}\n', encoding="utf-8")
             b.write_text(json.dumps({"schema": 4, "kind": "ndsrecomp-tier3-coverage",
                                      "rom_sha1": "b" * 40, "pages": {"entries": []}}), encoding="utf-8")
-            c.write_bytes(b'{"format":"ndsrecomp-hostprof","version":1}\\n')
+            c.write_bytes(b'{"format":"ndsrecomp-hostprof","version":1}\n')
             with self.assertRaises(ValueError):
                 summarize([a], [b], [c])
 

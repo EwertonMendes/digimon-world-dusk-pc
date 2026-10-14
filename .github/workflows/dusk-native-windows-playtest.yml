@@ -7,9 +7,15 @@ on:
         required: true
         type: boolean
         default: false
+      fast_repack:
+        description: 'Repackage the already-validated overlay AOT runner as v0.18 without rebuilding it'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: dusk-native-owner-playtest-${{ github.ref }}
@@ -17,7 +23,7 @@ concurrency:
 
 jobs:
   build-dusk-native-game:
-    if: inputs.approve_game_bundle == true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack != true
     runs-on: windows-latest
     timeout-minutes: 120
     steps:
@@ -167,3 +173,65 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
+
+  repackage-validated-native:
+    if: inputs.approve_game_bundle == true && inputs.fast_repack == true
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Retrieve successful owner AOT native runner from exact build
+        shell: pwsh
+        run: |
+          gh run download 38604672953 --repo EwertonMendes/digimon-world-dusk-pc --name Digimon-Dusk-PC-Windows-v0.17-PLAYTEST-NATIVE-GAME --dir .private/prior
+          if ($LASTEXITCODE -ne 0) { throw 'Verified owner native build download failed' }
+          $sha = (Get-FileHash .private/prior/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'e34a984ae9245975023cca073e0309ff63ee1c6a63412d665b7025e914526010') {
+            throw "Wrong upstream AOT bundle SHA256: $sha"
+          }
+      - name: Recover original ROM and SDL3 runner from authenticated bundle
+        shell: pwsh
+        run: |
+          python tools/repack_verified_native_windows.py --exe .private/prior/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe --out .private/verified-runtime --sha256 e34a984ae9245975023cca073e0309ff63ee1c6a63412d665b7025e914526010
+          if ($LASTEXITCODE -ne 0) { throw 'Exact original AOT runner identity invalid' }
+      - name: Compile and unit test clean v0.18 Windows GUI launcher
+        shell: pwsh
+        run: |
+          Push-Location native-launcher/desktop
+          go test ./... -count=1
+          if ($LASTEXITCODE -ne 0) { throw 'Native launcher tests failed' }
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/dusk-v018-launcher.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows GUI launcher build failed' }
+          Pop-Location
+      - name: Package one-click game and verify Windows PE on Windows
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          python tools/pack_native_private.py --launcher .private/dusk-v018-launcher.exe --runner .private/verified-runtime/runner.exe --sdl .private/verified-runtime/SDL3.dll --iconv .private/verified-runtime/libiconv-2.dll --rom .private/verified-runtime/game.nds --output dist/Digimon-Dusk-PC-Windows-v0.18-AOT-RESTORED.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Native one-click packaging failed' }
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.18-AOT-RESTORED.exe).Path
+          $proc = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "EXE bundle verification failed: $($proc.ExitCode)" }
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  Digimon-Dusk-PC-Windows-v0.18-AOT-RESTORED.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Digimon World Dusk Windows v0.18 AOT RESTORED - owner playtest.`nNative SDL3 runner is byte-identical to successful AOT build 38604672953.`nFixes v0.17 missing verified overlay AOT regressions, but in-game audio/video improvement is NOT yet confirmed.`nNew runtime install v0.18, stable player save remains %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav.`nDouble-click EXE to play; no additional dependencies." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          Get-ChildItem dist | Select-Object Name,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Digimon-Dusk-PC-Windows-v0.18-AOT-RESTORED-GAME
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+

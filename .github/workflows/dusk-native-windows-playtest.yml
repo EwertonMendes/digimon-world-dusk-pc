@@ -127,20 +127,21 @@ jobs:
           Pop-Location
           $runner = 'upstream/runner/build-owner-dusk/nds_runner.exe'
           $sdl = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/SDL3.dll'
-          if (!(Test-Path $runner) -or !(Test-Path $sdl)) {
+          $iconv = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/libiconv-2.dll'
+          if (!(Test-Path $runner) -or !(Test-Path $sdl) -or !(Test-Path $iconv)) {
             throw 'NDSRecomp SDL3 executable or matching SDL3.dll missing'
           }
           $objdump = Join-Path $env:RUNNER_TEMP 'msys64/ucrt64/bin/objdump.exe'
           if (!(Test-Path $objdump)) { throw 'Windows PE import auditor missing' }
-          foreach ($binary in @($runner, $sdl)) {
+          foreach ($binary in @($runner, $sdl, $iconv)) {
             $imports = ((& $objdump -p $binary | Select-String 'DLL Name:' | ForEach-Object { $_.Line }) -join "`n")
             Write-Host "Windows PE imports for $binary"
             Write-Host $imports
-            if ($imports -match 'libstdc\\+\\+|libgcc_s|libwinpthread|msys-2\\.0|libiconv|libintl') {
+            if ($imports -match 'libstdc\\+\\+|libgcc_s|libwinpthread|msys-2\\.0|libintl') {
               throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
             }
           }
-          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
           $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe).Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru

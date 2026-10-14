@@ -54,7 +54,7 @@ def recover(stage: Path, evidence: dict, rom: bytes) -> dict:
             raise ValueError(f"Stage bank identity mismatch: {name}")
         if int(cfg["program"]["size"]) != len(image):
             raise ValueError(f"Stage bank size mismatch: {name}")
-        if not isinstance(roots, list) or not roots or len(roots) > 256:
+        if not isinstance(roots, list) or not roots or len(roots) > 3072:
             raise ValueError(f"Unbounded or absent AOT evidence: {name}")
         # Copied ARM7 executable pages use original-ROM bytes at a distinct
         # runtime PC. Every 4KiB page of every mapping MUST match the
@@ -221,7 +221,7 @@ def load_evidence(path: Path) -> dict:
     if not isinstance(metadata["b"], dict) or len(metadata["b"]) > 32:
         raise ValueError("Invalid bank manifest")
     for bank, entries in metadata["b"].items():
-        if not BANK_RE.fullmatch(bank) or len(entries) > 256:
+        if not BANK_RE.fullmatch(bank) or len(entries) > 3072:
             raise ValueError("Invalid bank/root count")
         roots = []
         for entry in entries:

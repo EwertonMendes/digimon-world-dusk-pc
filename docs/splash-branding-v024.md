@@ -1,9 +1,9 @@
-# Recompiled v0.24: identidade e abertura
+# Recompiled v0.25: identidade e abertura
 
 **Produto:** Digimon World Dusk Recompiled  
 **Crédito:** Recompiled by Tblack  
-**Versão de playtest:** v0.24  
-**EXE:** `Digimon-World-Dusk-Recompiled-v0.24-Windows.exe`
+**Versão de playtest:** v0.25  
+**EXE:** `Digimon-World-Dusk-Recompiled-v0.25-Windows.exe`
 
 ## Abertura nativa
 
@@ -29,7 +29,7 @@ ROM, memória de jogo, música do jogo ou recurso de rede são introduzidos.
   para recursos gerados e testes de consistência.
 - `tools/generate_icons.py`: ícone + VERSIONINFO Windows, Linux desktop
   entry e nome de aplicativo Android preparado para um port futuro.
-- `native-launcher/desktop/save_data.go`: runtime `v0.24` separado,
+- `native-launcher/desktop/save_data.go`: runtime `v0.25` separado,
   sem trocar o perfil persistente em `userdata/A6RE`.
 - O `CMakeLists.txt` mantém o protótipo gráfico sem ROM identificado
   explicitamente como **PRESENTATION-PROTOTYPE**. Ele não é o jogo.
@@ -37,5 +37,5 @@ ROM, memória de jogo, música do jogo ou recurso de rede são introduzidos.
 Para gerar o jogo completo use o workflow privado
 `dusk-native-windows-playtest.yml`, com `approve_game_bundle=true`.
 Um repack rápido de executáveis v0.23 não seria seguro para a nova splash,
-por isso v0.24 exige reconstrução do runner SDL3. Não publique uma versão
+por isso v0.25 exige reconstrução do runner SDL3. Não publique uma versão
 como validada antes de confirmar build, abertura, controles e saves.

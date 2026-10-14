@@ -121,3 +121,41 @@ the v0.16 UX Fixes build. The launcher updates the versioned v0.16 runner
 when its content hash changes, but **continues using the exact same
 `userdata/A6RE` game save**. The public repo must not include ROM-derived
 runner/game payloads. Do not merge PR #16 until owner accepts this revision.
+
+
+## Owner UX follow-up: polish pass 2
+
+This ROM-free, host-only change is provided in
+`tools/patches/ndsrecomp-dusk-ux-polish-v2.patch` and **must** apply
+after `ndsrecomp-dusk-immersive-ui-hotfix.patch`.
+
+- PiP header is located in a **reserved 24 px above** the entire 256 × 192
+  screenshot. The image keeps its full texture UV coverage; no in-game
+  pixel is covered by the title/header. The host-only outer frame is
+  kept within the window when moved and resized.
+- The PiP's texture and frame receive a small 7–9 px rounded radius using
+  native SDL3 geometry, maintaining the game pixel art and the original 4:3
+  image aspect. Z-order remains main -> PiP frame -> PiP screenshot ->
+  PiP header/actions.
+- Hovering a PiP edge/corner requests the corresponding **native OS resize
+  cursor**: horizontal, vertical or diagonal. Cursor returns to default
+  outside the resize region, when the pointer leaves or the window loses focus.
+- The swap control is an explicit pair of opposed arrows (not the letter S).
+  The bottom-right corner offers a subtle diagonal size affordance.
+- The controller **right analog stick** moves a genuine guest DS touch drag
+  with its own cursor. Deflection above 23% presses the touchscreen, motion
+  follows stick direction at a bounded speed (frame-time independent); a
+  neutral stick *releases* it. Touch coordinates stay 0..255 and 0..191
+  in both screen focus orders. Keyboard/gamepad menu focus, window focus,
+  mouse and existing virtual stylus have priority. Original Nintendo DS
+  buttons, game saves and CPU cycles are untouched.
+- ROM-free tests validate **12,672** focus/layout configurations, **5,760**
+  PiP resize checks and right-stick deadzone/time-step/cancel/bounds
+  behavior. The full Windows SDL3 original-game runner must still be
+  visually tested by the owner before the PR merges.
+
+Private Windows owner build `Digimon-Dusk-PC-Windows-v0.16-UX-Polish.exe`
+was built from unchanged v0.15 AOT banks, with the verified original ROM;
+the public repository contains no ROM, generated game C, owner game
+save or full Windows payload. Same permanent A6RE in-game save profile as
+previous builds. Keep v0.15 available for rollback.

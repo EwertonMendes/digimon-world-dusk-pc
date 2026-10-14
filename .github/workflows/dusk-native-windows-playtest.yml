@@ -104,24 +104,33 @@ jobs:
           cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 2
           test -f upstream/runner/build-owner-dusk/nds_runner.exe
           test -f /ucrt64/bin/SDL3.dll
-      - name: Verify bundled native runner and build one-click GUI EXE
-        shell: msys2 {0}
+      - name: Verify native runner and build one-click GUI EXE
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p dist .private/staging
-          (cd native-launcher/desktop && go test ./... -count=1)
-          (cd native-launcher/desktop && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
-            go build -trimpath -ldflags='-s -w -H windowsgui' -o ../../.private/staging/dusk-launcher.exe .)
-          python tools/pack_native_private.py \
-            --launcher .private/staging/dusk-launcher.exe \
-            --runner upstream/runner/build-owner-dusk/nds_runner.exe \
-            --sdl /ucrt64/bin/SDL3.dll \
-            --rom 'Digimon World - Dusk (USA).nds' \
-            --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
-          ./dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe --verify-bundle
-          sha256sum dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe > dist/SHA256SUMS.txt
-          printf 'Dusk PC v0.17 native owner playtest\nSource commit: %s\nROM: verified Dusk USA\nThis includes the original ARM9/ARM7 main banks and FreeBIOS. Overlay code may still use Tier3 fallback. Full-campaign compatibility is NOT established.\nSave: %%LOCALAPPDATA%%/DuskNativePC/userdata/A6RE/saves/dusk.sav\n' "$GITHUB_SHA" > dist/README-PLAYTEST.txt
-          ls -lh dist
+          New-Item -ItemType Directory -Force dist, .private/staging | Out-Null
+          Push-Location native-launcher/desktop
+          go test ./... -count=1
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher unit tests failed' }
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/staging/dusk-launcher.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Native GUI launcher build failed' }
+          Pop-Location
+          $runner = 'upstream/runner/build-owner-dusk/nds_runner.exe'
+          $sdl = 'C:/msys64/ucrt64/bin/SDL3.dll'
+          if (!(Test-Path $runner) -or !(Test-Path $sdl)) {
+            throw 'NDSRecomp SDL3 executable or matching SDL3.dll missing'
+          }
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe).Path
+          $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.17 native owner playtest`nSource: $env:GITHUB_SHA`nIncludes original ARM9/ARM7 main bank and FreeBIOS. Uncovered overlays still use Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:

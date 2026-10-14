@@ -28,7 +28,7 @@ def runtime_fingerprint(root: Path = ROOT) -> str:
         # Windows Git may materialize checked-out text as CRLF while the
         # pinned Linux CI checkout uses LF. Normalize line endings ONLY;
         # meaningful source edits must still alter the provenance digest.
-        normalized = path.read_bytes().replace(b"\\r\\n", b"\\n")
+        normalized = path.read_bytes().replace(b"\r\n", b"\n")
         h.update(hashlib.sha256(normalized).digest())
     return h.hexdigest()
 

@@ -381,3 +381,17 @@ jobs:
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
           ./native_30hz_pacing
+      - name: Test pinned upstream EEPROM 64KiB and atomic battery file persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src \
+            upstream/runner/tests/cart_backup_test.cpp \
+            upstream/runner/src/cart_backup.cpp -o cart-backup-test
+          ./cart-backup-test
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src \
+            upstream/runner/tests/battery_save_test.cpp \
+            upstream/runner/src/battery_save.cpp -o battery-save-test
+          ./battery-save-test

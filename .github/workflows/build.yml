@@ -383,7 +383,7 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-ux-polish-v2.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-pc-menu-input-capture.patch
-          grep -q 'dusk.menu_stick.poll(lx,ly)' upstream/runner/src/frontend.cpp
+          grep -q 'd.menu_stick.poll(lx,ly)' upstream/runner/src/frontend.cpp
           grep -q 'clear_gameplay_input_for_runtime_menu();' upstream/runner/src/frontend.cpp
           grep -q 'SDL_SYSTEM_CURSOR_NWSE_RESIZE' upstream/runner/src/frontend.cpp
           grep -q 'dusk_render_rounded_screen' upstream/runner/src/frontend.cpp

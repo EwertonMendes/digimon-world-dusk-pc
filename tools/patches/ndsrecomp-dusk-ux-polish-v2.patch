@@ -106,7 +106,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  static void dusk_text(SDL_Renderer* r,int x,int y,const char* str,float scale=1.f) {
      SDL_SetRenderDrawColor(r,237,229,253,255);
      SDL_SetRenderScale(r,scale,scale);
-@@ -1622,12 +1713,33 @@
+@@ -1622,18 +1713,33 @@
          return;
      }
      if(!g.pip_bar.w)return;
@@ -133,6 +133,12 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    SDL_RenderLine(r,xx+13,yy+7,xx+10,yy+4);
 +    SDL_RenderLine(r,xx+13,yy+7,xx+10,yy+10);
      dusk_text(r,g.pip_minimize.x+9,g.pip_minimize.y+8,"_");
+-    // Subtle resize grip at the lower-right border; other edges work too.
+-    const auto pip=p.dusk.cfg.focus_top?g.bottom:g.top;
+-    SDL_SetRenderDrawColor(r,231,180,255,255);
+-    for(int n=0;n<3;++n)
+-        SDL_RenderLine(r,float(pip.x+pip.w-5-n*4),float(pip.y+pip.h-2),
+-                         float(pip.x+pip.w-2),float(pip.y+pip.h-5-n*4));
 +    const auto pip=dusk_native::focus_pip(g,p.dusk.cfg);
 +    dusk_round_outline(r,{box.x-2,box.y-2,pip.w+4,
 +                          pip.h+dusk_native::kPiPHeaderHeight+4},
@@ -145,7 +151,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  }
  static void dusk_corner_options(SDL_Renderer* r,const FrontendPresentation& p,
                                  const dusk_native::Geometry& g) {
-@@ -1649,6 +1761,10 @@
+@@ -1655,6 +1761,10 @@
      if(!SDL_RenderCoordinatesFromWindow(p.renderers[0],x,y,&x,&y))return false;
      p.dusk.cursor_x=x;p.dusk.cursor_y=y;
      const auto g=dusk_geometry(p);
@@ -156,7 +162,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
      p.dusk.menu_hover=dusk_native::contains(g.settings,x,y);
      if(down && ev.button.button==SDL_BUTTON_LEFT && p.dusk.menu_hover) {
          if(p.dusk.quit_confirm) return true;
-@@ -1736,7 +1852,7 @@
+@@ -1742,7 +1852,7 @@
          const auto geo=dusk_geometry(p);
          const auto pip=p.dusk.cfg.focus_top?geo.bottom:geo.top;
          const int free_x=std::max(1,geo.play.w-pip.w-12);
@@ -165,7 +171,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
          p.dusk.cfg.floating_x=std::clamp((x-p.dusk.drag_dx)/free_x,0.f,1.f);
          p.dusk.cfg.floating_y=std::clamp((y-p.dusk.drag_dy)/free_y,0.f,1.f);
          return true;
-@@ -1768,6 +1884,15 @@
+@@ -1774,6 +1884,15 @@
          if (texture) SDL_DestroyTexture(texture);
          texture = nullptr;
      }
@@ -181,7 +187,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
      if (presentation.separate && presentation.renderers[1])
          SDL_DestroyRenderer(presentation.renderers[1]);
      if (presentation.renderers[0])
-@@ -2403,23 +2528,42 @@
+@@ -2409,23 +2528,42 @@
              dusk_fill(renderer,{0,0,geo.play.w,geo.play.h},13,8,29);
              dusk_fill(renderer,geo.play,19,26,41);
              auto bottom=dusk_sdl_rect(geo.bottom);
@@ -231,7 +237,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              }
              if(virtual_stylus_visible)
                  draw_virtual_stylus(renderer,bottom,virtual_stylus_x,virtual_stylus_y);
-@@ -3601,6 +3745,12 @@
+@@ -3607,6 +3745,12 @@
                  continue;
              }
  #endif
@@ -244,7 +250,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              convert_mouse_event_to_logical_coordinates(event, presentation);
              if (event.type == SDL_QUIT) {
                  release_relative_mouse();
-@@ -4083,6 +4233,33 @@
+@@ -4089,6 +4233,33 @@
                  dusk_lt_held=lt;dusk_rt_held=rt;
              }
  #endif
@@ -278,7 +284,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
              // Left stick -> D-pad, with hysteresis so a stick resting near
              // a threshold never flickers a direction.
              const float lx = SDL_GameControllerGetAxis(
-@@ -4261,6 +4438,14 @@
+@@ -4267,6 +4438,14 @@
                  }
              }
          } else {

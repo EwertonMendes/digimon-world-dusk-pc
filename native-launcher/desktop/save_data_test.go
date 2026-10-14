@@ -111,3 +111,23 @@ func TestInvalidOldSaveIsNotImported(t *testing.T) {
     if err:=prepareGameData(p,base);err==nil { t.Fatal("wrong EEPROM size must not be imported") }
     if _,err:=os.Stat(p.save);!os.IsNotExist(err) { t.Fatal("invalid save migrated") }
 }
+
+
+func TestRunnerArgsOnlyUseOriginalCartridgeSave(t *testing.T) {
+    p := pathsFor(t.TempDir())
+    args := runnerArgs(p)
+    for _, forbidden := range []string{"--no-save", "--savestate-dir", "--force-tier3"} {
+        for _, a := range args {
+            if a == forbidden { t.Fatalf("forbidden runner argument: %s", a) }
+        }
+    }
+    values := map[string]string{}
+    for i := 0; i+1 < len(args); i++ {
+        if strings.HasPrefix(args[i], "--") { values[args[i]] = args[i+1] }
+    }
+    if values["--save-path"] != p.save || values["--config"] != p.config ||
+        values["--firmware-state-path"] != p.firmware {
+        t.Fatalf("missing stable in-game save arguments: %v", values)
+    }
+    if args[0] != p.console { t.Fatal("firmware console identity must be permanent") }
+}

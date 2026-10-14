@@ -54,7 +54,7 @@ def recover(stage: Path, evidence: dict, rom: bytes) -> dict:
             raise ValueError(f"Stage bank identity mismatch: {name}")
         if int(cfg["program"]["size"]) != len(image):
             raise ValueError(f"Stage bank size mismatch: {name}")
-        if not isinstance(roots, list) or not roots or len(roots) > 3072:
+        if not isinstance(roots, list) or not roots or len(roots) > 4096:
             raise ValueError(f"Unbounded or absent AOT evidence: {name}")
         # Copied ARM7 executable pages use original-ROM bytes at a distinct
         # runtime PC. Every 4KiB page of every mapping MUST match the
@@ -270,14 +270,46 @@ def load_evidence(path: Path) -> dict:
             "banks": banks, "code_copies": copies}
 
 
+
+def merge_safe_supplement(base: dict, supplement: dict) -> dict:
+    """Union owner-observed roots without replacing bank/page identities."""
+    if (base.get("schema") != 2 or supplement.get("schema") != 2 or
+        base.get("rom_sha256") != ROM_SHA256 or
+        supplement.get("rom_sha256") != ROM_SHA256):
+        raise ValueError("Incompatible owner root proof")
+    if set(supplement) - {"schema", "rom_sha256", "banks", "code_copies", "notes"}:
+        raise ValueError("Unknown owner supplement fields")
+    if supplement.get("code_copies"):
+        raise ValueError("Supplement cannot alter trusted relocation mapping")
+    result = dict(base)
+    result["banks"] = {name: list(roots) for name, roots in base["banks"].items()}
+    for name, roots in supplement.get("banks", {}).items():
+        if name not in result["banks"] or not isinstance(roots, list):
+            raise ValueError("Supplement cannot add an unknown AOT bank")
+        index = {(x["pc"], x["mode"]): x for x in result["banks"][name]}
+        for root in roots:
+            key = (root["pc"], root["mode"])
+            if key in index and index[key] != root:
+                raise ValueError(f"Conflicting verified RAM generation at {key}")
+            index[key] = root
+        if len(index) > 4096:
+            raise ValueError("Unbounded supplemental entrypoint expansion")
+        result["banks"][name] = list(index.values())
+    return result
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--rom", type=Path, required=True)
     p.add_argument("--stage", type=Path, required=True)
     p.add_argument("--evidence", type=Path, required=True)
+    p.add_argument("--extra-evidence", type=Path, help="Optional new verified interpreted ARM7 roots; cannot replace mappings")
     p.add_argument("--recompiler", type=Path, required=True)
     args = p.parse_args()
-    report = recover(args.stage, load_evidence(args.evidence), args.rom.read_bytes())
+    owner_proof = load_evidence(args.evidence)
+    if args.extra_evidence:
+        owner_proof = merge_safe_supplement(owner_proof, load_evidence(args.extra_evidence))
+    report = recover(args.stage, owner_proof, args.rom.read_bytes())
     print("Verified root entries:", report, flush=True)
     outputs = emit(args.stage, args.recompiler)
     overlays = [n for n in outputs if "_ovl" in n]

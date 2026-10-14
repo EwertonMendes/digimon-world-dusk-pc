@@ -255,6 +255,8 @@ jobs:
     timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
+      # Dedicated, restorable cache for the Windows Go launcher/stdlib.
+      GOCACHE: ${{ github.workspace }}/.cache/dusk-go-build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -274,12 +276,26 @@ jobs:
               }
             }
           }
+          if ($available -eq 'true') {
+            $version = [regex]::Match($versionLine,'go1\.\d+(\.\d+)?').Value
+          } else {
+            $version = 'go1.23-setup'
+          }
+          "go_version=$version" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
           "available=$available" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
       - uses: actions/setup-go@v5
         if: steps.preinstalled-go.outputs.available != 'true'
         with:
           go-version: '1.23'
           cache: false
+      - name: Restore cached Windows Go compiled packages
+        id: go-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/dusk-go-build
+          key: dusk-go-win-v1-${{ steps.preinstalled-go.outputs.go_version }}-${{ hashFiles('native-launcher/desktop/go.mod', 'native-launcher/desktop/*.go') }}
+          restore-keys: |
+            dusk-go-win-v1-${{ steps.preinstalled-go.outputs.go_version }}-
       - name: Reject stale fast repack of a different native game build
         shell: pwsh
         run: |
@@ -316,6 +332,13 @@ jobs:
           go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/dusk-v020-launcher.exe .
           if ($LASTEXITCODE -ne 0) { throw 'Native Windows GUI launcher build failed' }
           Pop-Location
+      - name: Save reusable Windows Go compiler cache before packaging
+        if: success() && steps.go-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: .cache/dusk-go-build
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
       - name: Package one-click game and verify Windows PE on Windows
         shell: pwsh
         run: |

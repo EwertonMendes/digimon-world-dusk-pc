@@ -1,8 +1,6 @@
 package main
 
 import (
-    "crypto/sha256"
-    "encoding/hex"
     "errors"
     "fmt"
     "io"
@@ -19,7 +17,7 @@ import (
 // are deliberately left untouched.
 const maxAutomaticBackups = 20
 
-var backupNamePattern = regexp.MustCompile(`^dusk-[0-9]{8}T[0-9]{6}\\.[0-9]{9}Z-[a-f0-9]{12}\\.sav$`)
+var backupNamePattern = regexp.MustCompile(`^dusk-[0-9]{8}T[0-9]{6}\.[0-9]{9}Z-[a-f0-9]{12}\.sav$`)
 
 func backupDirectory(p gamePaths) string { return filepath.Join(p.profile, "backups") }
 
@@ -83,10 +81,11 @@ func makeBackup(p gamePaths) error {
     if err != nil { return err }
     // Prune only backups created by this format. If deletion fails, leave the
     // verified backup and report the issue; never compromise the active save.
-    for _, old := range names[maxAutomaticBackups:] {
+    if len(names) > maxAutomaticBackups { for _, old := range names[maxAutomaticBackups:] {
         if err := os.Remove(filepath.Join(backupDirectory(p), old)); err != nil {
             return fmt.Errorf("retenção de backups: %w", err)
         }
+    }
     }
     return nil
 }
@@ -156,9 +155,3 @@ func restoreBackup(p gamePaths, name string) error {
     return nil
 }
 
-// Checked hashes always cover the complete 64-KiB cartridge EEPROM.
-func hashBytes(reader io.Reader) (string, error) {
-    h := sha256.New()
-    if _, err := io.Copy(h, reader); err != nil { return "", err }
-    return hex.EncodeToString(h.Sum(nil)), nil
-}

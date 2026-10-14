@@ -81,7 +81,8 @@ def main() -> None:
     p.add_argument('--window-icon', type=Path, help='128x128 RGBA32 icon displayed by SDL3')
     args = p.parse_args()
     print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
-                args.baseline_dispatch, args.candidate_dispatch, args.iconv))
+                args.baseline_dispatch, args.candidate_dispatch, args.iconv,
+                args.window_icon))
 
 if __name__ == '__main__':
     main()

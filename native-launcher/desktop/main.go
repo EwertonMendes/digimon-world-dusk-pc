@@ -134,7 +134,7 @@ func launch(p gamePaths) error {
 	cmd.Dir = p.install
 	cmd.Stdout, cmd.Stderr = file, file
 	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0", "NDS_DUSK_NATIVE_UI=1", "NDS_DUSK_DISABLE_SAVESTATES=1")
-	cmd.Env = append(cmd.Env, "NDS_DUSK_SPLASH_PATH="+filepath.Join(p.install, "dusk-splash.bmp"), "NDS_DUSK_SPLASH_DURATION_MS=5000")
+	cmd.Env = append(cmd.Env, "NDS_DUSK_SPLASH_PATH="+filepath.Join(p.install, "dusk-splash.bmp"), "NDS_DUSK_SPLASH_DURATION_MS=5000", "NDS_DUSK_WINDOW_TITLE=Digimon World Dusk Recompiled | "+appVersion)
 	if _, iconErr := os.Stat(filepath.Join(p.install, "window-icon.rgba")); iconErr == nil {
 		cmd.Env = append(cmd.Env, "NDS_DUSK_ICON_PATH="+filepath.Join(p.install, "window-icon.rgba"))
 	}

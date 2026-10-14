@@ -377,6 +377,10 @@ jobs:
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-disable-savestates.patch
           git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
           git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui.patch
+          git -C upstream apply --check ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
+          git -C upstream apply ../tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch
+          grep -q 'Unsaved progress will be lost' upstream/runner/src/frontend.cpp
+          grep -q 'disable_mph_ui=presentation.dusk.enabled' upstream/runner/src/frontend.cpp
           grep -q 'NDS_DUSK_DISABLE_SAVESTATES' upstream/runner/src/frontend.cpp
           grep -q 'DUSK' upstream/runner/src/frontend.cpp
       - name: Build ROM-free geometry and touch tests
@@ -387,6 +391,9 @@ jobs:
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_focus_pip.cpp -o native_focus_pip
           ./native_focus_pip
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            -I upstream/runner/src tests/native_pip_resize.cpp -o native_pip_resize
+          ./native_pip_resize
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             -I upstream/runner/src tests/native_30hz_pacing.cpp -o native_30hz_pacing
           ./native_30hz_pacing

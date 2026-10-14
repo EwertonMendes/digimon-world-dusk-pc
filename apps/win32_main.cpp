@@ -159,7 +159,7 @@ LRESULT CALLBACK windowProc(HWND window,UINT msg,WPARAM wp,LPARAM lp) {
         if(g.layout.visibleSecondary) drawSurface(dc,g.layout.secondary,pixelsAux.data(),L"AUXILIARY - TEST FRAME",RGB(152,113,179));
         HBRUSH bottom=CreateSolidBrush(RGB(26,31,49));
         RECT band{0,contentHeight,w,h};FillRect(dc,&band,bottom);DeleteObject(bottom);
-        writeText(dc,L"DUSK PC  /  PRESENTATION TEST",18,contentHeight+8,std::max(1,w-36),27,RGB(237,229,255),17);
+        writeText(dc,L"DUSK RECOMPILED  /  PRESENTATION TEST",18,contentHeight+8,std::max(1,w-36),27,RGB(237,229,255),17);
         std::wstring status=L"No native game execution  |  F1 Help  F2 Show/hide  F3 Layout  F11 Fullscreen  +/- Resize";
         writeText(dc,status,18,contentHeight+36,std::max(1,w-36),20,RGB(183,194,219),11);
         std::wstring mode=L"Layout: "+std::wstring(dusk::modeName(g.settings.mode),dusk::modeName(g.settings.mode)+std::char_traits<char>::length(dusk::modeName(g.settings.mode)));
@@ -195,7 +195,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE, PWSTR,int show) {
         wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
         wc.lpszClassName=kClassName;
         if(!RegisterClassExW(&wc)) return 1;
-        g.window=CreateWindowExW(0,kClassName,L"Digimon World Dusk PC - Presentation Prototype (NOT GAME)",
+        g.window=CreateWindowExW(0,kClassName,L"Digimon World Dusk Recompiled | v0.24 - Presentation Prototype (NOT GAME)",
             WS_OVERLAPPEDWINDOW|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,1280,800,nullptr,nullptr,instance,nullptr);
         if(!g.window) return 1;
         ShowWindow(g.window,show);UpdateWindow(g.window);

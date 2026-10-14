@@ -34,6 +34,20 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(len(merged["pages"]["entries"]),1)
         self.assertEqual(len(merged["entry_points_arm9"]),1)
 
+    def test_generation_bound_root_bitmaps_are_unioned(self):
+        first = page(9, 0x02200000, 1)
+        second = page(9, 0x02200000, 1)
+        first["root_arm"] = base64.b64encode(bytes([1])).decode("ascii")
+        second["root_arm"] = base64.b64encode(bytes([2])).decode("ascii")
+        first["root_hits"] = [3, 4]
+        second["root_hits"] = [7, 2]
+        result = module.merge([capture(first), capture(second)])
+        record = result["pages"]["entries"][0]
+        bits = base64.b64decode(record["root_arm"])
+        self.assertEqual(len(bits), 128)
+        self.assertEqual(bits[0], 3)
+        self.assertEqual(record["root_hits"], [7, 4])
+
     def test_same_address_different_contents_kept_distinct(self):
         a=module.merge([capture(page(9,0x02200000,1)),
                         capture(page(9,0x02200000,2))])

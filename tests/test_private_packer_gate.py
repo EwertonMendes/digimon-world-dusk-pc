@@ -22,7 +22,7 @@ class BundleProtectionTests(unittest.TestCase):
     def test_rejects_invalid_window_icon_without_private_rom(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            invalid = root / "bad.bmp"
+            invalid = root / "bad.rgba"
             invalid.write_bytes(b"not a bitmap")
             for name, data in (
                 ("launcher", b"MZfake"),

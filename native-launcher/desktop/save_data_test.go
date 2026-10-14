@@ -46,7 +46,7 @@ func TestExistingSaveIsNeverOverwrittenAndBackedUp(t *testing.T) {
     b, err := os.ReadFile(p.save)
     if err != nil || len(b) != duskSaveSize || b[0] != 0xA5 { t.Fatal("canonical save modified") }
     backups, err := os.ReadDir(filepath.Join(p.profile,"backups"))
-    if err != nil || len(backups) != 2 { t.Fatalf("expected 2 non-destructive backups; %v %d",err,len(backups)) }
+    if err != nil || len(backups) != 1 { t.Fatalf("expected 1 deduplicated backup; %v %d",err,len(backups)) }
     for _, e := range backups {
         b, err := os.ReadFile(filepath.Join(p.profile,"backups",e.Name()))
         if err != nil || !bytes.Equal(b, bytes.Repeat([]byte{0xA5},duskSaveSize)) { t.Fatalf("invalid backup %s: %v",e.Name(),err) }

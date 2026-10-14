@@ -47,6 +47,30 @@ class RecoveryContractTests(unittest.TestCase):
                                        "page_sha1":hashlib.sha1(overlay[4096:8192]).hexdigest()}],
                 }}
 
+    def test_supplement_preserves_known_rom_pages_and_rejects_conflicts(self):
+        with tempfile.TemporaryDirectory() as td:
+            stage, image, overlay = self.make_stage(td)
+            base = self.manifest(image, overlay)
+            base["schema"] = 2
+            base["code_copies"] = {}
+            extra = {"schema":2,"rom_sha256":base["rom_sha256"],
+                     "banks":{"dusk_arm9_main":[
+                         dict(base["banks"]["dusk_arm9_main"][0]),
+                         {"pc":"0x02001100","mode":"arm",
+                          "page_sha1":base["banks"]["dusk_arm9_main"][0]["page_sha1"]}]},
+                     "code_copies":{}}
+            with patch.object(hot,"ROM_SHA256",base["rom_sha256"]):
+                merged=hot.merge_safe_supplement(base,extra)
+                self.assertEqual(len(merged["banks"]["dusk_arm9_main"]),2)
+                self.assertEqual(len(base["banks"]["dusk_arm9_main"]),1)
+                self.assertEqual(hot.recover(stage,merged,b"synthetic")["dusk_arm9_main"],2)
+                bad=dict(extra)
+                bad["banks"]={"dusk_arm9_main":[
+                    dict(extra["banks"]["dusk_arm9_main"][0],
+                         page_sha1="0"*40)]}
+                with self.assertRaisesRegex(ValueError,"Conflicting"):
+                    hot.merge_safe_supplement(base,bad)
+
     def test_compressed_expanded_owner_schema_two_is_loaded(self):
         with tempfile.TemporaryDirectory() as td:
             stage, image, overlay = self.make_stage(td)

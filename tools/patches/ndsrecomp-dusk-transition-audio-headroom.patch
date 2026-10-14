@@ -1,6 +1,6 @@
 --- a/runner/src/frontend.cpp
 +++ b/runner/src/frontend.cpp
-@@ -668,8 +668,13 @@
+@@ -668,5 +668,10 @@
  constexpr int kWindowScale = 2;
  constexpr uint64_t kSystemCyclesPerFrame = 2130ull * 263ull;
  constexpr int kAudioFrequency = 33513982 / 1024;

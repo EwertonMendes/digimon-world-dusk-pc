@@ -24,6 +24,13 @@ class BundleProtectionTests(unittest.TestCase):
             root = Path(td)
             invalid = root / "bad.bmp"
             invalid.write_bytes(b"not a bitmap")
+            for name, data in (
+                ("launcher", b"MZfake"),
+                ("runner", b"MZSDL3.dll"),
+                ("sdl", b"MZdll"),
+                ("rom", b"not real ROM"),
+            ):
+                (root / name).write_bytes(data)
             with self.assertRaisesRegex(ValueError, "SDL window icon"):
                 build(*(root / name for name in ("launcher", "runner", "sdl", "rom", "out")),
                       window_icon=invalid)

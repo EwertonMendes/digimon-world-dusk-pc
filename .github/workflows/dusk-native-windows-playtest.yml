@@ -186,6 +186,20 @@ jobs:
           cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 3
           test -f upstream/runner/build-owner-dusk/nds_runner.exe
           test -f /ucrt64/bin/SDL3.dll
+      # Preserve expensive compiled objects even if later Go PE packaging,
+      # artifact upload or associated validation fails.
+      - name: Show native compiler cache hit rate
+        if: success()
+        shell: msys2 {0}
+        run: |
+          ccache --show-stats
+      - name: Save verified compiled game objects before GUI packaging
+        if: success() && steps.native-ccache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/dusk-native-ccache
+          key: ${{ steps.native-ccache.outputs.cache-primary-key }}
       - name: Verify native runner and build one-click GUI EXE
         shell: pwsh
         run: |
@@ -232,18 +246,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
-      - name: Show actual native compiler cache hit rate
-        if: success()
-        shell: msys2 {0}
-        run: |
-          ccache --show-stats
-      - name: Save compiled objects for next owner playtest
-        if: success() && steps.native-ccache.outputs.cache-hit != 'true'
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/dusk-native-ccache
-          key: ${{ steps.native-ccache.outputs.cache-primary-key }}
 
   repackage-validated-native:
     if: inputs.approve_game_bundle == true && inputs.fast_repack == true
@@ -251,14 +253,56 @@ jobs:
     timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
+      # Dedicated, restorable cache for the Windows Go launcher/stdlib.
+      GOCACHE: ${{ github.workspace }}/.cache/dusk-go-build
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Prefer preinstalled Go to avoid unnecessary setup
+        id: preinstalled-go
+        shell: pwsh
+        run: |
+          $go = Get-Command go -ErrorAction SilentlyContinue
+          $available = 'false'
+          if ($go) {
+            $versionLine = & go version
+            Write-Host "Go available from Windows runner image: $versionLine"
+            if ($LASTEXITCODE -eq 0 -and $versionLine -match 'go1\.(\d+)') {
+              if ([int]$Matches[1] -ge 23) {
+                $available = 'true'
+              }
+            }
+          }
+          if ($available -eq 'true') {
+            $version = [regex]::Match($versionLine,'go1\.\d+(\.\d+)?').Value
+          } else {
+            $version = 'go1.23-setup'
+          }
+          "go_version=$version" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
+          "available=$available" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
       - uses: actions/setup-go@v5
+        if: steps.preinstalled-go.outputs.available != 'true'
         with:
           go-version: '1.23'
           cache: false
+      - name: Restore cached Windows Go compiled packages
+        id: go-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/dusk-go-build
+          key: dusk-go-win-v1-${{ steps.preinstalled-go.outputs.go_version }}-${{ hashFiles('native-launcher/desktop/go.mod', 'native-launcher/desktop/*.go') }}
+          restore-keys: |
+            dusk-go-win-v1-${{ steps.preinstalled-go.outputs.go_version }}-
+      - name: Reject stale fast repack of a different native game build
+        shell: pwsh
+        run: |
+          # An older or newer native runner can omit requested patches.
+          # Repackage only when both launcher version and pinned runner agree.
+          $go = Get-Content native-launcher/desktop/save_data.go -Raw
+          if ($go -notmatch 'appVersion\s*=\s*"v0\.19"') {
+            throw 'Fast repackage is pinned to the v0.19 native runner; the launcher version differs. Build a new native runner and update the pinned SHA first.'
+          }
       - name: Retrieve successful owner AOT native runner from exact build
         shell: pwsh
         run: |
@@ -285,6 +329,13 @@ jobs:
           go build -trimpath -ldflags '-s -w -H windowsgui' -o ../../.private/dusk-v019-launcher.exe .
           if ($LASTEXITCODE -ne 0) { throw 'Native Windows GUI launcher build failed' }
           Pop-Location
+      - name: Save reusable Windows Go compiler cache before packaging
+        if: success() && steps.go-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: .cache/dusk-go-build
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
       - name: Package one-click game and verify Windows PE on Windows
         shell: pwsh
         run: |
@@ -296,7 +347,7 @@ jobs:
           if ($proc.ExitCode -ne 0) { throw "EXE bundle verification failed: $($proc.ExitCode)" }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$sha  Digimon-Dusk-PC-Windows-v0.19-LAUNCHER-REPACK.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Digimon World Dusk PC v0.19 launcher-only repack for owner testing.`nNative runner is EXACTLY the one in successful build 38622682716.`nNo change to ARM9/ARM7/audio/video code. No claim of repaired scene stutter.`nRuntime install v0.19, original EEPROM save remains %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav.`nDouble-click to play." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "Digimon World Dusk PC v0.19 stable-audio launcher-only repack for owner testing.`nNative runner is EXACTLY the one in successful build 38622682716.`nOriginal authenticated v0.19 owner-tested audio runner. Unchanged ARM9/ARM7/SDL/audio/video code.`nRuntime install v0.19, original EEPROM save remains %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav.`nDouble-click to play." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name,Length
       - uses: actions/upload-artifact@v4
         with:

@@ -11,6 +11,51 @@ SOURCE = ROOT / "assets/icons/dusk-icon-master.webp"
 OUT = ROOT / "assets/icons/generated"
 
 
+def remove_corner_matte(image: Image.Image) -> Image.Image:
+    """Recover rounded-corner transparency from the original black-matted artwork.
+
+    Never key out black pixels throughout the image: dark blue/black details
+    inside the Dusk illustration must remain opaque.
+    """
+    rgba = image.convert("RGBA")
+    if rgba.getextrema()[3][0] < 255:
+        return rgba  # Preserve intentional alpha from future source artwork.
+    width, height = rgba.size
+    pixels = rgba.load()
+    alpha = Image.new("L", (width, height), 255)
+    mask = alpha.load()
+    for y in range(height):
+        luminance = [max(pixels[x, y][:3]) for x in range(width)]
+        first = next((x for x, v in enumerate(luminance) if v >= 28), width)
+        last = next((x for x in range(width - 1, -1, -1)
+                     if luminance[x] >= 28), -1)
+        if first > width // 3 or last < 2 * width // 3:
+            raise ValueError(f"Unexpected rounded corner artwork in row {y}")
+        for left in (True, False):
+            boundary = first if left else last
+            if (left and boundary <= 0) or (not left and boundary >= width - 1):
+                continue
+            inside = min(width - 1, boundary + 3) if left else max(0, boundary - 3)
+            reference = max(25, luminance[inside])
+            positions = (range(0, min(width, boundary + 3)) if left
+                         else range(max(0, boundary - 2), width))
+            for x in positions:
+                v = luminance[x]
+                if ((left and x < boundary - 2) or
+                        (not left and x > boundary + 2) or v <= 8):
+                    coverage = 0
+                else:
+                    coverage = round(min(1.0, v / reference) * 255)
+                mask[x, y] = min(mask[x, y], coverage)
+                if 0 < coverage < 255:
+                    # Remove the embedded black backing from antialiased edges,
+                    # so a light Windows desktop does not show a dark halo.
+                    rgb = pixels[x, y][:3]
+                    scale = 255 / coverage
+                    pixels[x, y] = tuple(min(255, round(c * scale)) for c in rgb) + (255,)
+    rgba.putalpha(alpha)
+    return rgba
+
 def save_png(image: Image.Image, path: Path, side: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.resize((side, side), Image.Resampling.LANCZOS).save(path, optimize=True)
@@ -22,17 +67,19 @@ def generate(source: Path = SOURCE, out: Path = OUT) -> None:
     with Image.open(source) as loaded:
         if loaded.width != loaded.height or loaded.width < 256:
             raise ValueError("Master icon must be square and at least 256 pixels")
-        art = loaded.convert("RGBA")
+        art = remove_corner_matte(loaded)
     out.mkdir(parents=True, exist_ok=True)
+    art.save(out / "dusk-icon-transparent.png", optimize=True)
 
     windows = out / "windows"
     windows.mkdir(parents=True, exist_ok=True)
     art.resize((256, 256), Image.Resampling.LANCZOS).save(
         windows / "dusk.ico", format="ICO",
         sizes=[(s, s) for s in (16, 24, 32, 48, 64, 128, 256)])
-    # BMP is supported natively by SDL3; no SDL_image library is necessary.
-    art.resize((128, 128), Image.Resampling.LANCZOS).convert("RGB").save(
-        windows / "window-icon.bmp", format="BMP")
+    # Headerless RGBA is mapped into an SDL3 surface without SDL_image;
+    # unlike BMP/RGB, the alpha channel survives all the way to the taskbar.
+    (windows / "window-icon.rgba").write_bytes(
+        art.resize((128, 128), Image.Resampling.LANCZOS).tobytes())
     (windows / "dusk.rc").write_text(
         '1 ICON "assets/icons/generated/windows/dusk.ico"\n', encoding="ascii")
 

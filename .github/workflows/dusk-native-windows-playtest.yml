@@ -103,13 +103,26 @@ jobs:
           python tools/restore_verified_hotpaths.py \
             --rom 'Digimon World - Dusk (USA).nds' \
             --stage .private/recomp \
-            --evidence tools/evidence/owner-v016-v017-hot-roots.json \
+            --evidence tools/evidence/owner-v019-verified-roots-compact.b64 \
             --recompiler upstream/recompiler/build/nds_recompile.exe
           test -f .private/recomp/generated/dusk_arm9_main_dispatch.c
           test -f .private/recomp/generated/dusk_arm7_main_dispatch.c
+          grep -q '\[\[code_copy\]\]' .private/recomp/dusk_arm7_main.toml
           test -f .private/recomp/generated/dusk_arm9_ovl00_dispatch.c
           test -f .private/recomp/generated/dusk_arm9_ovl07_dispatch.c
           test -f .private/recomp/generated/dusk_arm9_ovl09_dispatch.c
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from tools.verified_dispatch_rows import read_dispatch_rows
+          generated = Path('.private/recomp/generated')
+          for cpu, bank in ((9, 'dusk_arm9_main'), (7, 'dusk_arm7_main')):
+              count = len(read_dispatch_rows(
+                  [generated / (bank + '_dispatch.c')], expected_cpu=cpu))
+              print(f'Validated native {bank} entries:', count)
+              if count < (60000 if cpu == 9 else 11000):
+                  raise SystemExit('Regressed to undercovered native main bank')
+          PY
       - name: Build Windows x64 SDL3 native runner from original code
         shell: msys2 {0}
         run: |
@@ -156,19 +169,19 @@ jobs:
               throw "Game runtime unexpectedly requires nonbundled development DLLs: $binary"
             }
           }
-          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe
+          python tools/pack_native_private.py --launcher .private/staging/dusk-launcher.exe --runner $runner --sdl $sdl --iconv $iconv --rom 'Digimon World - Dusk (USA).nds' --output dist/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe
           if ($LASTEXITCODE -ne 0) { throw 'Owner one-click EXE packing failed' }
-          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe).Path
+          $exe = (Resolve-Path dist/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe).Path
           $check = Start-Process -FilePath $exe -ArgumentList '--verify-bundle' -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Windows GUI one-click bundle verification failed' }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha  Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Dusk PC v0.17 native owner playtest`nSource: $env:GITHUB_SHA`nIncludes original ARM9/ARM7, byte-guarded verified overlay AOT and FreeBIOS. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "$sha  Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "Dusk PC v0.17 native owner playtest`nSource: $env:GITHUB_SHA`nIncludes page-verified ARM9/ARM7 (including relocated ARM7 code), guarded overlay AOT, and FreeBIOS. Audio runway target 188 ms. Uncovered code still uses Tier3 fallback.`nFull-campaign compatibility is not established.`nCartridge EEPROM remains at %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav`nShift + double click: manage save backups." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-Dusk-PC-Windows-v0.17-PLAYTEST-NATIVE-GAME
+          name: Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7
@@ -191,16 +204,16 @@ jobs:
       - name: Retrieve successful owner AOT native runner from exact build
         shell: pwsh
         run: |
-          gh run download 38604672953 --repo EwertonMendes/digimon-world-dusk-pc --name Digimon-Dusk-PC-Windows-v0.17-PLAYTEST-NATIVE-GAME --dir .private/prior
+          gh run download 38604672953 --repo EwertonMendes/digimon-world-dusk-pc --name Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST-NATIVE-GAME --dir .private/prior
           if ($LASTEXITCODE -ne 0) { throw 'Verified owner native build download failed' }
-          $sha = (Get-FileHash .private/prior/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sha = (Get-FileHash .private/prior/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($sha -ne 'e34a984ae9245975023cca073e0309ff63ee1c6a63412d665b7025e914526010') {
             throw "Wrong upstream AOT bundle SHA256: $sha"
           }
       - name: Recover original ROM and SDL3 runner from authenticated bundle
         shell: pwsh
         run: |
-          python tools/repack_verified_native_windows.py --exe .private/prior/Digimon-Dusk-PC-Windows-v0.17-PLAYTEST.exe --out .private/verified-runtime --sha256 e34a984ae9245975023cca073e0309ff63ee1c6a63412d665b7025e914526010
+          python tools/repack_verified_native_windows.py --exe .private/prior/Digimon-Dusk-PC-Windows-v0.19-SCENE-AUDIO-PLAYTEST.exe --out .private/verified-runtime --sha256 e34a984ae9245975023cca073e0309ff63ee1c6a63412d665b7025e914526010
           if ($LASTEXITCODE -ne 0) { throw 'Exact original AOT runner identity invalid' }
       - name: Compile and unit test clean v0.18 Windows GUI launcher
         shell: pwsh

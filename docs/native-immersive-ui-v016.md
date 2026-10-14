@@ -81,3 +81,43 @@ NDSRecomp adaptive-widescreen pipeline needs Dusk-specific verification of
 Unlike a savestate feature, in-game Save/Continue remains the original
 cartridge EEPROM mechanism. Do not publish the private full-game executable,
 game sources or the owner's save files in GitHub Actions.
+
+
+## v0.16 owner feedback hotfix (Oct 14, 2026)
+
+The following five issues were reproduced from the owner's screenshots and
+fixed without touching ARM gameplay, save data or original Nintendo DS timing:
+
+1. **Start button:** the inherited Metroid Prime Hunters
+   `recomp_runtime_ui` is no longer constructed in Dusk-native mode.
+   Start reaches the original DS input system. Select/Back, Esc and F10
+   remain the Dusk PC Options shortcuts.
+2. **Quit Game:** the tenth PC Options action displays a confirmation modal
+   with **Unsaved progress will be lost**. Cancel/B/Esc return to PC
+   Options; Quit/confirm exits through the normal runner loop.
+   No savestate is created.
+3. **PiP z-order:** each screen's outline is drawn immediately after
+   that image. The focused screen is rendered first; the auxiliary image,
+   outline and control strip are rendered last, above the main border.
+4. **Resize with borders and corners:** pointer dragging near any of the
+   four edges (including corners) changes the PiP size. Resizing clamps
+   25–65%, retains exactly the native 256:192 aspect, and keeps the
+   opposite edge anchored. Size and location save to the host profile.
+   Action buttons keep priority over resize hit-testing.
+5. **LT/RT:** at first threshold crossing, LT selects physical *lower*
+   (touch) as main, RT selects physical *upper* as main; both switch to
+   Focus+PiP. Host gamepad trigger inputs are not fed through the optional
+   virtual stylus. Original DS L/R input remains unchanged.
+
+The hotfix is maintained as a small additive patch
+`tools/patches/ndsrecomp-dusk-immersive-ui-hotfix.patch`
+applied **after** `ndsrecomp-dusk-immersive-ui.patch` and all prior patches
+in pinned-source private builds. CI executes `native_pip_resize.cpp`
+(5,760 border/corner cases) plus pre-existing 12,672 layout cases,
+alongside the ROM-free save, cycles and presentation tests.
+
+**Windows owner check:** close the previous v0.16 executable before running
+the v0.16 UX Fixes build. The launcher updates the versioned v0.16 runner
+when its content hash changes, but **continues using the exact same
+`userdata/A6RE` game save**. The public repo must not include ROM-derived
+runner/game payloads. Do not merge PR #16 until owner accepts this revision.

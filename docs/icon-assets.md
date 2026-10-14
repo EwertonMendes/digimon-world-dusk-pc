@@ -1,7 +1,7 @@
 # Dusk PC — cross-platform application icon
 
 The approved Dusk-themed icon lives in \`assets/icons/dusk-icon-master.webp\`.
-It is **raster artwork** (not a vector SVG). It is stored as optimized WebP to
+The generated icons include recovered rounded-corner transparency (no black matte); the native SDL3 surface consumes raw 128x128 RGBA32 pixels without losing alpha.\n\nIt is **raster artwork** (not a vector SVG). It is stored as optimized WebP to
 keep the Git repository small. Other images are **derived**, never manually edited.
 
 Generate all platform assets using Pillow >= 10:

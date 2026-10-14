@@ -195,7 +195,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE, PWSTR,int show) {
         wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
         wc.lpszClassName=kClassName;
         if(!RegisterClassExW(&wc)) return 1;
-        g.window=CreateWindowExW(0,kClassName,L"Digimon World Dusk Recompiled | v0.24 - Presentation Prototype (NOT GAME)",
+        g.window=CreateWindowExW(0,kClassName,L"Digimon World Dusk Recompiled | v0.25 - Presentation Prototype (NOT GAME)",
             WS_OVERLAPPEDWINDOW|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,1280,800,nullptr,nullptr,instance,nullptr);
         if(!g.window) return 1;
         ShowWindow(g.window,show);UpdateWindow(g.window);

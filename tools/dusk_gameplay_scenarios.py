@@ -13,7 +13,9 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
+import tempfile
 
 from test_dusk_native_story import Native, SHA256
 
@@ -119,16 +121,40 @@ def execute_actions(game: Native, scenario: dict, out: Path) -> dict:
     }
 
 
+def cartridge_fixture(source: Path, out: Path) -> tuple[list[str], str]:
+    """Clone an owner's *in-game* save into an isolated scenario run.
+
+    Never open a live or canonical save for writing. The test runner may change
+    only this private temporary copy. No save states, memory snapshots or
+    save-slot formats are involved.
+    """
+    if not source.is_file() or source.stat().st_size != 65536:
+        raise ValueError("Dusk USA in-game EEPROM must be an existing 65536-byte .sav file")
+    sandbox = Path(tempfile.mkdtemp(prefix="cartridge-fixture-", dir=out))
+    target = sandbox / "dusk.sav"
+    config = sandbox / "dusk-cartridge.toml"
+    original = hashlib.sha256(source.read_bytes()).hexdigest()
+    shutil.copyfile(source, target)
+    if hashlib.sha256(target.read_bytes()).hexdigest() != original:
+        raise RuntimeError("Cartridge save fixture did not copy bit-for-bit")
+    config.write_text('[cartridge]\\nsave_type = "eeprom"\\nsave_size = 65536\\n',
+                      encoding="utf-8")
+    return ["--save-path", str(target), "--config", str(config)], original
+
+
 def run(args) -> None:
     if hashlib.sha256(args.rom.read_bytes()).hexdigest() != SHA256:
         raise RuntimeError("Expected the verified original Dusk USA ROM")
     scenario = validate_scenario(json.loads(args.scenario.read_text(encoding="utf-8")))
     out = args.out / scenario["id"]
     out.mkdir(parents=True, exist_ok=True)
+    source_save = getattr(args, "save", None)
+    save_flags, source_digest = (cartridge_fixture(source_save, out)
+                                 if source_save is not None else (["--no-save"], None))
     command = [
         str(args.runner.resolve()), str(args.bios_dir.resolve()),
         "--serve", "--port", str(args.port), "--rom", str(args.rom.resolve()),
-        "--no-save", "--boot", "direct", "--generated-firmware",
+        *save_flags, "--boot", "direct", "--generated-firmware",
         "--freebios", "--network", "off",
     ]
     with (out / "native-runner.log").open("wb") as log:
@@ -141,6 +167,11 @@ def run(args) -> None:
             game.cmd("keys", mask=4095)
             game.frames(840)
             report = execute_actions(game, scenario, out)
+            if source_digest is not None:
+                # The source path is read only; the runner gets only a clone.
+                if hashlib.sha256(source_save.read_bytes()).hexdigest() != source_digest:
+                    raise RuntimeError("Source save changed while testing; abort")
+                report["save_fixture"] = "isolated-cartridge-copy; original untouched"
             (out / "result.json").write_text(json.dumps(report, indent=2)+"\n", encoding="utf-8")
             print(json.dumps(report, indent=2))
             game.socket.close()
@@ -158,6 +189,7 @@ def main() -> None:
     parser.add_argument("--runner", type=Path, required=True)
     parser.add_argument("--rom", type=Path, required=True)
     parser.add_argument("--bios-dir", type=Path, required=True)
+    parser.add_argument("--save", type=Path, help="owner .sav input; cloned to isolated test profile")
     parser.add_argument("--scenario", type=Path, required=True)
     parser.add_argument("--out", type=Path, default=Path(".private/gameplay-regression"))
     parser.add_argument("--port", type=int, default=19880)

@@ -22,7 +22,10 @@ int main() {
     assert(std::abs((double)major.w/major.h-(ratio?16./9.:4./3.))<.03);
     if(aux) {
       assert(inside(minor));assert(inside(g.pip_bar));
-      assert(contains(minor,g.pip_bar.x+5,g.pip_bar.y+4));
+      assert(!contains(minor,g.pip_bar.x+5,g.pip_bar.y+4));
+      assert(g.pip_bar.y+g.pip_bar.h==minor.y);
+      assert(g.pip_bar.x==minor.x && g.pip_bar.w==minor.w);
+      assert(minor.y+minor.h<=g.play.h-8);
       assert(inside(g.pip_swap));assert(inside(g.pip_minimize));
       if(primary) {
         float tx=-1,ty=-1;

@@ -38,16 +38,17 @@ func TestRejectsTamperedPrivatePayload(t *testing.T) {
 	if _, err := readPayload(path); err == nil { t.Fatal("tampering was accepted") }
 }
 
-func TestProvisionKeepsIdentityAndReusesFiles(t *testing.T) {
+func TestProvisionReusesIdenticalVersionBinaries(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string][]byte{"runner.exe":[]byte("MZmock"), "SDL3.dll":[]byte("MZmock"), "game.nds":[]byte("synthetic")}
+	if err := os.MkdirAll(dir, 0700); err != nil { t.Fatal(err) }
 	if err := provision(dir, files); err != nil { t.Fatal(err) }
-	id := filepath.Join(dir, "generated-identity.bin")
-	old, err := os.ReadFile(id)
-	if err != nil { t.Fatal(err) }
-	if len(old) != 6 { t.Fatalf("identity bytes: %d",len(old)) }
 	if err := provision(dir, files); err != nil { t.Fatal(err) }
-	now, err := os.ReadFile(id)
-	if err != nil { t.Fatal(err) }
-	if !bytes.Equal(old, now) { t.Fatal("persistent identity was replaced") }
+	for name, expected := range files {
+		got, err := os.ReadFile(filepath.Join(dir,name))
+		if err != nil || !bytes.Equal(got,expected) { t.Fatalf("%s was not provisioned correctly: %v",name,err) }
+	}
+	if _, err := os.Stat(filepath.Join(dir,"generated-identity.bin")); !os.IsNotExist(err) {
+		t.Fatal("installer must not create a version-bound firmware identity")
+	}
 }

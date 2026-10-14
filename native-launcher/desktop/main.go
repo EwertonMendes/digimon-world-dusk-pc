@@ -52,7 +52,7 @@ func readPayload(executable string) (map[string][]byte, error) {
 	// SDL3's MSYS2 UCRT package uses libiconv. When present, it must be
 	// packaged in the same SHA256-verified archive and deployed beside SDL3.
 	// Older 3-file owner builds remain compatible with this reader.
-	allowed := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "libiconv-2.dll":20 << 20}
+	allowed := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "libiconv-2.dll":20 << 20, "window-icon.bmp":1 << 20}
 	if len(reader.File) < len(required) || len(reader.File) > len(allowed) {
 		return nil, errors.New("quantidade de arquivos incorreta")
 	}
@@ -77,6 +77,9 @@ func readPayload(executable string) (map[string][]byte, error) {
 	}
 	if optional, ok := contents["libiconv-2.dll"]; ok && !bytes.HasPrefix(optional, []byte("MZ")) {
 		return nil, errors.New("libiconv Windows inválida")
+	}
+	if icon, ok := contents["window-icon.bmp"]; ok && (len(icon) < 54 || !bytes.HasPrefix(icon, []byte("BM"))) {
+		return nil, errors.New("ícone SDL3 inválido")
 	}
 	romHash := sha256.Sum256(contents["game.nds"])
 	if hex.EncodeToString(romHash[:]) != romSHA256 { return nil, errors.New("esta versão exige Dusk USA original") }
@@ -123,6 +126,9 @@ func launch(p gamePaths) error {
 	cmd.Dir = p.install
 	cmd.Stdout, cmd.Stderr = file, file
 	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0", "NDS_DUSK_NATIVE_UI=1", "NDS_DUSK_DISABLE_SAVESTATES=1")
+	if _, iconErr := os.Stat(filepath.Join(p.install, "window-icon.bmp")); iconErr == nil {
+		cmd.Env = append(cmd.Env, "NDS_DUSK_ICON_PATH="+filepath.Join(p.install, "window-icon.bmp"))
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW: SDL window remains visible
 	if err := cmd.Start(); err != nil { return err }
 	if err := cmd.Wait(); err != nil {

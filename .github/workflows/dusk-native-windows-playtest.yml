@@ -186,6 +186,22 @@ jobs:
           cmake --build upstream/runner/build-owner-dusk --target nds_runner --parallel 3
           test -f upstream/runner/build-owner-dusk/nds_runner.exe
           test -f /ucrt64/bin/SDL3.dll
+      # Preserve compiled C/C++ objects as soon as the expensive native
+      # runner succeeds. Previously this was AFTER Go launcher checks, PE
+      # packaging, artifact upload and their possible failures: a transient
+      # packaging failure discarded ~20 minutes of compiler results.
+      - name: Show cold/warm compiler cache hit rate
+        if: success()
+        shell: msys2 {0}
+        run: |
+          ccache --show-stats
+      - name: Persist compiled Windows game objects before packaging
+        if: success() && steps.native-ccache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/dusk-native-ccache
+          key: ${{ steps.native-ccache.outputs.cache-primary-key }}
       - name: Verify native runner and build one-click GUI EXE
         shell: pwsh
         run: |
@@ -232,18 +248,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
-      - name: Show actual native compiler cache hit rate
-        if: success()
-        shell: msys2 {0}
-        run: |
-          ccache --show-stats
-      - name: Save compiled objects for next owner playtest
-        if: success() && steps.native-ccache.outputs.cache-hit != 'true'
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/dusk-native-ccache
-          key: ${{ steps.native-ccache.outputs.cache-primary-key }}
 
   repackage-validated-native:
     if: inputs.approve_game_bundle == true && inputs.fast_repack == true

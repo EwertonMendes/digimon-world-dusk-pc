@@ -12,7 +12,7 @@ menus ou campanha em linguagem de alto nível.
   não há alegação de campanha inteira certificada.
 - **v0.17 (em desenvolvimento)**: consolidação segura de cobertura AOT,
   telemetria de sessões reais, retenção e restauração de saves, documentação
-  e melhorias progressivas de arquitetura. Consulte a [PR #17](../../pull/17)
+  e melhorias progressivas de arquitetura. Consulte a [PR #17](https://github.com/EwertonMendes/digimon-world-dusk-pc/pull/17)
   e [roadmap](docs/roadmap.md) para itens aprovados e pendentes.
 - O `dusk_pc.exe` produzido no CI público é **somente a demonstração
   gráfica sintética**, não o jogo completo.

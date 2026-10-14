@@ -17,7 +17,8 @@ import zipfile
 MAGIC = b"DUSKPACKv1!!"
 FOOTER_SIZE = 52
 ROM_SHA256 = "df9522e07be99c5622e0211d3a50132776784db3fb28f42fc7392f588e1ae8cb"
-EXPECTED_FILES = {"runner.exe", "SDL3.dll", "game.nds", "libiconv-2.dll"}
+RUNTIME_FILES = {"runner.exe", "SDL3.dll", "game.nds", "libiconv-2.dll"}
+EXPECTED_FILES = RUNTIME_FILES | {"window-icon.rgba", "dusk-splash.bmp"}
 
 
 def verified_extract(executable: Path, destination: Path, expected_sha256: str) -> dict[str, str]:
@@ -49,7 +50,7 @@ def verified_extract(executable: Path, destination: Path, expected_sha256: str) 
             contents[name] = z.read(name)
     if hashlib.sha256(contents["game.nds"]).hexdigest() != ROM_SHA256:
         raise ValueError("ROM identity mismatch")
-    for name in EXPECTED_FILES - {"game.nds"}:
+    for name in RUNTIME_FILES - {"game.nds"}:
         if not contents[name].startswith(b"MZ"):
             raise ValueError(f"Invalid Windows PE file: {name}")
     if b"SDL3.dll" not in contents["runner.exe"]:
@@ -57,6 +58,8 @@ def verified_extract(executable: Path, destination: Path, expected_sha256: str) 
     destination.mkdir(parents=True, exist_ok=False)
     result: dict[str, str] = {}
     for name, file_data in contents.items():
+        if name not in RUNTIME_FILES:
+            continue  # Replace cosmetic resources with newly generated, validated assets.
         (destination / name).write_bytes(file_data)
         result[name] = hashlib.sha256(file_data).hexdigest()
     return result

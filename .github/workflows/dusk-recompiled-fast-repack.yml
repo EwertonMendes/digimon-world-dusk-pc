@@ -50,8 +50,13 @@ jobs:
           New-Item -ItemType Directory -Force .private/prior | Out-Null
           gh run download $pin.run_id --repo EwertonMendes/digimon-world-dusk-pc --name $pin.artifact_name --dir .private/prior
           if ($LASTEXITCODE -ne 0) { throw 'Pinned native artifact download failed' }
+          $artifacts = gh api "repos/EwertonMendes/digimon-world-dusk-pc/actions/runs/$($pin.run_id)/artifacts" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to verify immutable GitHub artifact' }
+          $matching = @($artifacts.artifacts | Where-Object { $_.id -eq $pin.artifact_id -and $_.name -eq $pin.artifact_name -and $_.digest -eq $pin.artifact_digest -and !$_.expired })
+          if ($matching.Count -ne 1) { throw 'Source artifact ID/digest is not the pinned native build' }
           $source = Join-Path '.private/prior' $pin.exe_filename
-          python tools/repack_verified_native_windows.py --exe $source --out .private/verified-runtime --sha256 $pin.exe_sha256
+          $sourceHash = (Get-FileHash $source -Algorithm SHA256).Hash.ToLowerInvariant()
+          python tools/repack_verified_native_windows.py --exe $source --out .private/verified-runtime --sha256 $sourceHash
           if ($LASTEXITCODE -ne 0) { throw 'Pinned runner or ROM failed SHA-256 verification' }
       - name: Generate approved icons and splash without ARM recompilation
         shell: pwsh

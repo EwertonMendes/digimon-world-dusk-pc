@@ -42,3 +42,7 @@ game-coverage-*.json
 performance-*.jsonl
 hostprof-*.ndshp
 *.ndshp
+
+# Deterministic cross-platform Dusk icon exports; keep only the master art.
+/assets/icons/generated/
+/native-launcher/desktop/*_windows_amd64.syso

@@ -81,7 +81,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  } // namespace
  
  int nds_run_interactive_frontend(const NdsFrontendOptions& initial_options) {
-@@ -2430,5 +2430,12 @@
+@@ -2430,5 +2495,12 @@
      if (!create_presentation(options, presentation)) {
          SDL_Quit();
          return 1;
@@ -94,7 +94,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    }
 +#endif
      const int bottom_logical_width = presentation.separate
-@@ -4550,5 +4550,5 @@
+@@ -4550,5 +4622,5 @@
              const std::string top_title =
  #if defined(NDS_HAVE_SDL3)
 -                presentation.dusk.enabled ? "Digimon World Dusk | PC - " + fps_text + governor_text :

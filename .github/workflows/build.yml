@@ -22,9 +22,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDUSK_BUILD_TESTS=ON
+      - uses: actions/setup-python@v5
+        if: runner.os == 'Linux'
+        with:
+          python-version: '3.11'
+      - name: Install pinned icon-generation dependency
+        if: runner.os == 'Linux'
+        run: python -m pip install Pillow==11.3.0
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
         run: |
+          python3 -m unittest discover -s tests -p test_icon_assets.py -v
           python3 -m py_compile tools/test_dusk_native_story.py tools/dusk_gameplay_scenarios.py tools/prepare_dusk_recomp.py tools/analyze_native_perf.py tools/analyze_v016_sessions.py tools/apply_dusk_patches.py tools/verified_dispatch_rows.py tools/pack_native_private.py
           python3 -m unittest discover -s tests -p test_native_perf.py -v
           python3 -m unittest discover -s tests -p test_v016_diagnostics.py -v

@@ -259,7 +259,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Prefer preinstalled Go to avoid unnecessary setup
+        id: preinstalled-go
+        shell: pwsh
+        run: |
+          $go = Get-Command go -ErrorAction SilentlyContinue
+          $available = 'false'
+          if ($go) {
+            $versionLine = & go version
+            Write-Host "Go available from Windows runner image: $versionLine"
+            if ($LASTEXITCODE -eq 0 -and $versionLine -match 'go1\.(\d+)') {
+              if ([int]$Matches[1] -ge 23) {
+                $available = 'true'
+              }
+            }
+          }
+          "available=$available" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
       - uses: actions/setup-go@v5
+        if: steps.preinstalled-go.outputs.available != 'true'
         with:
           go-version: '1.23'
           cache: false

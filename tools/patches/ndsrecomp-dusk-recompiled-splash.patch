@@ -1,0 +1,103 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -2005,5 +2005,5 @@
+     presentation.windows[0] = create_window(
+ #if defined(NDS_HAVE_SDL3)
+-        presentation.dusk.enabled ? "Digimon World Dusk | PC" :
++        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24" :
+ #endif
+         presentation.separate ? "ndsrecomp - Top Screen"
+@@ -2390,7 +2390,72 @@
+     return ticks;
+ }
+ 
++#if defined(NDS_HAVE_SDL3)
++// Host-only splash: ROM/guest frames, timing and save state are untouched.
++// BMP is generated from approved artwork at build time and integrity-checked
++// by the desktop launcher. SDL3 loads it without another image dependency.
++static bool dusk_show_startup(FrontendPresentation& presentation) {
++    const char* path = std::getenv("NDS_DUSK_SPLASH_PATH");
++    if (!path || !path[0] || !presentation.renderers[0]) return true;
++    SDL_Surface* surface = SDL_LoadBMP(path);
++    if (!surface) {
++        std::fprintf(stderr, "[dusk-splash] unable to load BMP: %s\n", SDL_GetError());
++        return true;  // Degraded appearance must never prevent starting the game.
++    }
++    SDL_Renderer* renderer = presentation.renderers[0];
++    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
++    SDL_DestroySurface(surface);
++    if (!texture) {
++        std::fprintf(stderr, "[dusk-splash] unable to create texture: %s\n", SDL_GetError());
++        return true;
++    }
++    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
++    constexpr uint64_t duration_ms = 2600;
++    constexpr uint64_t fade_ms = 300;
++    const uint64_t start = SDL_GetTicks();
++    bool cancelled = false;
++    bool skip = false;
++    while (!skip && SDL_GetTicks() - start < duration_ms) {
++        SDL_Event event{};
++        while (SDL_PollEvent(&event)) {
++            if (event.type == SDL_EVENT_QUIT ||
++                event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
++                cancelled = true;
++                break;
++            }
++            if (event.type == SDL_EVENT_KEY_DOWN ||
++                event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
++                event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
++                skip = true;
++                break;
++            }
++        }
++        if (cancelled || skip) break;
++        const uint64_t elapsed = SDL_GetTicks() - start;
++        int width = 1280, height = 720;
++        SDL_GetRenderOutputSize(renderer, &width, &height);
++        if (width < 1 || height < 1) break;
++        const float scale = std::min(float(width) / 1280.f, float(height) / 720.f);
++        const SDL_FRect destination{
++            (float(width) - 1280.f * scale) * 0.5f,
++            (float(height) - 720.f * scale) * 0.5f,
++            1280.f * scale, 720.f * scale};
++        const uint64_t fade_in = std::min(elapsed, fade_ms);
++        const uint64_t fade_out = std::min(duration_ms - std::min(elapsed, duration_ms), fade_ms);
++        const uint8_t opacity = static_cast<uint8_t>(
++            255u * std::min(fade_in, fade_out) / fade_ms);
++        SDL_SetTextureAlphaMod(texture, opacity);
++        SDL_SetRenderDrawColor(renderer, 7, 11, 30, 255);
++        SDL_RenderClear(renderer);
++        SDL_RenderTexture(renderer, texture, nullptr, &destination);
++        SDL_RenderPresent(renderer);
++        SDL_Delay(16);  // Presentation-only; guest emulation has not started.
++    }
++    SDL_DestroyTexture(texture);
++    return !cancelled;
++}
++#endif
+ 
+ } // namespace
+ 
+ int nds_run_interactive_frontend(const NdsFrontendOptions& initial_options) {
+@@ -2430,5 +2430,12 @@
+     if (!create_presentation(options, presentation)) {
+         SDL_Quit();
+         return 1;
+     }
++#if defined(NDS_HAVE_SDL3)
++    if (presentation.dusk.enabled && !dusk_show_startup(presentation)) {
++        destroy_presentation(presentation);
++        SDL_Quit();
++        return 0;
++    }
++#endif
+     const int bottom_logical_width = presentation.separate
+@@ -4550,5 +4550,5 @@
+             const std::string top_title =
+ #if defined(NDS_HAVE_SDL3)
+-                presentation.dusk.enabled ? "Digimon World Dusk | PC - " + fps_text + governor_text :
++                presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.24 - " + fps_text + governor_text :
+ #endif
+                 !savestate_notice.empty()

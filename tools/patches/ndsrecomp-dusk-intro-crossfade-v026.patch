@@ -1,0 +1,134 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1914,5 +1914,11 @@
+ }
+ 
++#if defined(NDS_HAVE_SDL3)
++// Only the opening texture is retained; guest video and timing are untouched.
++static SDL_Texture* g_dusk_intro_overlay = nullptr;
++static uint64_t g_dusk_intro_guest_start = 0;
++static void dusk_blend_intro_guest(SDL_Renderer* renderer);
++#endif
+ 
+ PresentationTicks present_screens(FrontendPresentation& presentation,
+                                   const uint32_t* top_pixels,
+@@ -2010,5 +2010,6 @@
+             draw_savestate_notice(renderer,bottom,savestate_notice);
+             dusk_toolbar(renderer,presentation,geo);
++            dusk_blend_intro_guest(renderer);
+             ticks.draw+=SDL_GetPerformanceCounter()-start;
+             start=SDL_GetPerformanceCounter();
+             SDL_RenderPresent(renderer);
+@@ -2405,6 +2405,81 @@
+ static const char* dusk_project_title() {
+     const char* configured = std::getenv("NDS_DUSK_WINDOW_TITLE");
+     return configured && configured[0] ? configured :
+         "Digimon World Dusk Recompiled | v0.25";
+ }
++// The version is drawn by SDL, not burned into the 4K illustration.
++static const uint8_t* dusk_version_glyph(char c) {
++    static constexpr uint8_t v[7] = {17,17,17,17,17,10,4};
++    static constexpr uint8_t dot[7] = {0,0,0,0,0,6,6};
++    static constexpr uint8_t digits[10][7] = {
++        {14,17,19,21,25,17,14}, {4,12,4,4,4,4,14},
++        {14,17,1,2,4,8,31}, {30,1,1,14,1,1,30},
++        {2,6,10,18,31,2,2}, {31,16,16,30,1,1,30},
++        {14,16,16,30,17,17,14}, {31,1,2,4,8,8,8},
++        {14,17,17,14,17,17,14}, {14,17,17,15,1,1,14}};
++    if (c == 'v' || c == 'V') return v;
++    if (c == '.') return dot;
++    if (c >= '0' && c <= '9') return digits[c - '0'];
++    return nullptr;
++}
++static void dusk_draw_version_label(SDL_Renderer* renderer, int width,
++                                    int height, uint8_t opacity) {
++    const char* version = std::getenv("NDS_DUSK_SPLASH_VERSION");
++    if (!version || !version[0]) return;
++    size_t count = 0;
++    while (version[count] && count < 12) {
++        if (!dusk_version_glyph(version[count])) return;
++        ++count;
++    }
++    if (version[count] || count == 0) return;
++    const float unit = std::max(2.f, float(height) / 360.f);
++    const float margin = 11.f * unit;
++    const float panel_w = float(count * 6 + 8) * unit;
++    const float panel_h = 13.f * unit;
++    const float x = float(width) - margin - panel_w;
++    const float y = float(height) - margin - panel_h;
++    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
++    SDL_SetRenderDrawColor(renderer, 6, 14, 40,
++                           uint8_t(float(opacity) * 0.55f));
++    SDL_FRect panel{x, y, panel_w, panel_h};
++    SDL_RenderFillRect(renderer, &panel);
++    SDL_SetRenderDrawColor(renderer, 197, 224, 255, opacity);
++    for (size_t index = 0; index < count; ++index) {
++        const uint8_t* glyph = dusk_version_glyph(version[index]);
++        for (int row = 0; row < 7; ++row) {
++            for (int col = 0; col < 5; ++col) {
++                if ((glyph[row] & (1 << (4-col))) == 0) continue;
++                SDL_FRect dot{
++                    x + (4.f + float(index * 6 + col)) * unit,
++                    y + (3.f + float(row)) * unit, unit, unit};
++                SDL_RenderFillRect(renderer, &dot);
++            }
++        }
++    }
++}
++static void dusk_blend_intro_guest(SDL_Renderer* renderer) {
++    if (!g_dusk_intro_overlay) return;
++    const uint64_t now = SDL_GetTicks();
++    if (!g_dusk_intro_guest_start) g_dusk_intro_guest_start = now;
++    const uint64_t elapsed = now - g_dusk_intro_guest_start;
++    constexpr uint64_t crossfade_ms = 800;
++    if (elapsed >= crossfade_ms) {
++        SDL_DestroyTexture(g_dusk_intro_overlay);
++        g_dusk_intro_overlay = nullptr;
++        return;
++    }
++    const uint8_t opacity = uint8_t(
++        (crossfade_ms - elapsed) * 255u / crossfade_ms);
++    SDL_SetTextureAlphaMod(g_dusk_intro_overlay, opacity);
++    SDL_SetTextureBlendMode(g_dusk_intro_overlay, SDL_BLENDMODE_BLEND);
++    int width = 1280, height = 720;
++    if (!SDL_GetRenderOutputSize(renderer, &width, &height) ||
++        width < 1 || height < 1) return;
++    const float scale = std::min(float(width)/3840.f, float(height)/2160.f);
++    SDL_FRect destination{(float(width)-3840.f*scale)*0.5f,
++                         (float(height)-2160.f*scale)*0.5f,
++                         3840.f*scale, 2160.f*scale};
++    SDL_RenderTexture(renderer, g_dusk_intro_overlay, nullptr, &destination);
++    dusk_draw_version_label(renderer, width, height, opacity);
++}
+ // Host-only splash: ROM/guest frames, timing and save state are untouched.
+@@ -2460,2 +2460,3 @@
+     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
++    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+     // Five seconds of visible presentation by default. Future cosmetic
+@@ -2520,5 +2520,3 @@
+         const uint64_t fade_in = std::min(elapsed, fade_ms);
+-        const uint64_t fade_out = std::min(duration_ms - std::min(elapsed, duration_ms), fade_ms);
+-        const uint8_t opacity = static_cast<uint8_t>(
+-            255u * std::min(fade_in, fade_out) / fade_ms);
++        const uint8_t opacity = static_cast<uint8_t>(255u * fade_in / fade_ms);
+         SDL_SetTextureAlphaMod(texture, opacity);
+@@ -2530,4 +2530,5 @@
+         SDL_RenderClear(renderer);
+         SDL_RenderTexture(renderer, texture, nullptr, &destination);
++        dusk_draw_version_label(renderer, width, height, opacity);
+         SDL_RenderPresent(renderer);
+         SDL_Delay(16);  // Presentation-only; guest emulation has not started.
+@@ -2540,4 +2540,11 @@
+     }
+-    SDL_DestroyTexture(texture);
++    // Keep the last splash frame until the first guest frame is available.
++    // Blend it over guest presentation; no intermediate black/white flash.
++    if (cancelled) {
++        SDL_DestroyTexture(texture);
++    } else {
++        g_dusk_intro_overlay = texture;
++        g_dusk_intro_guest_start = 0;
++    }
+     return !cancelled;
+ }

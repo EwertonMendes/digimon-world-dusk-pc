@@ -1,0 +1,19 @@
+name: Dusk sprite localization research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sprite-index:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Inspect owner ROM sprite asset containers
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprite_paks.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite pack examination failed' }

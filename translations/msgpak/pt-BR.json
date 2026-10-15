@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "language": "pt-BR",
+  "description": "Digimon World Dusk — Brazilian Portuguese",
+  "messages": {
+    "0/0": "[PLAYER_NAME] e sua equipe\nforam derrotados...",
+    "0/1": "A equipe de [PLAYER_NAME]\ntentou fugir...",
+    "1/0": "[PLAYER_NAME], que tipo de\nprogramas de TV você gosta?[END]",
+    "1/1": "Vejo comédias na TV\ntodos os dias.[END]",
+    "3/2": "Hoje é meu dia\nde sorte![END]",
+    "124/45": "Novo\nContinuar\nConexão Wi-Fi Nintendo\nVoltar[END]",
+    "125/33": "Tem certeza?[END]",
+    "70/31": "Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+    "70/32": "Olá!\nDeseja comprar\n[GREEN]Itens consumíveis[GREEN]?[END]",
+    "70/33": "Olá!\nDeseja comprar\n[GREEN]Itens da fazenda[GREEN]?[END]",
+    "70/34": "Olá!\nDeseja reformar\nsua [RED]Ilha Agrícola[RED]?[END]",
+    "71/19": "Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+    "69/67": "Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+    "63/36": "Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+    "64/88": "Olá!\nDeseja comprar\n[GREEN]Itens consumíveis[GREEN]?[END]",
+    "66/90": "Olá, [PLAYER_NAME].\nEsta é a [RED]Praça Sombria[RED].[END]",
+    "69/35": "Olá, [PLAYER_NAME]. Esta é a\n[RED]Praça Sombria[RED].[END]",
+    "72/26": "Deseja usar\no elevador?[END]"
+  }
+}

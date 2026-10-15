@@ -51,7 +51,7 @@ jobs:
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |
-          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 517,518,519,520,521,522,523,524,527,528,529,530 --count 1
+          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 380,383,388,389,516,531,519 --count 1
           if ($LASTEXITCODE -ne 0) { throw 'DS sprite-cell inspection failed' }
       - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
         shell: pwsh

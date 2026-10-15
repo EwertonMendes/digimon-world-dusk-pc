@@ -72,6 +72,32 @@ def generate(rom:bytes,preview=False)->str:
             if cel_source is None:raise ValueError("invalid compressed NCER cell")
             isolated_chr,isolated_cel=isolate_selected_cells(src,cel_source,spec.get("edits",[]))
             dest=edit_ncer_title(isolated_chr,pal,isolated_cel,spec.get("edits",[]))
+            if any("region" in edit for edit in spec.get("edits",[])):
+                from probe_dusk_sprite_cells import get_cell_groups,render_one
+                orig_cells,orig_mode=get_cell_groups(cel_source)
+                new_cells,new_mode=get_cell_groups(isolated_cel)
+                if len(orig_cells)!=len(new_cells) or orig_mode!=new_mode:
+                    raise ValueError("animation cell count or mapping mode changed")
+                colors=palette(pal)
+                original_chars=graphics(src)[1]
+                localized_chars=graphics(dest)[1]
+                for edit in spec["edits"]:
+                    if "region" not in edit:continue
+                    idx=edit["cell"]
+                    before=render_one(original_chars,colors,orig_cells[idx],orig_mode)
+                    after=render_one(localized_chars,colors,new_cells[idx],new_mode)
+                    if before is None or after is None or before.size!=after.size:
+                        raise ValueError("original Digivice animation cell was altered")
+                    x,y,w,h=edit["region"]
+                    changed=0
+                    bp=before.load();ap=after.load()
+                    for py in range(before.height):
+                        for px in range(before.width):
+                            if bp[px,py]!=ap[px,py]:
+                                if not (x<=px<x+w and y<=py<y+h):
+                                    raise ValueError("original button icon/frame changed outside label area")
+                                changed+=1
+                    if changed<12:raise ValueError("translation did not update sufficient glyph pixels")
             packed=rle_compress(dest)
             rows.append((locale,i,26,zlib.crc32(raw)&0xffffffff,packed))
             if isolated_cel!=cel_source:

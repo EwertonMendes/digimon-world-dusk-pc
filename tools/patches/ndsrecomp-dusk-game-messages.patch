@@ -1,0 +1,27 @@
+diff --git a/runner/src/main.cpp b/runner/src/main.cpp
+--- a/runner/src/main.cpp
++++ b/runner/src/main.cpp
+@@ -34,6 +34,7 @@
+ #include "spu.h"
+ #include "title_patches.h"
++#include "dusk_msgpak_runtime.hpp"
+ #if defined(NDS_HAVE_COMPUTE_RENDERER)
+ #include "melonds_compute/ComputeHost.h"
+ #endif
+@@ -1718,6 +1719,19 @@
+     }
++    // The on-disk ROM and verified ARM code banks are unchanged. Rebuild only
++    // the message file in RAM after the canonical cartridge SHA-1 gate.
++    // Filesystem FAT points to a new copy within verified unused cart padding.
++    // This is an opt-in, small translated-gameplay proof (not a full patch).
++    const char* dusk_selected_language = std::getenv("NDS_DUSK_LANGUAGE");
++    if (!rom.empty() &&
++        rom_sha1 == "de1a1915e07288ffad654f3f9f2eb730a0fd1d9c" &&
++        dusk_selected_language && dusk_selected_language[0]) {
++        std::string msg_error;
++        if (dusk_msgpak::apply(rom, dusk_selected_language, &msg_error))
++            std::fprintf(stderr, "[dusk-lang] MSG.PAK translated in memory: %s\n", dusk_selected_language);
++        else
++            std::fprintf(stderr, "[dusk-lang] original English MSG.PAK used: %s\n", msg_error.c_str());
++    }
+     std::string save_path;

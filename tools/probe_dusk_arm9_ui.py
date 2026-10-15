@@ -28,6 +28,22 @@ def inspect(rom):
     if hashlib.sha256(rom).hexdigest()!=SHA256:raise ValueError("ROM mismatch")
     arm=u32(rom,0x20);size=u32(rom,0x2c);ram=u32(rom,0x28)
     print(f"ARM9 ROM: {arm} length={size} guest_ram={ram:#x}")
+    # Inventory menu bottom-screen help text lives in a shared 16-bit
+    # string block; enumerate all consecutive records from the verified ROM.
+    for first,last in [(1012800,1013160),(1079200,1079450),(1130600,1131200)]:
+        cursor=first
+        print("BLOCK",first,last)
+        while cursor+10<last:
+            words=[u16(rom,p) for p in range(cursor,last-1,2)]
+            try: end=words.index(0xffff)
+            except ValueError:break
+            if 3<=end<=72 and all((0<=v<=0xbf or v in(0xfffd,0xffed,0xfff0,0xfff1))
+                                   for v in words[:end]):
+                phrase=decode(words[:end])
+                if len(phrase)>=3:
+                    print(f"TEXT {cursor} chars={end}: {phrase[:100]!r}")
+                cursor+=2*(end+1)
+            else:cursor+=2
     for name,pos in SITES.items():
         if pos<arm or pos+96>arm+size:raise ValueError(f"{name} outside ARM9")
         words=[u16(rom,pos+i) for i in range(0,96,2)]

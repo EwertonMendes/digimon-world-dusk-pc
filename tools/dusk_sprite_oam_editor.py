@@ -34,7 +34,7 @@ def edit_ncer_title(ncgr:bytes,nclr:bytes,ncer:bytes,labels:list[dict])->bytes:
             raise ValueError("cell outside sprite")
         if cell in used_cells:raise ValueError("duplicate title edit")
         used_cells.add(cell)
-        if not isinstance(title,str) or not title or any(not 32<=ord(c)<127 for c in title):
+        if not isinstance(title,str) or not title or any(not (32<=ord(c)<127 or c in "áéíóúãõâêôçÁÉÍÓÚÃÕÂÊÔÇ") for c in title):
             raise ValueError("unsupported title characters")
         mapping={}
         for a0,a1,a2 in cells[cell]:
@@ -61,26 +61,59 @@ def edit_ncer_title(ncgr:bytes,nclr:bytes,ncer:bytes,labels:list[dict])->bytes:
         minx=min(k[0] for k in mapping);maxx=max(k[0] for k in mapping)
         miny=min(k[1] for k in mapping);maxy=max(k[1] for k in mapping)
         w=maxx-minx+1;h=maxy-miny+1
-        if not 6<=h<=64:raise ValueError("unexpected text bounding box")
-        glyph=Image.new("1",(w,h))
+        region=edit.get("region")
+        if region is not None:
+            if (not isinstance(region,list) or len(region)!=4 or
+                    not all(isinstance(v,int) for v in region)):
+                raise ValueError("invalid sprite text region")
+            rx,ry,rw,rh=region
+            if not (0<=rx<w and 0<=ry<h and rw>=8 and rh>=6 and
+                    rx+rw<=w and ry+rh<=h):
+                raise ValueError("sprite text region outside OAM cell")
+        else:
+            rx,ry,rw,rh=0,0,w,h
+        if not 6<=rh<=64:raise ValueError("unexpected text bounding box")
+        glyph=Image.new("1",(rw,rh))
         draw=ImageDraw.Draw(glyph)
         chosen=None
-        for fontsize in range(min(h+4,12),5,-1):
+        for fontsize in range(min(rh+4,12),5,-1):
             font=ImageFont.load_default(size=fontsize)
             l,t,r,b=draw.textbbox((0,0),title,font=font)
-            if r-l<=w-2 and b-t<=h:
+            if r-l<=rw-2 and b-t<=rh:
                 chosen=(font,l,t,r,b);break
         if chosen is None:raise ValueError(f"translated title {title!r} doesn't fit cell")
         font,l,t,r,b=chosen
-        draw.text(((w-(r-l))//2-l,(h-(b-t))//2-t),title,font=font,fill=1)
+        draw.text(((rw-(r-l))//2-l,(rh-(b-t))//2-t),title,font=font,fill=1)
         glyphpx=glyph.load()
-        ink=max(range(1,16),key=lambda c:sum(colors[c][:3]))
+        if edit.get("color")=="lime":
+            ink=max(range(1,16),key=lambda c:colors[c][1]-0.35*(colors[c][0]+colors[c][2]))
+        else:
+            ink=max(range(1,16),key=lambda c:sum(colors[c][:3]))
+        line_background={}
+        if region is not None:
+            from collections import Counter
+            for row in range(ry,ry+rh):
+                options=[]
+                for col in range(rx,rx+rw):
+                    xy=(minx+col,miny+row)
+                    if xy not in mapping:continue
+                    source=mapping[xy]
+                    val=px[source[0],source[1]]
+                    if val!=ink:options.append(val)
+                freq=Counter(options)
+                # Preserve the striped original button plate behind its label.
+                line_background[row]=freq.most_common(1)[0][0] if freq else 0
         for point,(pxx,pyy) in mapping.items():
+            gx=point[0]-minx;gy=point[1]-miny
+            if not (rx<=gx<rx+rw and ry<=gy<ry+rh):continue
+            wanted=ink if glyphpx[gx-rx,gy-ry] else line_background.get(gy,0)
             if (pxx,pyy) in used_pixels:
-                raise ValueError("shared OAM tile was already overwritten")
+                if px[pxx,pyy]!=wanted:
+                    raise ValueError("shared OAM tiles require independent cell relocation")
+                continue
             used_pixels.add((pxx,pyy))
-            px[pxx,pyy]=ink if glyphpx[point[0]-minx,point[1]-miny] else 0
-        print("REPLACED_NATIVE_NCER_CELL",cell,title,w,h)
+            px[pxx,pyy]=wanted
+        print("REPLACED_NATIVE_NCER_CELL",cell,title,"area",rx,ry,rw,rh,"cell",w,h)
     at,_=chunk(chars,b"RGCN",b"RAHC")
     base=at+32
     for t in range(count):

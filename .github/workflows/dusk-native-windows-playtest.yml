@@ -150,6 +150,7 @@ jobs:
           cp tools/native-ui/dusk_material_renderer.hpp upstream/runner/src/dusk_material_renderer.hpp
           cp tools/native-ui/dusk_ui_font.hpp upstream/runner/src/dusk_ui_font.hpp
           cp tools/native-ui/dusk_localization.hpp upstream/runner/src/dusk_localization.hpp
+          cp tools/native-ui/dusk_msgpak_runtime.hpp upstream/runner/src/dusk_msgpak_runtime.hpp
           cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch

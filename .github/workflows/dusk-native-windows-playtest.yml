@@ -63,6 +63,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_backgrounds.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Title screen Nitro graphic source inspection failed' }
+      - name: Map the original Dusk pixel-font letters in native OAM frames
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_menu_glyphs.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original pixel font sampling failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

@@ -11,13 +11,14 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  
  PresentationTicks present_screens(FrontendPresentation& presentation,
                                    const uint32_t* top_pixels,
-@@ -2010,5 +2016,6 @@
-             draw_savestate_notice(renderer,bottom,savestate_notice);
-             dusk_toolbar(renderer,presentation,geo);
+@@ -2010,6 +2016,7 @@
+             if(presentation.dusk.menu_open) {
+                 dusk_menu(renderer,presentation,geo);
+                 if(presentation.dusk.quit_confirm)
+                     dusk_quit_modal(renderer,presentation,geo);
+             }
 +            dusk_blend_intro_guest(renderer);
              ticks.draw+=SDL_GetPerformanceCounter()-start;
-             start=SDL_GetPerformanceCounter();
-             SDL_RenderPresent(renderer);
 @@ -2405,6 +2412,81 @@
  static const char* dusk_project_title() {
      const char* configured = std::getenv("NDS_DUSK_WINDOW_TITLE");

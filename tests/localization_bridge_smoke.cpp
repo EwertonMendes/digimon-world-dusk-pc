@@ -28,7 +28,7 @@ int main() {
     assert(catalog.resolve("msgpak/0001",1,Language::spanish,origin)==origin);
     assert(!catalog.set("",1,Language::portuguese,"missing region"));
     assert(!catalog.set("msgpak",1,Language::english,"not allowed"));
-    assert(!catalog.set("msgpak",1,Language::spanish,std::string("\\xC3",1)));
+    assert(!catalog.set("msgpak",1,Language::spanish,std::string(1,static_cast<char>(0xC3))));
     assert(catalog.size()==1);
     // User preferences are outside game EEPROM. A corrupt locale falls back to English.
     auto directory=std::filesystem::temp_directory_path()/"dusk-localization-smoke";

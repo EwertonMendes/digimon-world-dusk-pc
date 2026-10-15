@@ -41,6 +41,31 @@ func pathsFor(base string) gamePaths {
     }
 }
 
+// pathsForBundle selects a content-addressed installation without changing the
+// shared A6RE profile. Playtest builds with the same displayed appVersion may
+// contain different runner binaries, SDL3 builds, icons or ROM payloads;
+// reusing the old version folder would be unsafe on Windows.
+func pathsForBundle(base string, files map[string][]byte) gamePaths {
+    p := pathsFor(base)
+    names := make([]string, 0, len(files))
+    for name := range files { names = append(names, name) }
+    sort.Strings(names)
+    manifest := sha256.New()
+    for _, name := range names {
+        // Domain-separate every filename and digest. Content hashes are used
+        // instead of ZIP metadata so equivalent bundles share one installation.
+        _, _ = manifest.Write([]byte(name))
+        _, _ = manifest.Write([]byte{0})
+        digest := sha256.Sum256(files[name])
+        _, _ = manifest.Write(digest[:])
+    }
+    id := hex.EncodeToString(manifest.Sum(nil)[:12])
+    p.install = filepath.Join(base, "DuskNativePC", "installs", appVersion, id)
+    p.config = filepath.Join(p.install, "dusk-cartridge.toml")
+    p.diagnostics = filepath.Join(p.install, "diagnostics")
+    return p
+}
+
 func ensureGameDirectories(p gamePaths) error {
     for _, d := range []string{p.install, p.console, filepath.Dir(p.save), filepath.Join(p.profile, "backups"), p.diagnostics} {
         if err := os.MkdirAll(d, 0700); err != nil { return fmt.Errorf("não foi possível criar %s: %w", d, err) }

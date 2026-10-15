@@ -371,8 +371,11 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
                p.dusk.cfg.auxiliary) {
                 state.pip_drag=true;
                 state.pip_drag_x=x;state.pip_drag_y=y;
-                state.pip_origin_x=p.dusk.cfg.floating_x<0?0.75f:p.dusk.cfg.floating_x;
-                state.pip_origin_y=p.dusk.cfg.floating_y<0?0.1f:p.dusk.cfg.floating_y;
+                const auto pip=p.dusk.cfg.focus_top?geo.bottom:geo.top;
+                const float free_w=float(std::max(1,geo.play.w-pip.w-12));
+                const float free_h=float(std::max(1,geo.play.h-pip.h-12));
+                state.pip_origin_x=std::clamp(float(pip.x-geo.play.x)/free_w,0.f,1.f);
+                state.pip_origin_y=std::clamp(float(pip.y-geo.play.y)/free_h,0.f,1.f);
                 return true;
             }
             if(state.pip_drag) {
@@ -479,6 +482,10 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
             case SDL_SCANCODE_UP:navigate(geo,p,0,-1);return true;
             case SDL_SCANCODE_DOWN:navigate(geo,p,0,1);return true;
             case SDL_SCANCODE_TAB:choose_tab(geo,p,(state.tab+1)%4);return true;
+            case SDL_SCANCODE_PAGEUP:
+                choose_tab(geo,p,(state.tab+3)%4);return true;
+            case SDL_SCANCODE_PAGEDOWN:
+                choose_tab(geo,p,(state.tab+1)%4);return true;
             case SDL_SCANCODE_RETURN:
             case SDL_SCANCODE_KP_ENTER:
             case SDL_SCANCODE_SPACE: {
@@ -502,7 +509,16 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
             else choose_tab(geo,p,(state.tab+4+dir)%4);
             return true;
         }
-        if(key==SDL_CONTROLLER_BUTTON_A){if(v.count)choose(p,geo,v.items[state.focus]);return true;}
+        if(key==SDL_CONTROLLER_BUTTON_LEFTSHOULDER){
+            choose_tab(geo,p,(state.tab+3)%4);return true;
+        }
+        if(key==SDL_CONTROLLER_BUTTON_RIGHTSHOULDER){
+            choose_tab(geo,p,(state.tab+1)%4);return true;
+        }
+        if(key==SDL_CONTROLLER_BUTTON_A){
+            if(v.count)choose(p,geo,v.items[state.focus]);
+            return true;
+        }
         // B/Select go through the original capture and toggling paths.
     }
     return false;

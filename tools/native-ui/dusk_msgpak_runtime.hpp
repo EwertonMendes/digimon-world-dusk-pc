@@ -151,7 +151,7 @@ inline bool apply(std::vector<uint8_t>& rom,std::string_view language,std::strin
     for(size_t group=0;group<groups;++group) {
         const uint32_t off=read32(original,4+group*8),szflag=read32(original,8+group*8);
         const uint32_t size=szflag&0x7fffffffu;
-        if(!(szflag&0x80000000u) || off<output.size() ||
+        if(!(szflag&0x80000000u) || off<4+groups*8 ||
            size==0 || uint64_t(off)+size>original.size())
             return fail("invalid MSG.PAK subfile");
         std::vector<uint8_t> sub(original.begin()+off,original.begin()+off+size);

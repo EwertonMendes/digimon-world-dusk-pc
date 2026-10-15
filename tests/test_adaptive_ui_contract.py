@@ -14,6 +14,8 @@ class AdaptiveUiTests(unittest.TestCase):
         self.assertNotIn('scheduler_run_round(',HEADER)
         self.assertNotIn('cartridge',HEADER)
         self.assertIn('dusk_save(p)',HEADER)
+        self.assertIn('hit_test(',HEADER)
+        self.assertNotIn('contains(',HEADER)
     def test_responsive_and_touch_gestures(self):
         for item in ('w<730 || w<h','SDL_SetRenderClipRect','state.scroll',
                      'SDL_EVENT_FINGER_DOWN','SDL_EVENT_FINGER_MOTION',

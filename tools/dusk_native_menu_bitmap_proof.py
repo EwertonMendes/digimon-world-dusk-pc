@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-from collections import Counter
 import hashlib
 import io
 import json
@@ -25,47 +24,9 @@ from dusk_original_glyph_atlas import collect_original_glyphs, layout_native_wor
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Original hand-drawn bitmap shapes. Each source glyph has seven 5-pixel rows.
+# Original DS glyphs are extracted from the verified cartridge's own button artwork.
 # Variable bearing/advance is computed from ink columns, unlike the earlier
 # Pillow load_default() substitution. The DS will never load a desktop font.
-FONT = {
-    "A":("01110","10001","10001","11111","10001","10001","10001"),
-    "B":("11110","10001","10001","11110","10001","10001","11110"),
-    "D":("11110","10001","10001","10001","10001","10001","11110"),
-    "E":("11111","10000","10000","11110","10000","10000","11111"),
-    "F":("11111","10000","10000","11110","10000","10000","10000"),
-    "G":("01111","10000","10000","10111","10001","10001","01110"),
-    "I":("11111","00100","00100","00100","00100","00100","11111"),
-    "M":("10001","11011","10101","10101","10001","10001","10001"),
-    "O":("01110","10001","10001","10001","10001","10001","01110"),
-    "S":("01111","10000","10000","01110","00001","00001","11110"),
-    "T":("11111","00100","00100","00100","00100","00100","00100"),
-    "a":("00000","00000","01110","00001","01111","10001","01111"),
-    "b":("10000","10000","10110","11001","10001","10001","11110"),
-    "c":("00000","00000","01111","10000","10000","10000","01111"),
-    "d":("00001","00001","01101","10011","10001","10011","01101"),
-    "e":("00000","00000","01110","10001","11111","10000","01111"),
-    "f":("00110","01001","01000","11110","01000","01000","01000"),
-    "g":("00000","01111","10001","10001","01111","00001","11110"),
-    "i":("1","0","1","1","1","1","1"),
-    "j":("001","000","001","001","001","101","010"),
-    "l":("10","10","10","10","10","10","01"),
-    "m":("00000","00000","11010","10101","10101","10101","10101"),
-    "n":("00000","00000","10110","11001","10001","10001","10001"),
-    "o":("00000","00000","01110","10001","10001","10001","01110"),
-    "p":("00000","00000","11110","10001","11110","10000","10000"),
-    "r":("0000","0000","1011","1100","1000","1000","1000"),
-    "s":("00000","00000","01111","10000","01110","00001","11110"),
-    "t":("0100","0100","1111","0100","0100","0101","0010"),
-    "u":("00000","00000","10001","10001","10001","10011","01101"),
-    "v":("00000","00000","10001","10001","10001","01010","00100"),
-    "ç":("00000","00000","01111","10000","10000","01111","00100"),
-    "õ":("01010","10100","01110","10001","10001","10001","01110"),
-    "ó":("00100","01000","01110","10001","10001","10001","01110"),
-    "é":("00100","01000","01110","10001","11111","10000","01111"),
-    "í":("1","0","1","1","1","1","1"),
-}
-
 # The four original Digivice states share exactly three NCGR bitmaps.
 MENUS = {
     "pt-BR": {479:"Itens",480:"Salvar",481:"Missões",482:"Treinador"},
@@ -80,35 +41,6 @@ REGIONS = {
 # Only source-caption fragments known from the ROM mapping, outside the new
 # text band. These masks deliberately avoid the character's original icon.
 EXTRA = {482:((10,22,50,11),)}
-
-
-def glyph(char: str) -> tuple[str,...]:
-    if char not in FONT:
-        raise ValueError(f"No reviewed DS glyph for {char!r}")
-    return FONT[char]
-
-
-def composition(text: str, max_width: int) -> tuple[list[tuple[int,int]],int,int]:
-    """Return native one-pixel glyph dots and the exact ink extents."""
-    all_rows = [glyph(ch) for ch in text]
-    raw_width = sum(len(rows[0]) for rows in all_rows)
-    spacing = 1 if raw_width + len(all_rows) - 1 <= max_width else 0
-    if raw_width + spacing * (len(all_rows)-1) > max_width:
-        raise ValueError(f"native caption {text!r} cannot fit without distorting glyphs")
-    x = 0
-    dots = []
-    for rows in all_rows:
-        width = len(rows[0])
-        if any(len(row)!=width for row in rows):
-            raise ValueError("invalid font glyph shape")
-        for yy,row in enumerate(rows):
-            for xx,point in enumerate(row):
-                if point=="1":
-                    dots.append((x+xx,yy))
-                elif point!="0":
-                    raise ValueError("non-binary custom glyph")
-        x += width+spacing
-    return dots,x-spacing,7
 
 
 def _regions(sprite: int):

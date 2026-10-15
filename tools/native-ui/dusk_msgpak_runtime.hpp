@@ -70,52 +70,15 @@ inline bool encode_text(std::u32string_view text,std::vector<uint8_t>& out) {
     push16(out,0xffff);
     return true;
 }
-struct Replacement {int group;int id;std::u32string_view pt;std::u32string_view es;};
-// Reachable playtest surfaces from exact-ROM (MSG.PAK) inspection.
-// Title menu can be inspected at boot. Shops and location greetings can be
-// inspected from an existing save without a story-specific event. These
-// preserve original color/control tokens; never change save or ARM instructions.
-// This is a SMALL TEST CATALOG, not a complete in-game localization.
-inline constexpr std::array proof{
-    Replacement{0,0,U"[PLAYER_NAME] e sua equipe\nforam derrotados...",
-                   U"El equipo de [PLAYER_NAME]\nfue derrotado..."},
-    Replacement{0,1,U"A equipe de [PLAYER_NAME]\ntentou fugir...",
-                   U"El equipo de [PLAYER_NAME]\nintentó escapar..."},
-    Replacement{1,0,U"[PLAYER_NAME], que tipo de\nprogramas de TV você gosta?[END]",
-                   U"[PLAYER_NAME], ¿qué tipo de\nprogramas de TV te gustan?[END]"},
-    Replacement{1,1,U"Vejo comédias na TV\ntodos os dias.[END]",
-                   U"Veo comedias en la TV\ntodos los días.[END]"},
-    Replacement{3,2,U"Hoje é meu dia\nde sorte![END]",
-                   U"Hoy es mi día\nde suerte![END]"},
-    // The single title-screen option list appears before story progression.
-    Replacement{124,45,U"Novo\nContinuar\nConexão Wi-Fi Nintendo\nVoltar[END]",
-                        U"Nuevo\nContinuar\nConexión Wi-Fi Nintendo\nVolver[END]"},
-    Replacement{125,33,U"Tem certeza?[END]",U"¿Estás seguro?[END]"},
-    // Common shopkeeper interactions and repeat visits.
-    Replacement{70,31,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
-                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
-    Replacement{70,32,U"Olá!\nDeseja comprar\n[GREEN]Itens consumíveis[GREEN]?[END]",
-                       U"¡Hola!\n¿Quieres comprar\n[GREEN]Consumibles[GREEN]?[END]"},
-    Replacement{70,33,U"Olá!\nDeseja comprar\n[GREEN]Itens da fazenda[GREEN]?[END]",
-                       U"¡Hola!\n¿Quieres comprar\n[GREEN]Objetos de granja[GREEN]?[END]"},
-    Replacement{70,34,U"Olá!\nDeseja reformar\nsua [RED]Ilha Agrícola[RED]?[END]",
-                       U"¡Hola!\n¿Quieres remodelar\ntu [RED]Isla Granja[RED]?[END]"},
-    Replacement{71,19,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
-                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
-    Replacement{69,67,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
-                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
-    Replacement{63,36,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
-                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
-    Replacement{64,88,U"Olá!\nDeseja comprar\n[GREEN]Itens consumíveis[GREEN]?[END]",
-                       U"¡Hola!\n¿Quieres comprar\n[GREEN]Consumibles[GREEN]?[END]"},
-    // Reachable city and elevator prompts (both Dusk and common-area variants).
-    Replacement{66,90,U"Olá, [PLAYER_NAME].\nEsta é a [RED]Praça Sombria[RED].[END]",
-                       U"Hola, [PLAYER_NAME].\nEsta es la [RED]Plaza Oscura[RED].[END]"},
-    Replacement{69,35,U"Olá, [PLAYER_NAME]. Esta é a\n[RED]Praça Sombria[RED].[END]",
-                       U"Hola, [PLAYER_NAME]. Esta es la\n[RED]Plaza Oscura[RED].[END]"},
-    Replacement{72,26,U"Deseja usar\no elevador?[END]",
-                       U"¿Quieres tomar\nel ascensor?[END]"},
+struct Replacement {
+    int group;
+    int id;
+    std::string_view language;
+    std::u32string_view translated;
 };
+// This header is generated deterministically from translations/msgpak/*.json.
+#include "dusk_msgpak_catalog.generated.hpp"
+
 inline bool rebuild_group(const std::vector<uint8_t>& original,int group,
                           std::string_view language,std::vector<uint8_t>& output,
                           int& replacements) {
@@ -137,8 +100,8 @@ inline bool rebuild_group(const std::vector<uint8_t>& original,int group,
         write32(output,i*4,uint32_t(output.size()));
         bool changed=false;
         for(const auto& row:proof) {
-            if(row.group!=group || row.id!=int(i))continue;
-            const auto translated=language=="pt-BR"?row.pt:row.es;
+            if(row.group!=group || row.id!=int(i) || row.language!=language)continue;
+            const auto translated=row.translated;
             std::vector<uint8_t> encoded;
             // Preserve original end marker type; never inject an extra game event.
             if(!encode_text(translated,encoded))return false;
@@ -183,7 +146,8 @@ inline bool rebuild_group(const std::vector<uint8_t>& original,int group,
 // Caller must have verified exact Dusk USA SHA-1 before invoking this function.
 inline bool apply(std::vector<uint8_t>& rom,std::string_view language,std::string* error=nullptr) {
     const auto fail=[&](const char* why)->bool{if(error)*error=why;return false;};
-    if(language!="pt-BR" && language!="es-ES")return fail("no gameplay catalog for selected language");
+    if(std::find(kPackLanguages.begin(),kPackLanguages.end(),language)==kPackLanguages.end())
+        return fail("no gameplay catalog for selected language");
     if(rom.size()!=67108864u || std::memcmp(rom.data()+12,"A6RE",4)!=0)
         return fail("unexpected cartridge identity");
     const uint32_t fat=read32(rom,0x48),fat_size=read32(rom,0x4c);
@@ -208,7 +172,9 @@ inline bool apply(std::vector<uint8_t>& rom,std::string_view language,std::strin
             return fail("invalid MSG.PAK subfile");
         std::vector<uint8_t> sub(original.begin()+off,original.begin()+off+size);
         std::vector<uint8_t> translated;
-        if(std::any_of(proof.begin(),proof.end(),[&](const Replacement& r){return r.group==int(group);})) {
+        if(std::any_of(proof.begin(),proof.end(),[&](const Replacement& r){
+            return r.group==int(group) && r.language==language;
+        })) {
             if(!rebuild_group(sub,int(group),language,translated,replaced))
                 return fail("invalid internal message offsets or terminators");
         } else translated=std::move(sub);
@@ -218,7 +184,9 @@ inline bool apply(std::vector<uint8_t>& rom,std::string_view language,std::strin
         write32(output,8+group*8,uint32_t(translated.size())|0x80000000u);
         output.insert(output.end(),translated.begin(),translated.end());
     }
-    if(replaced!=int(proof.size()))return fail("gameplay message IDs did not match");
+    const int expected=int(std::count_if(proof.begin(),proof.end(),
+        [&](const Replacement& r){return r.language==language;}));
+    if(replaced!=expected)return fail("gameplay message IDs did not match");
     uint32_t highest=0;
     for(uint32_t i=0;i<fat_size/8;++i) {
         const uint32_t lo=read32(rom,fat+8*i),hi=read32(rom,fat+8*i+4);

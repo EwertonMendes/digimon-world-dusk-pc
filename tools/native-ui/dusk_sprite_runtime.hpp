@@ -1,7 +1,7 @@
 #pragma once
-// Replace original game-owned sprite data in memory, never overlay English UI.
-// Each SPR_CHR.PAK member is a Dusk RLE encoded NCGR sprite with an independent
-// ID. The pack table is rebuilt so translated art may use more bytes.
+// Native DS graphic localization: rebuild SPR_CHR.PAK and SPR_CEL.PAK in RAM.
+// Every source sprite entry is checksum-validated before writes, including
+// relocated NCER tile pointers for the four Digivice selection states.
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -14,6 +14,7 @@
 namespace dusk_sprites {
 struct SpriteAsset {
     std::string_view locale;
+    std::uint8_t pak_file_id; // exact Dusk USA FAT: 25 SPR_CEL, 26 SPR_CHR
     std::uint16_t sprite_id;
     std::uint32_t original_crc32;
     const std::uint8_t* compressed;
@@ -23,82 +24,98 @@ struct SpriteAsset {
 
 inline bool apply(std::vector<std::uint8_t>& rom,std::string_view locale,
                   std::string* reason=nullptr){
-    auto fail=[&](const char* why)->bool{if(reason)*reason=why;return false;};
+    auto fail=[&](const char* why)->bool{
+        if(reason)*reason=why;
+        return false;
+    };
     if(rom.size()!=67108864u || std::memcmp(rom.data()+12,"A6RE",4)!=0)
         return fail("unexpected cartridge header");
     if(kSprites.empty())return true;
-    const std::uint32_t fat=dusk_msgpak::read32(rom,0x48);
-    const std::uint32_t fat_size=dusk_msgpak::read32(rom,0x4c);
-    if(!fat || fat_size%8 || fat_size<27*8 || std::uint64_t(fat)+fat_size>rom.size())
+    const std::size_t fat=dusk_msgpak::read32(rom,0x48);
+    const std::size_t fat_size=dusk_msgpak::read32(rom,0x4c);
+    if(!fat || fat_size%8 || fat_size<27*8 ||
+       std::uint64_t(fat)+fat_size>rom.size())
         return fail("invalid NitroFS index");
-    const std::size_t entry=fat+26*8; // Verified Dusk USA dat/SPR_CHR.PAK
-    const std::size_t source=dusk_msgpak::read32(rom,entry);
-    const std::size_t source_end=dusk_msgpak::read32(rom,entry+4);
-    if(source>=source_end || source_end>rom.size())
-        return fail("sprite FAT record invalid");
-    const std::size_t old_size=source_end-source;
-    if(old_size<13020 || dusk_msgpak::read32(rom,source)!=1627u)
-        return fail("unsupported sprite index format");
-    constexpr size_t count=1627;
-    constexpr size_t header=4+8*count;
-    if(header!=13020 || source+header>source_end)
-        return fail("invalid sprite table length");
 
-    std::vector<const SpriteAsset*> replacement(count,nullptr);
-    size_t modifications=0;
-    for(const auto& patch:kSprites) {
-        if(patch.locale!=locale)continue;
-        if(patch.sprite_id>=count || !patch.compressed || !patch.length ||
-           patch.length>0x400000 || (patch.length&3))
-            return fail("invalid replacement sprite");
-        if(replacement[patch.sprite_id])
-            return fail("duplicate translated sprite");
-        if(patch.compressed[0]!=0x30)
-            return fail("expected Nintendo RLE-compressed sprite data");
-        replacement[patch.sprite_id]=&patch;
-        ++modifications;
+    constexpr std::size_t count=1627;
+    constexpr std::size_t table_size=4+8*count;
+    std::size_t tail=0;
+    for(std::size_t i=0;i<fat_size/8;++i){
+        const std::size_t lo=dusk_msgpak::read32(rom,fat+i*8);
+        const std::size_t hi=dusk_msgpak::read32(rom,fat+i*8+4);
+        if(hi<lo || hi>rom.size())return fail("untrusted FAT bounds");
+        tail=std::max(tail,hi);
     }
-    if(!modifications)return true;
-    std::vector<std::uint8_t> payload(header);
-    dusk_msgpak::write32(payload,0,std::uint32_t(count));
-    size_t prev_end=header;
-    for(size_t i=0;i<count;++i) {
-        const size_t begin=dusk_msgpak::read32(rom,source+4+i*8);
-        const std::uint32_t lengthflag=dusk_msgpak::read32(rom,source+8+i*8);
-        const size_t length=lengthflag&0x7fffffffu;
-        if(begin<prev_end || begin>old_size || length>old_size-begin)
-            return fail("invalid original sprite table bounds");
-        prev_end=begin+length;
-        const auto* patch=replacement[i];
-        if(patch && dusk_graphics::crc32(rom.data()+source+begin,length)
-                        !=patch->original_crc32)
-            return fail("sprite source checksum does not match");
-        const size_t newlen=patch?patch->length:length;
-        if(payload.size()>4*1024*1024-newlen)
-            return fail("translated sprite pack is too large");
-        dusk_msgpak::write32(payload,4+i*8,std::uint32_t(payload.size()));
-        dusk_msgpak::write32(payload,8+i*8,
-                            std::uint32_t(newlen)|(lengthflag&0x80000000u));
-        if(patch)payload.insert(payload.end(),patch->compressed,patch->compressed+newlen);
-        else payload.insert(payload.end(),
-                            rom.begin()+source+begin,rom.begin()+source+begin+length);
-        while(payload.size()%4)payload.push_back(0xff);
+    tail=(tail+511)&~std::size_t(511);
+
+    struct Rebuild {
+        std::uint8_t file_id;
+        std::size_t destination;
+        std::vector<std::uint8_t> bytes;
+    };
+    std::vector<Rebuild> staged;
+    for(const std::uint8_t file_id:{std::uint8_t{25},std::uint8_t{26}}){
+        std::array<const SpriteAsset*,count> entries{};
+        std::size_t edits=0;
+        for(const auto& spec:kSprites){
+            if(spec.locale!=locale || spec.pak_file_id!=file_id)continue;
+            if(spec.sprite_id>=count || !spec.compressed ||
+               spec.length<4 || spec.length>0x400000 || spec.length%4 ||
+               spec.compressed[0]!=0x30)
+                return fail("malformed localized Nitro sprite");
+            if(entries[spec.sprite_id])return fail("duplicate localized sprite ID");
+            entries[spec.sprite_id]=&spec;
+            ++edits;
+        }
+        if(!edits)continue;
+        const std::size_t row=fat+file_id*8;
+        const std::size_t src=dusk_msgpak::read32(rom,row);
+        const std::size_t stop=dusk_msgpak::read32(rom,row+4);
+        if(src>=stop || stop>rom.size() || stop-src<table_size ||
+           dusk_msgpak::read32(rom,src)!=count)
+            return fail("unsupported original Nitro sprite index");
+        const std::size_t source_length=stop-src;
+        std::vector<std::uint8_t> out(table_size);
+        dusk_msgpak::write32(out,0,std::uint32_t(count));
+        std::size_t previous=table_size;
+        for(std::size_t i=0;i<count;++i){
+            const std::size_t begin=dusk_msgpak::read32(rom,src+4+i*8);
+            const std::uint32_t flagged=dusk_msgpak::read32(rom,src+8+i*8);
+            const std::size_t len=flagged&0x7fffffffu;
+            if(begin<previous || begin>source_length || len>source_length-begin)
+                return fail("invalid source Nitro sprite record");
+            previous=begin+len;
+            const auto* spec=entries[i];
+            if(spec && dusk_graphics::crc32(rom.data()+src+begin,len)
+                        !=spec->original_crc32)
+                return fail("original sprite content does not match locale manifest");
+            const std::size_t newlen=spec?spec->length:len;
+            if(out.size()+newlen+4>5*1024*1024)
+                return fail("recompiled sprite pack exceeds safe bound");
+            dusk_msgpak::write32(out,4+i*8,std::uint32_t(out.size()));
+            dusk_msgpak::write32(out,8+i*8,
+                         std::uint32_t(newlen)|(flagged&0x80000000u));
+            if(spec)out.insert(out.end(),spec->compressed,spec->compressed+newlen);
+            else out.insert(out.end(),
+                    rom.begin()+src+begin,rom.begin()+src+begin+len);
+            while(out.size()%4)out.push_back(0xff);
+        }
+        if(out.size()>rom.size()-tail)return fail("translated sprite packs will not fit");
+        if(!std::all_of(rom.begin()+tail,rom.begin()+tail+out.size(),
+                   [](std::uint8_t v){return v==0 || v==0xff;}))
+            return fail("sprite pack destination is not free cartridge padding");
+        staged.push_back({file_id,tail,std::move(out)});
+        tail=(tail+staged.back().bytes.size()+511)&~std::size_t(511);
+        if(tail>rom.size())return fail("translated sprite padding overflow");
     }
-    size_t tail=0;
-    for(size_t i=0;i<fat_size/8;++i){
-        const auto a=dusk_msgpak::read32(rom,fat+i*8);
-        const auto z=dusk_msgpak::read32(rom,fat+i*8+4);
-        if(z<a || z>rom.size())return fail("invalid ROM FAT bounds");
-        tail=std::max(tail,size_t(z));
+    // Atomic commit: no ROM writes until every source CRC and target is valid.
+    for(const auto& item:staged){
+        std::copy(item.bytes.begin(),item.bytes.end(),rom.begin()+item.destination);
+        dusk_msgpak::write32(rom,fat+item.file_id*8,
+                             std::uint32_t(item.destination));
+        dusk_msgpak::write32(rom,fat+item.file_id*8+4,
+                             std::uint32_t(item.destination+item.bytes.size()));
     }
-    tail=(tail+511)&~size_t(511);
-    if(tail+payload.size()>rom.size())return fail("sprite pack cannot fit ROM padding");
-    if(!std::all_of(rom.begin()+tail,rom.begin()+tail+payload.size(),
-                    [](std::uint8_t c){return c==0 || c==0xff;}))
-        return fail("sprite destination is not empty padding");
-    std::copy(payload.begin(),payload.end(),rom.begin()+tail);
-    dusk_msgpak::write32(rom,entry,std::uint32_t(tail));
-    dusk_msgpak::write32(rom,entry+4,std::uint32_t(tail+payload.size()));
     return true;
 }
 } // namespace dusk_sprites

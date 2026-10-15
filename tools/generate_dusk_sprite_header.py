@@ -91,6 +91,15 @@ def generate(rom:bytes,preview=False)->str:
                     # Each action state is validated independently, rather
                     # than previewing a swizzled NCGR texture atlas.
                     images=[]
+                    if i==482:
+                        for debugcell in (0,2):
+                            dbg=extract_cell(src,pal,cel_source,debugcell)
+                            print("ORIGINAL_NCER_TEXT_PALETTE",i,debugcell,
+                                  [tuple(c[:3]) for c in palette(pal)[:16]])
+                            for yy in range(16,49):
+                                print("ORIGINAL_NCER_PIXEL_MAP",debugcell,yy,
+                                      "".join("0123456789abcdef"[dbg.mapping[(xx,yy)][2]]
+                                              for xx in range(64)))
                     for k in range(min(4,len(edits))):
                         cell=edits[k]["cell"]
                         old_image=extract_cell(src,pal,cel_source,cell).image

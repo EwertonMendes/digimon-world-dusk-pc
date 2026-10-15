@@ -66,6 +66,12 @@ class AuthoredArtTests(unittest.TestCase):
         self.assertEqual(sum(a!=b for a,b in zip(result,self.original)),1)
         self.assertEqual(view(result,None,None,0).image.getpixel((2,3)),COLORS[2][:3])
 
+    def test_original_transparent_palette_index_zero_roundtrip(self):
+        self.png(color=(22,26,40))
+        result=self.run_import()
+        self.assertEqual(view(result,None,None,0).mapping[(2,3)][2],0)
+        self.assertEqual(view(result,None,None,0).image.getpixel((2,3)),(22,26,40))
+
     def test_reject_icon_or_frame_pixels_outside_region(self):
         self.png(pos=(6,5))
         with self.assertRaisesRegex(ValueError,"icon/frame"):

@@ -47,6 +47,7 @@ FONT = {
     "f":("00110","01001","01000","11110","01000","01000","01000"),
     "g":("00000","01111","10001","10001","01111","00001","11110"),
     "i":("1","0","1","1","1","1","1"),
+    "j":("001","000","001","001","001","101","010"),
     "l":("10","10","10","10","10","10","01"),
     "m":("00000","00000","11010","10101","10101","10101","10101"),
     "n":("00000","00000","10110","11001","10001","10001","10001"),
@@ -86,9 +87,13 @@ def glyph(char: str) -> tuple[str,...]:
     return FONT[char]
 
 
-def composition(text: str) -> tuple[list[tuple[int,int]],int,int]:
+def composition(text: str, max_width: int) -> tuple[list[tuple[int,int]],int,int]:
     """Return native one-pixel glyph dots and the exact ink extents."""
     all_rows = [glyph(ch) for ch in text]
+    raw_width = sum(len(rows[0]) for rows in all_rows)
+    spacing = 1 if raw_width + len(all_rows) - 1 <= max_width else 0
+    if raw_width + spacing * (len(all_rows)-1) > max_width:
+        raise ValueError(f"native caption {text!r} cannot fit without distorting glyphs")
     x = 0
     dots = []
     for rows in all_rows:
@@ -101,8 +106,8 @@ def composition(text: str) -> tuple[list[tuple[int,int]],int,int]:
                     dots.append((x+xx,yy))
                 elif point!="0":
                     raise ValueError("non-binary custom glyph")
-        x += width+1
-    return dots,x-1,7
+        x += width+spacing
+    return dots,x-spacing,7
 
 
 def _regions(sprite: int):
@@ -114,15 +119,15 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     view = extract_cell(src,nclr,ncer,cell)
     rect = REGIONS[sprite]
     rx,ry,rw,rh = rect
-    dots,width,height = composition(word)
-    if width+1 > rw-1:
-        # Prefer a legible word with reduced tracking instead of scaling.
-        if len(word)>1:
-            raise ValueError(f"{word!r}: {width}px does not fit {rw}px")
-    xbase=rx+(rw-width)//2
-    ybase=ry+(rh-height)//2
-    if xbase<=rx or ybase<=ry or xbase+width>rx+rw or ybase+height>=ry+rh:
-        raise ValueError(f"{word!r}: pixel font outside native caption")
+    dots,width,height = composition(word,rw-3)
+    scale_x=min(1.7,(rw-4)/width)
+    scale_y=min(1.43,(rh-3)/height)
+    scaled_width=int(round(width*scale_x))
+    scaled_height=int(round(height*scale_y))
+    xbase=rx+(rw-scaled_width)//2
+    ybase=ry+(rh-scaled_height)//2
+    if xbase<=rx or ybase<=ry or xbase+scaled_width>=rx+rw or ybase+scaled_height>=ry+rh:
+        raise ValueError(f"{word!r}: native font outside caption")
     colors=palette(nclr)
     # Select authentic index-14 lime (if present) and OAM-dark index 2.
     # Source palette/char indices are never extended.
@@ -157,7 +162,13 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         out[x,y]=colors[bank*16+idx][:3]
     # Draw dark drop shadow then authentic lime glyphs. No antialias or
     # transforms: a single pixel is exactly one native Nintendo DS pixel.
-    bright=set((xbase+xx,ybase+yy) for xx,yy in dots)
+    bright=set()
+    for xx,yy in dots:
+        ax=int(xx*scale_x);bx=max(ax+1,int((xx+1)*scale_x))
+        ay=int(yy*scale_y);by=max(ay+1,int((yy+1)*scale_y))
+        for px in range(ax,bx):
+            for py in range(ay,by):
+                bright.add((xbase+px,ybase+py))
     shadows={(x+1,y+1) for x,y in bright if (x+1,y+1) not in bright}
     for x,y in shadows:
         if (x,y) not in affected:raise ValueError("text shadow outside mask")

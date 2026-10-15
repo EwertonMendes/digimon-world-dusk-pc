@@ -164,9 +164,17 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
             # unlike a flat fill, this keeps the native cyan top trim,
             # the original horizontal stripes and highlights.
             sample=pristine.getpixel((x,y))
-            if sample not in [c[:3] for c in colors[bank*16:bank*16+16]]:
+            bank_colors=[c[:3] for c in colors[bank*16:bank*16+16]]
+            if sample==(22,26,40):
+                # Renderer preview color for transparent palette index zero:
+                # write only a native dark pixel when clearing a source glyph.
+                original_index=view.mapping[(x,y)][2]
+                out[x,y]=(orig[x,y] if original_index==0
+                          else colors[bank*16+2][:3])
+            elif sample in bank_colors:
+                out[x,y]=sample
+            else:
                 raise ValueError("original game template uses a different NCLR palette")
-            out[x,y]=sample
         else:
             idx=2 if (sprite==482 and y<33) else row_bg[y]
             out[x,y]=colors[bank*16+idx][:3]

@@ -46,8 +46,11 @@ def inspect_ids(rom,ids):
         if i not in chosen: continue
         if ca is None or pa is None:continue
         im=tile_atlas(ca,pa)
+        source_digest=hashlib.sha256(ca).hexdigest()
         out=io.BytesIO();im.save(out,"PNG",optimize=True)
-        print("SPRITE_DETAIL",i,im.size,len(out.getvalue()))
+        print("SPRITE_DETAIL",i,im.size,len(out.getvalue()),"SHA256",source_digest)
+        im=im.resize((im.width*3,im.height*3),Image.Resampling.NEAREST)
+        out=io.BytesIO();im.save(out,"PNG",optimize=True)
         print("SPRITE_DETAIL64 "+base64.b64encode(out.getvalue()).decode("ascii"))
 
 def sheet(rom,begin,num,min_pixels,max_pixels):

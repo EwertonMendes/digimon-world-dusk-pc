@@ -119,30 +119,47 @@ def replace_labels(ncgr:bytes,nclr:bytes,ncer:bytes,edits:list[dict])->bytes:
             ink=max(range(1,16),key=lambda i:colors[i][1]-0.35*(colors[i][0]+colors[i][2]))
         else:
             ink=max(range(1,16),key=lambda i:sum(colors[i][:3]))
+        # Some labels occupy two original rows (e.g. Tamer / Info).
+        # The translated word is drawn only inside 'region'; supplementary
+        # erase rectangles remove surviving source glyphs without expanding
+        # the NCGR or touching any pixels outside the declared text bands.
+        extra=spec.get("erase_regions",[])
+        if not isinstance(extra,list):raise ValueError("invalid erase_regions")
+        rects=[rect]
+        for er in extra:
+            if not (isinstance(er,list) and len(er)==4 and
+                    all(type(v) is int for v in er)):
+                raise ValueError("invalid erase rectangle")
+            ex,ey,ew,eh=er
+            if not(0<=ex<w and 0<=ey<h and ew>=1 and eh>=1 and
+                   ex+ew<=w and ey+eh<=h):
+                raise ValueError("erase rectangle exceeds original cell")
+            rects.append(er)
+        affected={(xx,yy) for xx0,yy0,ww,hh in rects
+                  for yy in range(yy0,yy0+hh)
+                  for xx in range(xx0,xx0+ww)}
         glyph=_draw_label(view.image,rect,text)
         ink_pixels=glyph.load()
-        # Infer palette indices per row from original background (not by
-        # overwriting icons), preferring dominant stripe in the label band.
+        # Use the dominant source background in each affected row; this
+        # retains the original horizontal stripes and palette.
         row_bg={}
-        for yy in range(ry,ry+rh):
-            vals=[view.mapping[(xx,yy)][2] for xx in range(rx,rx+rw)
-                  if (xx,yy) in view.mapping and view.mapping[(xx,yy)][2]!=ink]
+        for yy in sorted({y for _,y in affected}):
+            vals=[view.mapping[(xx,yy)][2] for xx,y in affected
+                  if y==yy and (xx,yy) in view.mapping and
+                  view.mapping[(xx,yy)][2]!=ink]
             if not vals:raise ValueError("can't infer original frame background")
             row_bg[yy]=Counter(vals).most_common(1)[0][0]
-        for yy in range(ry,ry+rh):
-            for xx in range(rx,rx+rw):
-                key=(xx,yy)
-                if key not in view.mapping:raise ValueError("text rect traverses missing OAM pixels")
-                off,hi,original_index,bank=view.mapping[key]
-                target=ink if ink_pixels[xx-rx,yy-ry] else row_bg[yy]
-                place=(off,hi)
-                # Translation MUST NOT rewrite a shared source pixel in
-                # different states. For Digivice 128-byte mapping, the
-                # original four states are disjoint.
-                if place in pending and pending[place]!=target:
-                    raise ValueError("cross-cell shared character pixels cannot be edited")
-                pending[place]=target
-        print("NATIVE_CELL_IN_PLACE",cell,text,rect,"mode-aware no relocation")
+        for xx,yy in sorted(affected):
+            key=(xx,yy)
+            if key not in view.mapping:raise ValueError("text rect traverses missing OAM pixels")
+            off,hi,original_index,bank=view.mapping[key]
+            inside=rx<=xx<rx+rw and ry<=yy<ry+rh
+            target=ink if inside and ink_pixels[xx-rx,yy-ry] else row_bg[yy]
+            place=(off,hi)
+            if place in pending and pending[place]!=target:
+                raise ValueError("cross-cell shared character pixels cannot be edited")
+            pending[place]=target
+        print("NATIVE_CELL_IN_PLACE",cell,text,rect,"erase",extra,"mode-aware no relocation")
     for (off,high),value in pending.items():
         _write_pixel(replacement,raw_begin+off,high,value)
     if len(replacement)!=len(ncgr):raise ValueError("in-place edit changed file length")
@@ -159,14 +176,15 @@ def assert_frames(ncgr,nclr,ncer,replacement,edits):
         before=extract_cell(ncgr,nclr,ncer,edit["cell"])
         after=extract_cell(replacement,nclr,ncer,edit["cell"])
         if before.size!=after.size:raise ValueError("animated frame dimensions changed")
-        rx,ry,rw,rh=edit.get("region",[0,0,*before.size])
+        regions=[edit.get("region",[0,0,*before.size]),*edit.get("erase_regions",[])]
         bp=before.image.load();ap=after.image.load()
         changed=0
         for yy in range(before.size[1]):
             for xx in range(before.size[0]):
                 if bp[xx,yy]!=ap[xx,yy]:
                     changed+=1
-                    if not (rx<=xx<rx+rw and ry<=yy<ry+rh):
+                    if not any(rx<=xx<rx+rw and ry<=yy<ry+rh
+                               for rx,ry,rw,rh in regions):
                         raise ValueError("sprite icon, outline or other frame pixels changed")
         if changed<4:raise ValueError("translation did not change visible text")
     print("VERIFIED_OAM_FRAME_PIXELS",len(edits),"original frames preserved outside labels")

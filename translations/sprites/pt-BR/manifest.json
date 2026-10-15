@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "language": "pt-BR",
-  "description": "Verified original-NCLR native pixel artwork, generated at build time from owner ROM and hand-designed bitmap glyphs; no desktop font renderer.",
+  "description": "Native Nitro DS pixel localization using owner-ROM glyphs, exact 1D NCER mapping, and true original-palette title prompt.",
   "sprites": [
     {
       "id": 388,
@@ -262,6 +262,11 @@
           ]
         }
       ]
+    },
+    {
+      "id": 620,
+      "source_sha256": "016feb8ef37633fcb3432e09e816ab8883eae7fa821d17d3e85ca697919292f4",
+      "title_prompt": "APERTE START"
     }
   ]
 }

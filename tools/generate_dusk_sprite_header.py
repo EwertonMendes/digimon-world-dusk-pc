@@ -76,6 +76,7 @@ def generate(rom:bytes,preview=False)->str:
                 if mode!=2 or len(groups)!=4 or any(len(g)!=1 for g in groups):
                     raise ValueError("original S-menu OAM mapping / animation layout changed")
                 anchors=[(g[0][2]&0x3ff)*(1<<mode) for g in groups]
+                print("NITRO_OAM_ACTUAL_MAPPING",i,anchors,"total_original_tiles",len(graphics(src)[1])//32)
                 if anchors!=[0,64,128,192] or len(graphics(src)[1])//32 < 256:
                     raise ValueError("128-byte OAM alignment differs from verified original menu")
                 print("NITROPAINT_VERIFIED_128_BYTE_MAPPING",i,anchors)

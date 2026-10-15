@@ -62,50 +62,56 @@ inline void append(View& v, Rect r, int kind, int value) {
 inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation& p) {
     View out{};
     const int w=std::max(1,g.play.w), h=std::max(1,g.play.h);
+    // Breakpoints operate on the actual SDL output viewport, not desktop assumptions.
     const bool narrow=w<730 || w<h;
-    const int pad=narrow?12:22;
-    const int pw=std::max(1,std::min(w-2*pad,narrow?600:980));
-    const int ph=std::max(1,std::min(h-2*pad,narrow?h-24:750));
+    const float ui=std::clamp(std::min(float(w)/1280.f,float(h)/720.f),0.83f,1.30f);
+    const auto dp=[ui](float v){return std::max(1,int(std::lround(v*ui)));};
+    const int pad=narrow?8:dp(22);
+    const int pw=std::max(1,std::min(w-2*pad,narrow?w-2*pad:dp(900)));
+    const int ph=std::max(1,std::min(h-2*pad,narrow?h-2*pad:dp(715)));
     out.panel={(w-pw)/2,(h-ph)/2,pw,ph};
     const Rect panel=out.panel;
-    out.title={panel.x+18,panel.y+12,panel.w-36,58};
-    const int tab_y=panel.y+74;
-    const int tab_margin=16;
-    const int tab_gap=5;
-    const int tw=(panel.w-tab_margin*2-tab_gap*3)/4;
+    out.title={panel.x+dp(20),panel.y+dp(13),std::max(1,panel.w-dp(40)),dp(59)};
+    const int tab_y=panel.y+dp(76);
+    const int tab_margin=dp(16);
+    const int tab_gap=dp(6);
+    const int tw=std::max(1,(panel.w-tab_margin*2-tab_gap*3)/4);
     for(int i=0;i<4;i++)
-        out.tabs[i]={panel.x+tab_margin+i*(tw+tab_gap),tab_y,tw,42};
-    const int top=tab_y+53;
-    const int footer_h=62;
-    out.content={panel.x+16,top,panel.w-32,std::max(50,panel.y+panel.h-footer_h-top)};
-    out.footer={panel.x+16,panel.y+panel.h-footer_h,panel.w-32,footer_h-10};
-    out.close={panel.x+panel.w-70,panel.y+15,52,40};
+        out.tabs[i]={panel.x+tab_margin+i*(tw+tab_gap),tab_y,tw,dp(48)};
+    const int top=tab_y+dp(60);
+    const int footer_h=dp(64);
+    const int content_pad=dp(16);
+    out.content={panel.x+content_pad,top,std::max(1,panel.w-2*content_pad),
+                 std::max(1,panel.y+panel.h-footer_h-top)};
+    out.footer={panel.x+content_pad,panel.y+panel.h-footer_h,
+                std::max(1,panel.w-2*content_pad),footer_h-dp(8)};
+    out.close={panel.x+panel.w-dp(67),panel.y+dp(15),dp(48),dp(46)};
     int y=out.content.y+8;
     const int cw=out.content.w;
     if(state.tab==0) {
-        const int gap=9;
-        const int columns=cw>=610?3:(cw>=380?2:1);
+        const int gap=dp(10);
+        const int columns=cw>=690?3:(cw>=296?2:1);
         const int cellw=(cw-gap*(columns-1))/columns;
-        const int cellh=std::clamp(out.content.h/3,82,130);
+        const int cellh=dp(148);
         for(int i=0;i<6;i++) {
             const int row=i/columns, col=i%columns;
             append(out,{out.content.x+col*(cellw+gap),y+row*(cellh+gap)-state.scroll,
                         cellw,cellh},0,i);
         }
-        y+=(6+columns-1)/columns*(cellh+gap)+15;
-        const int itemh=std::clamp(out.content.h/7,58,78);
+        y+=(6+columns-1)/columns*(cellh+gap)+dp(12);
+        const int itemh=dp(79);
         for(int id : {1,2,3,7}) {
             append(out,{out.content.x,y-state.scroll,cw,itemh-7},1,id);
             y+=itemh;
         }
     } else if(state.tab==1) {
-        const int itemh=std::clamp(out.content.h/5,68,90);
+        const int itemh=dp(79);
         for(int id:{4,5,6}) {
             append(out,{out.content.x,y-state.scroll,cw,itemh-9},1,id);
             y+=itemh;
         }
     } else if(state.tab==3) {
-        int itemh=std::clamp(out.content.h/5,72,104);
+        int itemh=dp(79);
         append(out,{out.content.x,y-state.scroll,cw,itemh},2,8);
         y+=itemh+12;
         append(out,{out.content.x,y-state.scroll,cw,itemh},2,9);
@@ -145,7 +151,7 @@ inline void navigate(const dusk_native::Geometry& g,const FrontendPresentation& 
         return;
     }
     if(state.tab==0 && state.focus<6 && dx!=0) {
-        const int col=v.content.w>=610?3:(v.content.w>=380?2:1);
+        const int col=v.content.w>=690?3:(v.content.w>=296?2:1);
         const int i=state.focus+dx;
         if(i>=0&&i<6 && i/col==state.focus/col)state.focus=i;
     } else if(dx) {
@@ -524,3 +530,6 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     return false;
 }
 } // namespace dusk_modern
+
+// Modern material-style SDL overlay renderer, after all input/layout helpers.
+#include "dusk_material_renderer.hpp"

@@ -39,7 +39,7 @@ def rle_decompress(data):
             out.extend(data[p:p+n]);p+=n
         if len(out)>limit:return None
     return bytes(out) if len(out)==limit else None
-def scan(data,label,maxout=7):
+def scan(data,maxout=7):
     results=[]
     for phrase in TERMS:
         b=enc(phrase)

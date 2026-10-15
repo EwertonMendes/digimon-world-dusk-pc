@@ -60,6 +60,7 @@ def run(rom):
         except (IndexError,ValueError,struct.error):
             continue
     print("TITLE_REMAINING_SPRITE_COUNT",len(result))
+    print("TITLE_REMAINING_FILTER", "4bpp RLE, no 8bpp or uncompressed resources")
     for start in range(0,len(result),120):
         subset=result[start:start+120]
         sw,sh,cols=150,85,8

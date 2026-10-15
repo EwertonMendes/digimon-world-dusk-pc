@@ -31,6 +31,7 @@ jobs:
       CCACHE_DIR: ${{ github.workspace }}/.cache/dusk-native-ccache
       CCACHE_MAXSIZE: 1536M
       CCACHE_COMPILERCHECK: content
+      CCACHE_BASEDIR: ${{ github.workspace }}
       RELEASE_FILENAME: Digimon-World-Dusk-Recompiled-v0.27-Windows.exe
     steps:
       - uses: actions/checkout@v4
@@ -68,9 +69,13 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .cache/dusk-native-ccache
-          key: dusk-native-windows-ucrt64-ccache-v1-${{ hashFiles('tools/patches/*.patch', 'tools/evidence/*.b64', 'tools/restore_verified_hotpaths.py', 'tools/prepare_dusk_recomp.py', 'tools/patch_windows_net.py') }}
+          # A unique save key per run means newly compiled UI objects are kept.
+          # ccache internally fingerprints compiler flags and included headers;
+          # a UI-only edit does not invalidate all unchanged game banks.
+          key: dusk-ucrt64-objects-v2-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-            dusk-native-windows-ucrt64-ccache-v1-
+            dusk-ucrt64-objects-v2-${{ github.ref_name }}-
+            dusk-ucrt64-objects-v2-
       - name: Verify compiler cache and reset hit/miss statistics
         shell: msys2 {0}
         run: |
@@ -114,6 +119,9 @@ jobs:
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
           cp tools/native-ui/dusk_modern_ui.hpp upstream/runner/src/dusk_modern_ui.hpp
+          cp tools/native-ui/dusk_material_renderer.hpp upstream/runner/src/dusk_material_renderer.hpp
+          cp tools/native-ui/dusk_ui_font.hpp upstream/runner/src/dusk_ui_font.hpp
+          cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
           git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch
@@ -210,8 +218,9 @@ jobs:
         shell: msys2 {0}
         run: |
           ccache --show-stats
+          ccache --show-stats --format=json > .private/ccache-stats.json
       - name: Persist compiled Windows game objects before packaging
-        if: success() && steps.native-ccache.outputs.cache-hit != 'true'
+        if: success()
         continue-on-error: true
         uses: actions/cache/save@v4
         with:

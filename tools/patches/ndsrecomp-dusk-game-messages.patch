@@ -1,14 +1,12 @@
 diff --git a/runner/src/main.cpp b/runner/src/main.cpp
 --- a/runner/src/main.cpp
 +++ b/runner/src/main.cpp
-@@ -34,6 +34,7 @@
- #include "spu.h"
+@@ -60,3 +60,4 @@
  #include "title_patches.h"
 +#include "dusk_msgpak_runtime.hpp"
  #if defined(NDS_HAVE_COMPUTE_RENDERER)
  #include "melonds_compute/ComputeHost.h"
- #endif
-@@ -1718,6 +1719,19 @@
+@@ -1718,2 +1719,15 @@
      }
 +    // The on-disk ROM and verified ARM code banks are unchanged. Rebuild only
 +    // the message file in RAM after the canonical cartridge SHA-1 gate.

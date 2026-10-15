@@ -63,6 +63,30 @@ def probe(rom:bytes)->dict:
         result["candidates"].append({"name":name,"file_id":fid,"start":lo,"size":hi-lo,
           "prefix32":sample[:8], "table_candidate":valid_table})
     result["candidates"].sort(key=lambda x:x["size"],reverse=True)
+    for item in result["candidates"]:
+        if item["name"].lower()!="dat/msg.pak":continue
+        lo=item["start"]; end=lo+item["size"]
+        n=u32(rom,lo)
+        if n!=138 or 4+8*n>item["size"]:raise ValueError("unexpected MSG.PAK index")
+        entries=[]
+        for i in range(n):
+            p=lo+4+i*8
+            off=u32(rom,p);sizeflag=u32(rom,p+4)
+            size=sizeflag&0x7fffffff
+            if off+size>item["size"]:raise ValueError("MSG.PAK entry beyond FAT")
+            b=rom[lo+off:lo+off+min(size,64)]
+            entry={"i":i,"start":off,"size":size,
+                   "flag":int(bool(sizeflag&0x80000000))}
+            if i<12:
+                entry["first_u32"]=[u32(b,j) for j in range(0,min(32,len(b)-3),4)]
+                entry["first_u16"]=[u16(b,j) for j in range(0,min(24,len(b)-1),2)]
+            entries.append(entry)
+        item["entry_count"]=n
+        item["subfiles"]=entries[:12]
+        item["flagged_count"]=sum(e["flag"] for e in entries)
+        item["nonoverlapping"]=all(entries[i]["start"]+entries[i]["size"] <=
+                                  entries[i+1]["start"] for i in range(n-1))
+        break
     # Independent research places the MSG.PAK payload around 0x0117E970.
     # Report whether the first candidate has an 8-byte (offset,size) index.
     return result

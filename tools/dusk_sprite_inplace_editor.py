@@ -135,9 +135,20 @@ def replace_labels(ncgr:bytes,nclr:bytes,ncer:bytes,edits:list[dict])->bytes:
                    ex+ew<=w and ey+eh<=h):
                 raise ValueError("erase rectangle exceeds original cell")
             rects.append(er)
+        erase_background=spec.get("erase_background_index")
+        if erase_background is not None and (
+                type(erase_background) is not int or
+                not 0<=erase_background<16):
+            raise ValueError("invalid original erase background index")
         affected={(xx,yy) for xx0,yy0,ww,hh in rects
                   for yy in range(yy0,yy0+hh)
                   for xx in range(xx0,xx0+ww)}
+        if erase_background is not None:
+            for ex,ey,ew,eh in extra:
+                for y0 in range(ey,ey+eh):
+                    if not any(view.mapping.get((x0,y0),(None,None,None,None))[2]
+                               ==erase_background for x0 in range(ex,ex+ew)):
+                        raise ValueError("erase background absent from original sprite row")
         glyph=_draw_label(view.image,rect,text)
         ink_pixels=glyph.load()
         # Use the dominant source background in each affected row; this
@@ -154,7 +165,11 @@ def replace_labels(ncgr:bytes,nclr:bytes,ncer:bytes,edits:list[dict])->bytes:
             if key not in view.mapping:raise ValueError("text rect traverses missing OAM pixels")
             off,hi,original_index,bank=view.mapping[key]
             inside=rx<=xx<rx+rw and ry<=yy<ry+rh
-            target=ink if inside and ink_pixels[xx-rx,yy-ry] else row_bg[yy]
+            erase_only=not inside and any(
+                ex<=xx<ex+ew and ey<=yy<ey+eh for ex,ey,ew,eh in extra)
+            background=(erase_background if erase_only and
+                        erase_background is not None else row_bg[yy])
+            target=ink if inside and ink_pixels[xx-rx,yy-ry] else background
             place=(off,hi)
             if place in pending and pending[place]!=target:
                 raise ValueError("cross-cell shared character pixels cannot be edited")

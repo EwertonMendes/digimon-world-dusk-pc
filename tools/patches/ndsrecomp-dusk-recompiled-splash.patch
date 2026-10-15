@@ -5,7 +5,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
      presentation.windows[0] = create_window(
  #if defined(NDS_HAVE_SDL3)
 -        presentation.dusk.enabled ? "Digimon World Dusk | PC" :
-+        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.25" :
++        presentation.dusk.enabled ? "Digimon World Dusk Recompiled | v0.26" :
  #endif
          presentation.separate ? "ndsrecomp - Top Screen"
 @@ -2390,4 +2390,100 @@
@@ -15,7 +15,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +static const char* dusk_project_title() {
 +    const char* configured = std::getenv("NDS_DUSK_WINDOW_TITLE");
 +    return configured && configured[0] ? configured :
-+        "Digimon World Dusk Recompiled | v0.25";
++        "Digimon World Dusk Recompiled | v0.26";
 +}
 +// Host-only splash: ROM/guest frames, timing and save state are untouched.
 +// BMP is generated from approved artwork at build time and integrity-checked

@@ -40,7 +40,8 @@ class AuthoredArtTests(unittest.TestCase):
             patch.object(importer,"graphics",return_value=(3,b"\x11"*32)),
             patch.object(importer,"palette",return_value=COLORS),
             patch.object(importer,"chunk",return_value=(0,64)),
-            patch.object(importer,"extract_cell",side_effect=view)
+            patch.object(importer,"extract_cell",side_effect=view),
+            patch.object(importer,"get_cell_groups",return_value=([[]],2))
         ]
         for item in self.patches:
             item.start()
@@ -89,14 +90,21 @@ class AuthoredArtTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"escapes"):
             self.run_import("../art.png")
 
+    def test_reject_unedited_animation_changes(self):
+        self.png()
+        with patch.object(importer,"get_cell_groups",return_value=([[],[]],2)):
+            with self.assertRaisesRegex(ValueError,"animation 1"):
+                self.run_import()
+
     def test_reject_two_shared_cell_conflicts(self):
         self.png(name="first.png",pos=(2,3))
         self.png(name="second.png",pos=(2,3),color=(0,0,0))
-        with self.assertRaises(ValueError):
-            import_authored_art(self.original,b"p",b"c",[
-                {"cell":0,"png":"first.png","regions":[[0,0,4,4]]},
-                {"cell":1,"png":"second.png","regions":[[0,0,4,4]]}
-            ],self.root)
+        with patch.object(importer,"get_cell_groups",return_value=([[],[]],2)):
+            with self.assertRaisesRegex(ValueError,"share conflicting"):
+                import_authored_art(self.original,b"p",b"c",[
+                    {"cell":0,"png":"first.png","regions":[[0,0,4,4]]},
+                    {"cell":1,"png":"second.png","regions":[[0,0,4,4]]}
+                ],self.root)
 
 
 if __name__=="__main__":

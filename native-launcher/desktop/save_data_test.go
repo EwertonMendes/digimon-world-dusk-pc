@@ -24,6 +24,66 @@ func TestProfilePathIsVersionIndependent(t *testing.T) {
     if !strings.HasSuffix(p.save, filepath.Join("A6RE","saves","dusk.sav")) { t.Fatal(p.save) }
 }
 
+func TestContentAddressedInstallsSharePlayerDataAndPreservePriorBuilds(t *testing.T) {
+    base := t.TempDir()
+    a := map[string][]byte{
+        "runner.exe": []byte("MZ-runner-first"),
+        "SDL3.dll": []byte("MZ-sdl"),
+        "game.nds": []byte("verified-rom"),
+    }
+    // Stable regardless of map allocation or key insertion order.
+    same := map[string][]byte{
+        "game.nds": []byte("verified-rom"),
+        "runner.exe": []byte("MZ-runner-first"),
+        "SDL3.dll": []byte("MZ-sdl"),
+    }
+    b := map[string][]byte{
+        "runner.exe": []byte("MZ-runner-second"),
+        "SDL3.dll": []byte("MZ-sdl"),
+        "game.nds": []byte("verified-rom"),
+    }
+    p1, p2, p3 := pathsForBundle(base,a), pathsForBundle(base,same), pathsForBundle(base,b)
+    if p1.install != p2.install { t.Fatal("identical bundle got two installation paths") }
+    if p1.install == p3.install { t.Fatal("new runner reused previous installation") }
+    if !strings.Contains(p1.install, filepath.Join("DuskNativePC","installs",appVersion)) {
+        t.Fatalf("unexpected install folder: %s",p1.install)
+    }
+    for _, property := range []struct {old, next string}{
+        {p1.profile,p3.profile}, {p1.save,p3.save},
+        {p1.console,p3.console}, {p1.firmware,p3.firmware},
+    } {
+        if property.old != property.next { t.Fatal("player state changed between builds") }
+    }
+    putSave(t,p1.save,0x57,duskSaveSize)
+    for _, pair := range []struct {p gamePaths; files map[string][]byte}{{p1,a},{p3,b}} {
+        if err:=prepareGameData(pair.p,base);err!=nil { t.Fatal(err) }
+        if err:=provision(pair.p.install,pair.files);err!=nil { t.Fatal(err) }
+    }
+    prior,err:=os.ReadFile(filepath.Join(p1.install,"runner.exe"))
+    if err!=nil || !bytes.Equal(prior,a["runner.exe"]) { t.Fatal("older runner was overwritten") }
+    updated,err:=os.ReadFile(filepath.Join(p3.install,"runner.exe"))
+    if err!=nil || !bytes.Equal(updated,b["runner.exe"]) { t.Fatal("new runner was not installed") }
+    saved,err:=os.ReadFile(p3.save)
+    if err!=nil || !bytes.Equal(saved,bytes.Repeat([]byte{0x57},duskSaveSize)) {
+        t.Fatal("the shared EEPROM was modified during runtime upgrade")
+    }
+    // Reopening the exact same payload remains idempotent.
+    if err:=provision(p2.install,same);err!=nil { t.Fatal(err) }
+}
+
+func TestSameBundleRejectsCorruptedInstalledRunner(t *testing.T) {
+    base := t.TempDir()
+    files:=map[string][]byte{"runner.exe":[]byte("MZ-expected")}
+    p:=pathsForBundle(base,files)
+    if err:=os.MkdirAll(p.install,0700);err!=nil { t.Fatal(err) }
+    if err:=os.WriteFile(filepath.Join(p.install,"runner.exe"),[]byte("MZ-tampered"),0600);err!=nil {
+        t.Fatal(err)
+    }
+    if err:=provision(p.install,files);err==nil { t.Fatal("tampered runtime was accepted") }
+    installed,err:=os.ReadFile(filepath.Join(p.install,"runner.exe"))
+    if err!=nil || string(installed)!="MZ-tampered" { t.Fatal("tampered file was silently replaced") }
+}
+
 func TestFirstRunSets64KiBEEPROMWithoutCreatingSave(t *testing.T) {
     base := t.TempDir()
     p := pathsFor(base)

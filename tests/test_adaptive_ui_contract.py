@@ -43,6 +43,14 @@ class AdaptiveUiTests(unittest.TestCase):
         for filename in ('dusk_modern_ui.hpp','dusk_material_renderer.hpp',
                          'dusk_ui_font.hpp','dusk_font_atlas.hpp'):
             self.assertIn('cp tools/native-ui/'+filename+' upstream/runner/src/',BUILD)
+    def test_settings_title_and_overlay_controls(self):
+        self.assertEqual(MATERIAL.count('"Settings"'), 1)
+        self.assertNotIn('DUSK  /  PC EDITION', MATERIAL)
+        self.assertIn('center_label(r,g.pip_restore,"Show",14,ink,true)', MATERIAL)
+        self.assertNotIn('label(r,g.pip_restore.x+8', MATERIAL)
+        self.assertIn('gear_icon(r,g.settings,ink)', MATERIAL)
+        self.assertNotIn('center_label(r,g.settings,"PC"', MATERIAL)
+        self.assertIn('SDL_RenderGeometry(r,nullptr,vertices,samples*6', MATERIAL)
     def test_no_debug_font_in_new_renderer(self):
         self.assertNotIn('SDL_RenderDebugText',MATERIAL+FONT)
         self.assertIn('SDL_RenderGeometry',MATERIAL)

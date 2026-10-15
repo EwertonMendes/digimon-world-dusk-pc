@@ -75,7 +75,7 @@ def _draw_label(image:Image.Image,rect,text):
     rx,ry,rw,rh=rect
     glyph=Image.new("1",(rw,rh),0)
     draw=ImageDraw.Draw(glyph)
-    for fontsize in range(min(17,rh+4),7,-1):
+    for fontsize in range(min(17,rh+4),5,-1):
         font=ImageFont.load_default(size=fontsize)
         l,t,r,b=draw.textbbox((0,0),text,font=font)
         if r-l<=rw-2 and b-t<=rh-2:

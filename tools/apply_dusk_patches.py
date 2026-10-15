@@ -31,6 +31,7 @@ DESKTOP = NATIVE_UI + (
     "ndsrecomp-dusk-intro-crossfade-v026.patch",
     "ndsrecomp-dusk-adaptive-ui-v027.patch",
     "ndsrecomp-dusk-localization-global.patch",
+    "ndsrecomp-dusk-game-messages.patch",
 )
 
 

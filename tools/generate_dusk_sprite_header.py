@@ -81,7 +81,15 @@ def generate(rom:bytes,preview=False)->str:
                     raise ValueError("original three-frame/four-state OAM layout differs from verified Dusk ROM")
                 print("NITROPAINT_VERIFIED_128_BYTE_MAPPING",i,anchors)
             artwork=spec.get("artwork")
-            if artwork is not None:
+            native_title=spec.get("title_prompt")
+            if native_title is not None:
+                if i!=620 or locale!="pt-BR" or edits or artwork is not None or native_title!="APERTE START":
+                    raise ValueError("title localization must be audited sprite 620 in PT-BR")
+                from dusk_native_title_prompt import replace_title
+                dest,metadata=replace_title(src,pal,cel_source)
+                print("VERIFIED_ORIGINAL_TITLE_NATIVE",locale,i,metadata)
+                preview_cells=[{"cell":k} for k in range(4)]
+            elif artwork is not None:
                 if edits or not isinstance(artwork,list):
                     raise ValueError("authored PNG sprites cannot mix with procedural labels")
                 from dusk_sprite_authored_art import import_authored_art
@@ -104,8 +112,13 @@ def generate(rom:bytes,preview=False)->str:
                     images=[]
                     for k in range(min(4,len(preview_cells))):
                         cell=preview_cells[k]["cell"]
-                        old_image=extract_cell(src,pal,cel_source,cell).image
-                        new_image=extract_cell(dest,pal,cel_source,cell).image
+                        if native_title is not None:
+                            from probe_dusk_title_prompt_exact import composite_cell
+                            old_image=composite_cell(src,pal,cel_source,cell)
+                            new_image=composite_cell(dest,pal,cel_source,cell)
+                        else:
+                            old_image=extract_cell(src,pal,cel_source,cell).image
+                            new_image=extract_cell(dest,pal,cel_source,cell).image
                         images.append((cell,old_image,new_image))
                     width=max(im.width for _,old,new in images for im in (old,new))
                     height=sum(max(old.height,new.height)+6 for _,old,new in images)

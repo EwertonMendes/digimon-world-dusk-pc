@@ -1,53 +1,15 @@
 {
   "schema": 1,
   "language": "pt-BR",
-  "description": "Game-owned DS sprite subresources for menu headers; source identities pinned to original verified cartridge",
+  "description": "Native menu sprite titles that use independent OAM tile ranges; shared-tile labels require NCER relocation.",
   "sprites": [
-    {
-      "id": 380,
-      "source_sha256": "d738716d74cf6c534739aba3287ac46767b249a9290e81ebef6327823214d9d0",
-      "edits": [
-        {
-          "rect": [
-            0,
-            0,
-            65,
-            8
-          ],
-          "text": "MENU",
-          "background": 0
-        }
-      ]
-    },
-    {
-      "id": 383,
-      "source_sha256": "347361a37e17842149fcc58ea928d0c5d1768fb185ed305e49fc8e19c4ee6089",
-      "edits": [
-        {
-          "rect": [
-            0,
-            0,
-            68,
-            8
-          ],
-          "text": "TREINADOR",
-          "background": 0
-        }
-      ]
-    },
     {
       "id": 388,
       "source_sha256": "a05ebdf4945dac32d5536b4cb5040e3ec3454115eb40fab97e7c05066cffeb3c",
       "edits": [
         {
-          "rect": [
-            0,
-            0,
-            50,
-            8
-          ],
-          "text": "ITENS",
-          "background": 0
+          "cell": 0,
+          "text": "ITENS"
         }
       ]
     },
@@ -56,14 +18,8 @@
       "source_sha256": "ca1d17dc602165bf267c22d4c97d8a9c102bb46e66844041cb4295c4c8dc53c6",
       "edits": [
         {
-          "rect": [
-            0,
-            0,
-            50,
-            8
-          ],
-          "text": "EQUIPE",
-          "background": 0
+          "cell": 0,
+          "text": "EQUIPE"
         }
       ]
     }

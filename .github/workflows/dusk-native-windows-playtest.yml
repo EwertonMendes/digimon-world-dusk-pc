@@ -253,6 +253,12 @@ jobs:
         with:
           go-version: '1.23'
           cache: false
+      - name: Generate native sprite-menu localization from authenticated cartridge
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite translation catalog generation failed' }
       - name: Validate localization catalogs before compiling the game
         shell: pwsh
         run: |
@@ -288,6 +294,8 @@ jobs:
           cp tools/native-ui/dusk_arm9_catalog.generated.hpp upstream/runner/src/dusk_arm9_catalog.generated.hpp
           cp tools/native-ui/dusk_graphics_runtime.hpp upstream/runner/src/dusk_graphics_runtime.hpp
           cp tools/native-ui/dusk_graphics_catalog.generated.hpp upstream/runner/src/dusk_graphics_catalog.generated.hpp
+          cp tools/native-ui/dusk_sprite_runtime.hpp upstream/runner/src/dusk_sprite_runtime.hpp
+          cp tools/native-ui/dusk_sprite_catalog.generated.hpp upstream/runner/src/dusk_sprite_catalog.generated.hpp
           cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch

@@ -112,6 +112,13 @@ jobs:
         run: |
           python tools/probe_dusk_sprite_paks.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Sprite research failed' }
+      - name: Decode original UI sprite artwork sheets for localization
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --index
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 0 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 60 --count 60 --min-pixels 2048 --max-pixels 16384
+          if ($LASTEXITCODE -ne 0) { throw 'Failed sprite UI visual analysis' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |

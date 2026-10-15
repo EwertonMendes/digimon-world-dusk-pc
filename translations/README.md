@@ -16,8 +16,9 @@ original Nintendo DS RLE files, **not an external overlay**. The earlier experim
 banks, which caused overlapping images and corrupt menu graphics. That
 approach was removed. The corrected parser uses NitroPaint's verified
 mappingMode=2 stride (4 x 32-byte tiles per OAM character index). Its
-four animation states already occupy independent 64-tile ranges
-[0..63, 64..127, 128..191, 192..255]. Translation now changes pixels
+four animation states reference three original 64-tile ranges
+[0..63, 64..127, 128..191, 128..191] (the third and fourth
+states intentionally share one bitmap). Translation now changes pixels
 **inside the existing original NCGR**, never expands it and **never edits
 NCER or palettes**. The rebuilt CHR PAK is placed in verified unused
 ROM padding only in memory. Original ARM9, NCER, NCLR and saves are
@@ -30,7 +31,7 @@ python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nd
 ```
 CI compiles a checksum-pinned C++ asset catalog. Tests verify byte-for-byte
 preservation of ARM9 and original PAKs, an **unchanged NCER file table**,
-atomic rejection on checksum mismatch, correct four-state 128-byte mapping,
+atomic rejection on checksum mismatch, correct 128-byte mapping with an intentionally shared fourth-state tile range,
 and pixels differing only inside declared label regions (never icons/frames).
 True native Windows gameplay screenshots still require owner playtesting;
 asset-level previews are not equivalent to full runtime coverage.

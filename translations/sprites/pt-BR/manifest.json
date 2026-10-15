@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "language": "pt-BR",
-  "description": "In-place 1D 128-byte OAM sprite captions, preserving original NCER/NCLR and tile counts.",
+  "description": "Verified original-NCLR native pixel artwork, generated at build time from owner ROM and hand-designed bitmap glyphs; no desktop font renderer.",
   "sprites": [
     {
       "id": 388,
@@ -26,284 +26,240 @@
     {
       "id": 479,
       "source_sha256": "f53490e4cfb4ba1a0cc01a7778d64e6245c27cc68f2a4f12a84501291a13317d",
-      "edits": [
+      "artwork": [
         {
           "cell": 0,
-          "region": [
-            6,
-            32,
-            53,
-            16
-          ],
-          "text": "Itens",
-          "color": "lime"
+          "png": "art/479-state0.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
         },
         {
           "cell": 1,
-          "region": [
-            6,
-            32,
-            53,
-            16
-          ],
-          "text": "Itens",
-          "color": "lime"
+          "png": "art/479-state1.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
         },
         {
           "cell": 2,
-          "region": [
-            6,
-            32,
-            53,
-            16
-          ],
-          "text": "Itens",
-          "color": "lime"
+          "png": "art/479-state2.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
         },
         {
           "cell": 3,
-          "region": [
-            6,
-            32,
-            53,
-            16
-          ],
-          "text": "Itens",
-          "color": "lime"
+          "png": "art/479-state3.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
         }
       ]
     },
     {
       "id": 480,
       "source_sha256": "85f603fa5acf8a52ba419246e67376db65196f181640b86c37e27b86035b2da1",
-      "edits": [
+      "artwork": [
         {
           "cell": 0,
-          "region": [
-            10,
-            32,
-            47,
-            16
-          ],
-          "text": "Salvar",
-          "color": "lime"
+          "png": "art/480-state0.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
         },
         {
           "cell": 1,
-          "region": [
-            10,
-            32,
-            47,
-            16
-          ],
-          "text": "Salvar",
-          "color": "lime"
+          "png": "art/480-state1.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
         },
         {
           "cell": 2,
-          "region": [
-            10,
-            32,
-            47,
-            16
-          ],
-          "text": "Salvar",
-          "color": "lime"
+          "png": "art/480-state2.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
         },
         {
           "cell": 3,
-          "region": [
-            10,
-            32,
-            47,
-            16
-          ],
-          "text": "Salvar",
-          "color": "lime"
+          "png": "art/480-state3.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
         }
       ]
     },
     {
       "id": 481,
       "source_sha256": "998d46725f82b2fc91f1105a5c0305970b58c280497056bb5aee53501d39f436",
-      "edits": [
+      "artwork": [
         {
           "cell": 0,
-          "region": [
-            6,
-            32,
-            54,
-            16
-          ],
-          "text": "Missões",
-          "color": "lime"
+          "png": "art/481-state0.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
         },
         {
           "cell": 1,
-          "region": [
-            6,
-            32,
-            54,
-            16
-          ],
-          "text": "Missões",
-          "color": "lime"
+          "png": "art/481-state1.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
         },
         {
           "cell": 2,
-          "region": [
-            6,
-            32,
-            54,
-            16
-          ],
-          "text": "Missões",
-          "color": "lime"
+          "png": "art/481-state2.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
         },
         {
           "cell": 3,
-          "region": [
-            6,
-            32,
-            54,
-            16
-          ],
-          "text": "Missões",
-          "color": "lime"
+          "png": "art/481-state3.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
         }
       ]
     },
     {
       "id": 482,
       "source_sha256": "c98f053b435dccfa795929838e1138ecdec6b578c20dee6798675cfbb59f686b",
-      "edits": [
+      "artwork": [
         {
           "cell": 0,
-          "region": [
-            6,
-            28,
-            54,
-            17
-          ],
-          "text": "Treinador",
-          "color": "lime",
-          "erase_regions": [
+          "png": "art/482-state0.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
             [
               10,
-              23,
-              12,
-              2
-            ],
-            [
-              14,
-              25,
-              4,
-              1
-            ],
-            [
-              14,
-              26,
-              42,
-              2
+              22,
+              50,
+              11
             ]
-          ],
-          "erase_background_index": 2
+          ]
         },
         {
           "cell": 1,
-          "region": [
-            6,
-            28,
-            54,
-            17
-          ],
-          "text": "Treinador",
-          "color": "lime",
-          "erase_regions": [
+          "png": "art/482-state1.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
             [
               10,
-              23,
-              12,
-              2
-            ],
-            [
-              14,
-              25,
-              4,
-              1
-            ],
-            [
-              14,
-              26,
-              42,
-              2
+              22,
+              50,
+              11
             ]
-          ],
-          "erase_background_index": 2
+          ]
         },
         {
           "cell": 2,
-          "region": [
-            6,
-            28,
-            54,
-            17
-          ],
-          "text": "Treinador",
-          "color": "lime",
-          "erase_regions": [
+          "png": "art/482-state2.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
             [
               10,
-              23,
-              12,
-              2
-            ],
-            [
-              14,
-              25,
-              4,
-              1
-            ],
-            [
-              14,
-              26,
-              42,
-              2
+              22,
+              50,
+              11
             ]
-          ],
-          "erase_background_index": 2
+          ]
         },
         {
           "cell": 3,
-          "region": [
-            6,
-            28,
-            54,
-            17
-          ],
-          "text": "Treinador",
-          "color": "lime",
-          "erase_regions": [
+          "png": "art/482-state3.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
             [
               10,
-              23,
-              12,
-              2
-            ],
-            [
-              14,
-              25,
-              4,
-              1
-            ],
-            [
-              14,
-              26,
-              42,
-              2
+              22,
+              50,
+              11
             ]
-          ],
-          "erase_background_index": 2
+          ]
         }
       ]
     }

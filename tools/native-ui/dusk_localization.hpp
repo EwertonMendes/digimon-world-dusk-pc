@@ -52,7 +52,7 @@ inline void load_preference(const std::filesystem::path& native_layout_config) {
 inline bool select(Language language) {
     if(!preference_loaded || preference_path.empty())return false;
     std::ofstream out(preference_path,std::ios::trunc);
-    if(!out || !(out<<code(language)<<'\\n'))return false;
+    if(!out || !(out<<code(language)<<'\n'))return false;
     out.close();
     if(!out)return false;
     active_language=language;

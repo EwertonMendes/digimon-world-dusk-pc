@@ -47,3 +47,6 @@ hostprof-*.ndshp
 /assets/icons/generated/
 /native-launcher/desktop/*_windows_amd64.syso
 /assets/splash/generated/
+
+# Owner-ROM derived DS caption PNGs are temporary build inputs, never source assets.
+/translations/sprites/*/art/

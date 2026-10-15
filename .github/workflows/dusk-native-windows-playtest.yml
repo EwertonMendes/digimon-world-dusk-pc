@@ -113,6 +113,7 @@ jobs:
           git -C recomp-ui config core.autocrlf false
           git -C recomp-ui checkout 41c88ffea852b970af8d50312620b17404e455ad
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
+          cp tools/native-ui/dusk_modern_ui.hpp upstream/runner/src/dusk_modern_ui.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
           git -C upstream apply ../tools/patches/ndsrecomp-tftp-win32.patch

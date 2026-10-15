@@ -50,7 +50,7 @@ class IconTests(unittest.TestCase):
             self.assertIn("Digimon World Dusk Recompiled", (out / "android/values/strings.xml").read_text())
             resource = (out / "windows/dusk.rc").read_text()
             self.assertIn('VALUE "FileDescription", "Digimon World Dusk Recompiled"', resource)
-            self.assertIn('VALUE "ProductVersion", "v0.27"', resource)
+            self.assertIn('VALUE "ProductVersion", "v0.28"', resource)
 
     def test_rejects_missing_master(self):
         with tempfile.TemporaryDirectory() as tmp:

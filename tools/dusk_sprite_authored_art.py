@@ -79,8 +79,14 @@ def import_authored_art(
                            for rx,ry,rw,rh in regions):
                     raise ValueError(f"authored artwork modifies button icon/frame at {x},{y}")
                 offset, high, old_index, bank = source_view.mapping[x,y]
-                lookup = [i for i in range(16)
-                          if bank*16+i<len(colors) and colors[bank*16+i][:3]==new_color]
+                # extract_cell() displays NCLR index 0 using this private
+                # diagnostic matte. Encode it back as native transparent
+                # palette index zero, never as an invented RGB color.
+                if new_color==(22,26,40):
+                    lookup=[0]
+                else:
+                    lookup = [i for i in range(1,16)
+                              if bank*16+i<len(colors) and colors[bank*16+i][:3]==new_color]
                 if not lookup:
                     raise ValueError(f"PNG pixel at {x},{y} not present in original NCLR bank {bank}")
                 idx = old_index if old_index in lookup else lookup[0]

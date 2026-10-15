@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include "dusk_localization.hpp"
 
 namespace dusk_modern {
 using Rect = dusk_native::Rect;
@@ -60,6 +61,7 @@ inline void append(View& v, Rect r, int kind, int value) {
     if (v.count<int(v.items.size())) v.items[v.count++]={r,kind,value};
 }
 inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation& p) {
+    dusk_localization::load_preference(p.dusk.config_path);
     View out{};
     const int w=std::max(1,g.play.w), h=std::max(1,g.play.h);
     // Breakpoints operate on the actual SDL output viewport, not desktop assumptions.
@@ -112,6 +114,8 @@ inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation
         }
     } else if(state.tab==3) {
         int itemh=dp(79);
+        append(out,{out.content.x,y-state.scroll,cw,itemh},1,10);
+        y+=itemh+12;
         append(out,{out.content.x,y-state.scroll,cw,itemh},2,8);
         y+=itemh+12;
         append(out,{out.content.x,y-state.scroll,cw,itemh},2,9);
@@ -171,6 +175,10 @@ inline bool choose(FrontendPresentation& p,const dusk_native::Geometry& g,Item i
         return true;
     }
     if(item.kind==1) {
+        if(item.value==10) {
+            return dusk_localization::select(dusk_localization::next(
+                dusk_localization::active_language,direction));
+        }
         dusk_menu_action(p,item.value,direction);
         return true;
     }

@@ -80,8 +80,19 @@ def generate(rom:bytes,preview=False)->str:
                 if anchors!=[0,64,128,128] or len(graphics(src)[1])//32 < 192:
                     raise ValueError("original three-frame/four-state OAM layout differs from verified Dusk ROM")
                 print("NITROPAINT_VERIFIED_128_BYTE_MAPPING",i,anchors)
-            dest=replace_labels(src,pal,cel_source,edits)
-            assert_frames(src,pal,cel_source,dest,edits)
+            artwork=spec.get("artwork")
+            if artwork is not None:
+                if edits or not isinstance(artwork,list):
+                    raise ValueError("authored PNG sprites cannot mix with procedural labels")
+                from dusk_sprite_authored_art import import_authored_art
+                dest=import_authored_art(src,pal,cel_source,artwork,manifest.parent)
+                # No font renderer is involved; every authored input PNG is
+                # validated against the original NCER/NCLR and caption mask.
+                preview_cells=artwork
+            else:
+                dest=replace_labels(src,pal,cel_source,edits)
+                assert_frames(src,pal,cel_source,dest,edits)
+                preview_cells=edits
             packed=rle_compress(dest)
             rows.append((locale,i,26,zlib.crc32(raw)&0xffffffff,packed))
             if preview:
@@ -91,8 +102,8 @@ def generate(rom:bytes,preview=False)->str:
                     # Each action state is validated independently, rather
                     # than previewing a swizzled NCGR texture atlas.
                     images=[]
-                    for k in range(min(4,len(edits))):
-                        cell=edits[k]["cell"]
+                    for k in range(min(4,len(preview_cells))):
+                        cell=preview_cells[k]["cell"]
                         old_image=extract_cell(src,pal,cel_source,cell).image
                         new_image=extract_cell(dest,pal,cel_source,cell).image
                         images.append((cell,old_image,new_image))

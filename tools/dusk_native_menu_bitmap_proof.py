@@ -74,11 +74,11 @@ REGIONS = {
     479:(6,32,53,16),
     480:(10,32,47,16),
     481:(6,32,54,16),
-    482:(6,28,54,17),
+    482:(6,33,54,12),
 }
 # Only source-caption fragments known from the ROM mapping, outside the new
 # text band. These masks deliberately avoid the character's original icon.
-EXTRA = {482:((10,23,12,2),(14,25,4,1),(14,26,42,2))}
+EXTRA = {482:((10,22,23,11),(33,32,23,1))}
 
 
 def glyph(char: str) -> tuple[str,...]:
@@ -115,7 +115,7 @@ def _regions(sprite: int):
     return (region,*EXTRA.get(sprite,()))
 
 
-def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str) -> Image.Image:
+def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str, pristine:Image.Image|None=None) -> Image.Image:
     view = extract_cell(src,nclr,ncer,cell)
     rect = REGIONS[sprite]
     rx,ry,rw,rh = rect
@@ -159,10 +159,17 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         row_bg[yy]=Counter(safe).most_common(1)[0][0]
     for x,y in affected:
         bank=view.mapping[(x,y)][3]
-        idx=2 if (sprite==482 and (x,y) in {
-            (xx,yy) for x0,y0,w,h in EXTRA[482]
-            for yy in range(y0,y0+h) for xx in range(x0,x0+w)}) else row_bg[y]
-        out[x,y]=colors[bank*16+idx][:3]
+        if sprite==482 and pristine is not None and 10<=x<33 and 22<=y<32:
+            # Restore the untouched original *game* button backplate;
+            # unlike a flat fill, this keeps the native cyan top trim,
+            # the original horizontal stripes and highlights.
+            sample=pristine.getpixel((x,y))
+            if sample not in [c[:3] for c in colors[bank*16:bank*16+16]]:
+                raise ValueError("original game template uses a different NCLR palette")
+            out[x,y]=sample
+        else:
+            idx=2 if (sprite==482 and y<33) else row_bg[y]
+            out[x,y]=colors[bank*16+idx][:3]
     # Draw dark drop shadow then authentic lime glyphs. No antialias or
     # transforms: a single pixel is exactly one native Nintendo DS pixel.
     bright=set()
@@ -189,6 +196,12 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
         raise ValueError("wrong owner ROM")
     fs=files(rom)
     outdir.mkdir(parents=True,exist_ok=True)
+    # Sprite 479's top-left artwork is an original unlettered template for
+    # the two-row Tamer caption. Match animation state, never use a desktop
+    # UI theme color to patch an original Nintendo frame.
+    clean_chr=packed_resource(rom,fs,"dat/SPR_CHR.PAK",479)
+    clean_pal=packed_resource(rom,fs,"dat/SPR_PAL.PAK",479)
+    clean_cel=packed_resource(rom,fs,"dat/SPR_CEL.PAK",479)
     for sid,word in MENUS[locale].items():
         source=packed_resource(rom,fs,"dat/SPR_CHR.PAK",sid)
         palette_data=packed_resource(rom,fs,"dat/SPR_PAL.PAK",sid)
@@ -197,7 +210,8 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
             images=[]
             for state in range(4):
                 original=extract_cell(source,palette_data,cell_data,state).image
-                art=draft_cell(source,palette_data,cell_data,sid,state,word)
+                pristine=extract_cell(clean_chr,clean_pal,clean_cel,state).image if sid==482 else None
+                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine)
                 output=outdir/f"{sid}-state{state}.png"
                 art.save(output,optimize=True)
                 images.append((original,art))

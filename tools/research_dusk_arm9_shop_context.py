@@ -19,11 +19,17 @@ def main(rom):
                 before=[u16(rom,i) for i in range(max(start,at-36),at,2)]
                 after=[u16(rom,i) for i in range(at,min(end,at+140),2)]
                 stopper=next((i for i,v in enumerate(after) if v in(0xffff,0xfffe,0)),None)
+                zeros=0
+                if stopper is not None and after[stopper]==0:
+                    while stopper+zeros<len(after) and after[stopper+zeros]==0:zeros+=1
+                next_start=stopper+zeros if stopper is not None else 0
                 results.append({"rom_offset":at,"relative":at-start,
                     "source":word,"before":decode(before),
                     "after":decode(after[:min(stopper or 30,30)]),
                     "end_word":(hex(after[stopper]) if stopper is not None else "none"),
-                    "slots_bytes":(stopper*2 if stopper is not None else None)})
+                    "slots_bytes":(stopper*2 if stopper is not None else None),
+                    "zero_words_after":zeros,
+                    "next_words":[hex(v) for v in after[next_start:next_start+9]]})
             at=rom.find(raw,at+2,end)
         print("LABEL",word,"hits",len(results))
         for row in results[:22]:print("AROUND",row)

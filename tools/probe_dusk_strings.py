@@ -53,7 +53,9 @@ def files(rom:bytes)->dict[str,tuple[int,int,int]]:
 def probe(rom:bytes)->dict:
     if hashlib.sha256(rom).hexdigest()!=SHA256:raise ValueError("unexpected ROM")
     catalog=files(rom)
-    result={"files":len(catalog),"candidates":[]}
+    used=max(v[2] for v in catalog.values())
+    result={"files":len(catalog),"highest_fat_end":used,
+            "tail_free":len(rom)-used,"candidates":[]}
     for name,(fid,lo,hi) in catalog.items():
         if "msg" not in name.lower() and "text" not in name.lower():continue
         header=rom[lo:min(hi,lo+64)]
@@ -80,6 +82,31 @@ def probe(rom:bytes)->dict:
             if i<12:
                 entry["first_u32"]=[u32(b,j) for j in range(0,min(32,len(b)-3),4)]
                 entry["first_u16"]=[u16(b,j) for j in range(0,min(24,len(b)-1),2)]
+                if i<4:
+                    pointer_bytes=u32(b,0)
+                    sample=[]
+                    if pointer_bytes%4==0 and 4<=pointer_bytes<=size:
+                        count=pointer_bytes//4
+                        for mid in range(min(count,3)):
+                            start=u32(rom,lo+off+mid*4)
+                            stop=(u32(rom,lo+off+(mid+1)*4) if mid+1<count else size)
+                            if not (pointer_bytes<=start<stop<=size):continue
+                            symbols=[]
+                            for pos in range(lo+off+start,lo+off+min(stop,start+260),2):
+                                v=u16(rom,pos)
+                                if v==0xffff:break
+                                if v==0:tokens=" "
+                                elif 1<=v<=10:tokens=chr(ord("0")+v-1)
+                                elif 0x20<=v<=0x39:tokens=chr(ord("A")+v-0x20)
+                                elif 0x3a<=v<=0x53:tokens=chr(ord("a")+v-0x3a)
+                                elif v==0xfffd:tokens="\\n"
+                                elif v==0xfffe:tokens="[END]"
+                                elif v==0xffed:tokens="[PLAYER_NAME]"
+                                else:tokens=f"<{v:04x}>"
+                                symbols.append(tokens)
+                            sample.append({"message_id":mid,"text":"".join(symbols)[:230],
+                                           "raw_bytes":stop-start})
+                    entry["samples"]=sample
             entries.append(entry)
         item["entry_count"]=n
         item["subfiles"]=entries[:12]

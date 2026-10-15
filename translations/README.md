@@ -11,12 +11,17 @@ The 6-button Digivice/S-key menu was traced to the compressed game-native
 
 The source ROM SHA-256 and each source NCGR subresource SHA-256 are pinned in
 `translations/sprites/{pt-BR,es-ES}/manifest.json`. The renderer rebuilds the
-original Nintendo DS RLE files, **not an external overlay**. Since all four
-animation states of each menu button share original tile ranges, translation
-allocates independent NCGR tile banks and rewrites verified NCER cell tile IDs.
-Both rebuilt PAK files are placed in authenticated free ROM padding *only
-in memory* after the original game hash verification. All source bytes, ARM9
-instructions, palettes and saves stay unchanged.
+original Nintendo DS RLE files, **not an external overlay**. The earlier experimental version **incorrectly** treated Nintendo DS
+1D-128-byte OAM indices as 32-byte tile offsets. It also added new tile
+banks, which caused overlapping images and corrupt menu graphics. That
+approach was removed. The corrected parser uses NitroPaint's verified
+mappingMode=2 stride (4 x 32-byte tiles per OAM character index). Its
+four animation states already occupy independent 64-tile ranges
+[0..63, 64..127, 128..191, 192..255]. Translation now changes pixels
+**inside the existing original NCGR**, never expands it and **never edits
+NCER or palettes**. The rebuilt CHR PAK is placed in verified unused
+ROM padding only in memory. Original ARM9, NCER, NCLR and saves are
+unchanged.
 
 Generate using the original ROM:
 ```bash
@@ -24,9 +29,11 @@ python -m pip install Pillow==11.3.0
 python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
 ```
 CI compiles a checksum-pinned C++ asset catalog. Tests verify byte-for-byte
-preservation of ARM9 and original PAKs, atomic rejection on checksum mismatch,
-four state-specific OAM tile assignments, and that sprite edits change
-pixels only inside each named button's label region (never the icons/frames).
+preservation of ARM9 and original PAKs, an **unchanged NCER file table**,
+atomic rejection on checksum mismatch, correct four-state 128-byte mapping,
+and pixels differing only inside declared label regions (never icons/frames).
+True native Windows gameplay screenshots still require owner playtesting;
+asset-level previews are not equivalent to full runtime coverage.
 
 **Remaining interface gap:** Equipment Shop `Buy/Sell/Quit` is not included.
 A source scan located its ARM9 entries near ROM offset 1130728/1130780,

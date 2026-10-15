@@ -32,7 +32,7 @@ class SplashTests(unittest.TestCase):
 
     def test_one_release_identity_is_consistent(self):
         self.assertEqual(APP_NAME, "Digimon World Dusk Recompiled")
-        self.assertEqual(APP_VERSION, "v0.27")
+        self.assertEqual(APP_VERSION, "v0.28")
         self.assertEqual(WINDOW_TITLE, APP_NAME + " | " + APP_VERSION)
         self.assertEqual(WINDOWS_EXE, APP_SLUG + "-" + APP_VERSION + "-Windows.exe")
         desktop = (ROOT / "native-launcher/desktop/save_data.go").read_text()

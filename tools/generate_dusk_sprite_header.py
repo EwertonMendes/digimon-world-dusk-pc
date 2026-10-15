@@ -72,13 +72,22 @@ def generate(rom:bytes,preview=False)->str:
             if preview:
                 print("EDITED_SPRITE",locale,i,"oldbytes",len(raw),"newbytes",len(packed))
                 if locale=="pt-BR":
-                    a=tile_atlas(src,pal);z=tile_atlas(dest,pal)
-                    side=Image.new("RGB",(a.width,a.height*2+4),(30,25,46))
-                    side.paste(a,(0,0));side.paste(z,(0,a.height+4))
+                    from probe_dusk_sprite_cells import get_cell_groups,render_one
+                    cells,mode=get_cell_groups(rle_decompress(read_resource(celpack,i)))
+                    original_image=render_one(graphics(src)[1],palette(pal),cells[0],mode)
+                    translated_image=render_one(graphics(dest)[1],palette(pal),cells[0],mode)
+                    if original_image is None or translated_image is None:
+                        raise ValueError("could not visualize real OAM cell")
+                    w=max(original_image.width,translated_image.width)
+                    h=original_image.height+translated_image.height+4
+                    side=Image.new("RGB",(w,h),(30,25,46))
+                    side.paste(original_image,(0,0))
+                    side.paste(translated_image,(0,original_image.height+4))
                     side=side.resize((side.width*4,side.height*4),Image.Resampling.NEAREST)
                     buf=io.BytesIO();side.save(buf,"PNG",optimize=True)
                     print("TRANSLATED_SPRITE_ID",i)
                     print("TRANSLATED_SPRITE64 "+base64.b64encode(buf.getvalue()).decode("ascii"))
+
     lines=["// Generated from translations/sprites/<locale>/manifest.json by generate_dusk_sprite_header.py."]
     for n,(_,_,_,data) in enumerate(rows):
         lines.append(f"inline constexpr std::array<std::uint8_t,{len(data)}> kSpriteData{n}{{")

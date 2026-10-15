@@ -157,7 +157,7 @@ func main() {
 	}
 	base := os.Getenv("LOCALAPPDATA")
 	if base == "" { fatal(errors.New("LOCALAPPDATA indisponível")) }
-	p := pathsFor(base)
+	p := pathsForBundle(base, files)
 	release, err := acquireSaveSession()
 	if err != nil { fatal(err) }
 	defer release()

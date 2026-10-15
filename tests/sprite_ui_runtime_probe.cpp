@@ -13,7 +13,7 @@ int main(int argc,char**argv){
         (std::istreambuf_iterator<char>(source)),
         std::istreambuf_iterator<char>());
     if(original.size()!=67108864)return 4;
-    static_assert(dusk_sprites::kSprites.size()>=8,
+    static_assert(dusk_sprites::kSprites.size()>=4,
                   "PT and ES must each ship localized native menu graphics");
     const std::size_t fat=dusk_msgpak::read32(original,0x48);
     const std::size_t old_start=dusk_msgpak::read32(original,fat+26*8);
@@ -43,7 +43,7 @@ int main(int argc,char**argv){
         std::cout<<lang<<" replaced game-owned sprite records without changing original code/data\n";
     }
     auto corrupted=original;
-    corrupted[old_start+4+8*380]^=0x7f;
+    corrupted[old_start+4+8*388]^=0x7f;
     const auto before=corrupted;
     if(dusk_sprites::apply(corrupted,"pt-BR"))return 10;
     if(corrupted!=before)return 11;

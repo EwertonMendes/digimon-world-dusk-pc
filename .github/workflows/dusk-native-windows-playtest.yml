@@ -83,6 +83,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_overlays.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Native ARM9 title overlay scan failed' }
+      - name: Match unknown native title font character numbering
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_ordinal.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title ordinal text encoding scan failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

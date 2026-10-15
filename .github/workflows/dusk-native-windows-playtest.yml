@@ -86,6 +86,12 @@ jobs:
           python tools/research_dusk_tile_names.py --rom 'Digimon World - Dusk (USA).nds'
           python tools/localization_coverage.py --rom 'Digimon World - Dusk (USA).nds' --out .private/locale-coverage.json
           if ($LASTEXITCODE -ne 0) { throw 'Localization coverage audit failed' }
+      - name: Preview original menu and shop tilemaps without patching
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/mshp00
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/t_kk01text
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |

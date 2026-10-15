@@ -48,8 +48,7 @@ def pixels(src:bytearray):
     if depth!=3:raise ValueError("only palette-indexed 4bpp NCGR sprite labels supported")
     tilecount=len(raw)//32
     cols=32 if tilecount>=64 else 16
-    if tilecount%cols:raise ValueError("sprite tile rows not aligned")
-    width,height=cols*8,(tilecount//cols)*8
+    width,height=cols*8,((tilecount+cols-1)//cols)*8
     grid=Image.new("P",(width,height))
     array=grid.load()
     for tile in range(tilecount):
@@ -65,7 +64,8 @@ def encode_pixels(img:Image.Image,old:bytearray):
     width,height=img.size
     cols=width//8
     pixels=img.load()
-    for tile in range(width*height//64):
+    _,source_chars=graphics(old)
+    for tile in range(len(source_chars)//32):
         for y in range(8):
             for b in range(4):
                 a=pixels[tile%cols*8+b*2,tile//cols*8+y]

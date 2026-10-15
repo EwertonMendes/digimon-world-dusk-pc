@@ -101,7 +101,6 @@ jobs:
         shell: pwsh
         run: |
           python tools/nitro_bg_contact_sheet.py --rom 'Digimon World - Dusk (USA).nds' --prefix dat/bg/m --start 48 --count 24
-          python tools/nitro_bg_contact_sheet.py --rom 'Digimon World - Dusk (USA).nds' --prefix dat/bg/m --start 72 --count 24
           if ($LASTEXITCODE -ne 0) { throw 'Original graphical UI research failed' }
       - name: Detect precise menu text IDs in compressed Nintendo DS files
         shell: pwsh

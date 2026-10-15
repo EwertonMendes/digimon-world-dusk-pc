@@ -161,6 +161,11 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
             }
             label(r,b.x+dp(17,s),b.y+dp(11,s),caption,bpx,ink,true,b.w-dp(62,s));
             label(r,b.x+dp(17,s),b.y+dp(39,s),value,mpx,secondary,false,b.w-dp(68,s));
+            if(item.kind==1 && item.value==10 &&
+               dusk_localization::active_language!=dusk_localization::Language::english)
+                label(r,b.x+dp(17,s),b.y+dp(61,s),
+                      dusk_localization::ui("bridge_notice",dusk_localization::active_language),
+                      std::max(9,mpx-3),secondary,false,b.w-dp(68,s));
             if(item.kind==1)center_label(r,{b.x+b.w-dp(43,s),b.y+dp(7,s),dp(32,s),b.h-dp(14,s)},">",bpx,accent,true);
         }
     }
@@ -180,12 +185,6 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
         }
     }
     SDL_SetRenderClipRect(r,nullptr);
-    if(dusk_modern::state.tab==3 && dusk_localization::active_language!=dusk_localization::Language::english) {
-        // Explicitly disclose that the guest rendering hook is not installed yet.
-        label(r,v.footer.x+dp(8,s),v.footer.y+dp(2,s),
-              dusk_localization::ui("bridge_notice",dusk_localization::active_language),
-              std::max(10,mpx-2),secondary,false,v.footer.w-dp(20,s));
-    }
     if(int maximum=dusk_modern::max_scroll(v);maximum>0){
         const int bar=v.content.h-dp(12,s);
         const int thumb=std::max(dp(30,s),bar*v.content.h/std::max(1,v.content_height));

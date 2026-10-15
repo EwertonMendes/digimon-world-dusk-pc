@@ -7,9 +7,9 @@ No host SDL overlay or game-font pointer length assumptions. Builds a small
 RLE-compressed C++ asset table; original English resources are not included.
 """
 from __future__ import annotations
-import argparse,base64,collections,hashlib,io,json,zlib
+import argparse,base64,hashlib,io,json,zlib
 from pathlib import Path
-from PIL import Image,ImageDraw,ImageFont
+from PIL import Image
 from probe_dusk_strings import SHA256,files,u32
 from research_dusk_menu_strings import rle_decompress
 from nitro_bg_preview import graphics,chunk,palette,tile_atlas
@@ -43,86 +43,6 @@ def read_resource(pack:bytes,index:int)->bytes:
     off=u32(pack,4+8*index);size=u32(pack,8+8*index)&0x7fffffff
     if off<4+8*u32(pack,0) or size<4 or off+size>len(pack):raise ValueError("invalid sprite bounds")
     return pack[off:off+size]
-
-def pixels(src:bytearray):
-    depth,raw=graphics(src)
-    if depth!=3:raise ValueError("only palette-indexed 4bpp NCGR sprite labels supported")
-    tilecount=len(raw)//32
-    cols=32 if tilecount>=64 else 16
-    width,height=cols*8,((tilecount+cols-1)//cols)*8
-    grid=Image.new("P",(width,height))
-    array=grid.load()
-    for tile in range(tilecount):
-        for y in range(8):
-            for x in range(8):
-                b=raw[tile*32+y*4+x//2]
-                array[(tile%cols)*8+x,(tile//cols)*8+y]=(b>>4)&15 if x%2 else b&15
-    return grid,depth
-
-def encode_pixels(img:Image.Image,old:bytearray):
-    at,_=chunk(old,b"RGCN",b"RAHC")
-    base=at+32
-    width,height=img.size
-    cols=width//8
-    pixels=img.load()
-    _,source_chars=graphics(old)
-    for tile in range(len(source_chars)//32):
-        for y in range(8):
-            for b in range(4):
-                a=pixels[tile%cols*8+b*2,tile//cols*8+y]
-                z=pixels[tile%cols*8+b*2+1,tile//cols*8+y]
-                if a>15 or z>15:raise ValueError("palette index out of range")
-                old[base+tile*32+y*4+b]=a|(z<<4)
-    return bytes(old)
-
-def modify(original_ncgr,original_nclr,edits):
-    ncgr=bytearray(original_ncgr)
-    im,depth=pixels(ncgr)
-    colors=palette(original_nclr)
-    if len(colors)<16:raise ValueError("palette missing colors")
-    freq=collections.Counter(im.getdata())
-    foreground=max(range(1,16),key=lambda i:sum(colors[i][:3]))
-    dst=im.load()
-    mask_all=set()
-    for item in edits:
-        rect=item.get("rect")
-        text=item.get("text")
-        if not isinstance(rect,list) or len(rect)!=4 or not isinstance(text,str):
-            raise ValueError("invalid sprite edit schema")
-        x,y,w,h=rect
-        if any(not isinstance(z,int) for z in rect) or not(0<=x<im.width and 0<=y<im.height and
-             1<=w<=im.width-x and 6<=h<=im.height-y):
-            raise ValueError(f"invalid sprite rect: {rect}")
-        if not text or any(ord(c)<32 or ord(c)>126 for c in text):
-            raise ValueError("only verified ASCII UI sprite glyphs supported in this pack")
-        if any((xx,yy) in mask_all for xx in range(x,x+w) for yy in range(y,y+h)):
-            raise ValueError("two sprite translations have overlapping destinations")
-        for xx in range(x,x+w):
-            for yy in range(y,y+h):
-                mask_all.add((xx,yy))
-        bg=item.get("background",0)
-        if not isinstance(bg,int) or not 0<=bg<16:raise ValueError("invalid BG index")
-        for xx in range(x,x+w):
-            for yy in range(y,y+h):dst[xx,yy]=bg
-        font=None; bounds=None
-        for size in range(min(h+4,13),5,-1):
-            sample=ImageFont.load_default(size=size)
-            box=ImageDraw.Draw(Image.new("1",(1,1))).textbbox((0,0),text,font=sample)
-            if box[2]-box[0]<=w-2 and box[3]-box[1]<=h:
-                font=sample;bounds=box;break
-        if font is None:raise ValueError(f"unrenderable text {text!r} for {rect}")
-        glyph=Image.new("1",(w,h),0)
-        draw=ImageDraw.Draw(glyph)
-        left=max(0,(w-(bounds[2]-bounds[0]))//2-bounds[0])
-        top=max(0,(h-(bounds[3]-bounds[1]))//2-bounds[1])
-        draw.text((left,top),text,font=font,fill=1)
-        pix=glyph.load()
-        for xx in range(w):
-            for yy in range(h):
-                if pix[xx,yy]:dst[x+xx,y+yy]=foreground
-    new=encode_pixels(im,ncgr)
-    if new==original_ncgr:raise ValueError("sprite edit made no changes")
-    return new
 
 def generate(rom:bytes,preview=False)->str:
     if hashlib.sha256(rom).hexdigest()!=SHA256:raise ValueError("wrong source ROM")

@@ -31,7 +31,7 @@ int main() {
     assert(!catalog.set("msgpak",1,Language::spanish,std::string(1,static_cast<char>(0xC3))));
     assert(catalog.size()==1);
     // User preferences are outside game EEPROM. A corrupt locale falls back to English.
-    auto directory=std::filesystem::temp_directory_path()/"dusk-localization-smoke";
+    auto directory=std::filesystem::temp_directory_path()/"dusk-localization-settings-smoke";
     std::filesystem::create_directories(directory);
     preference_loaded=false;
     load_preference(directory/"native-layout-v4.cfg");

@@ -152,7 +152,10 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
             samples=[view.mapping[(xx,yy)][2] for xx in (11,12,54,55,56,57)
                      if (xx,yy) in view.mapping]
         safe=[v for v in samples if v not in (12,13,14,15)]
-        if not safe: raise ValueError("could not infer row background")
+        # Fully occupied rows offer no untouched background samples.
+        # Dark index 2 is the verified original DS plate color, not a
+        # desktop RGB guess; keep the fallback localized to this row.
+        if not safe: safe=[2]
         row_bg[yy]=Counter(safe).most_common(1)[0][0]
     for x,y in affected:
         bank=view.mapping[(x,y)][3]

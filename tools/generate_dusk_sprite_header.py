@@ -77,8 +77,8 @@ def generate(rom:bytes,preview=False)->str:
                     raise ValueError("original S-menu OAM mapping / animation layout changed")
                 anchors=[(g[0][2]&0x3ff)*(1<<mode) for g in groups]
                 print("NITRO_OAM_ACTUAL_MAPPING",i,anchors,"total_original_tiles",len(graphics(src)[1])//32)
-                if anchors!=[0,64,128,192] or len(graphics(src)[1])//32 < 256:
-                    raise ValueError("128-byte OAM alignment differs from verified original menu")
+                if anchors!=[0,64,128,128] or len(graphics(src)[1])//32 < 192:
+                    raise ValueError("original three-frame/four-state OAM layout differs from verified Dusk ROM")
                 print("NITROPAINT_VERIFIED_128_BYTE_MAPPING",i,anchors)
             dest=replace_labels(src,pal,cel_source,edits)
             assert_frames(src,pal,cel_source,dest,edits)

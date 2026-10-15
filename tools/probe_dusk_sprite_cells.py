@@ -106,6 +106,11 @@ def inspect(rom,ids,count=10):
             except ValueError as exc:
                 print("CELL_ERROR",sid,i,str(exc));continue
             if im is None:continue
+            if sid in (477,478,479,480,481,482):
+                z=im.resize((im.width*4,im.height*4),Image.Resampling.NEAREST)
+                out=io.BytesIO();z.save(out,"PNG",optimize=True)
+                print("CELL_FULLSCREEN",sid,i,im.width,im.height)
+                print("CELL_FULLSCREEN64 "+base64.b64encode(out.getvalue()).decode())
             im.thumbnail((240,110))
             pictures.append((i,im))
         if not pictures:continue

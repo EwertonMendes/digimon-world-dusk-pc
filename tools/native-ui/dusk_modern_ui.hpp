@@ -22,6 +22,14 @@ struct State {
     int focus=0;
     int scroll=0;
     bool touch=false;
+    bool finger_active=false;
+    bool finger_moved=false;
+    float finger_down_y=0.f;
+    int finger_start_scroll=0;
+    int pending_item=-1;
+    bool pip_drag=false;
+    float pip_drag_x=0.f,pip_drag_y=0.f;
+    float pip_origin_x=0.f,pip_origin_y=0.f;
 };
 inline State state{};
 
@@ -336,6 +344,45 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     float x=0.f,y=0.f;
     const bool has_pos=coordinate(p,ev,x,y);
     if(!p.dusk.menu_open) {
+        // Finger interactions on PiP chrome are host actions. Everywhere else
+        // the lower-screen touch remains owned by the original NDS mapper.
+        if(finger && has_pos) {
+            const bool focus=p.dusk.cfg.layout==dusk_native::Layout::Focus;
+            if(focus && down && contains(geo.pip_restore,x,y)) {
+                p.dusk.cfg.auxiliary=true;dusk_save(p);return true;
+            }
+            if(focus && down && contains(geo.pip_swap,x,y)) {
+                p.dusk.cfg.focus_top=!p.dusk.cfg.focus_top;
+                dusk_save(p);return true;
+            }
+            if(focus && down && contains(geo.pip_minimize,x,y)) {
+                p.dusk.cfg.auxiliary=false;dusk_save(p);return true;
+            }
+            if(focus && down && contains(geo.pip_bar,x,y) &&
+               p.dusk.cfg.auxiliary) {
+                state.pip_drag=true;
+                state.pip_drag_x=x;state.pip_drag_y=y;
+                state.pip_origin_x=p.dusk.cfg.floating_x<0?0.75f:p.dusk.cfg.floating_x;
+                state.pip_origin_y=p.dusk.cfg.floating_y<0?0.1f:p.dusk.cfg.floating_y;
+                return true;
+            }
+            if(state.pip_drag) {
+                if(ev.type==SDL_EVENT_FINGER_MOTION) {
+                    const auto frame=p.dusk.cfg.focus_top?geo.bottom:geo.top;
+                    const float free_x=float(std::max(1,geo.play.w-frame.w-12));
+                    const float free_y=float(std::max(1,geo.play.h-frame.h-12));
+                    p.dusk.cfg.floating_x=std::clamp(
+                        state.pip_origin_x+(x-state.pip_drag_x)/free_x,0.f,1.f);
+                    p.dusk.cfg.floating_y=std::clamp(
+                        state.pip_origin_y+(y-state.pip_drag_y)/free_y,0.f,1.f);
+                }
+                if(ev.type==SDL_EVENT_FINGER_UP) {
+                    state.pip_drag=false;
+                    dusk_save(p);
+                }
+                return true;
+            }
+        }
         // Finger input is explicitly supported, without stealing gameplay taps.
         if(finger && down && has_pos && contains(geo.settings,x,y)) {
             p.dusk.menu_open=true;
@@ -347,6 +394,45 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     }
     if(p.dusk.quit_confirm)return false; // Existing confirmed quit modal stays authoritative.
     if(has_pos) {
+        if(finger) {
+            const auto v=calculate(geo,p);
+            if(down) {
+                state.finger_active=true;
+                state.finger_moved=false;
+                state.finger_down_y=y;
+                state.finger_start_scroll=state.scroll;
+                state.pending_item=-1;
+                if(contains(v.close,x,y)){p.dusk.menu_open=false;return true;}
+                for(int i=0;i<4;i++) if(contains(v.tabs[i],x,y)) {
+                    choose_tab(geo,p,i);return true;
+                }
+                if(contains(v.content,x,y))
+                    for(int i=0;i<v.count;i++)
+                        if(contains(v.items[i].rect,x,y)){state.pending_item=i;break;}
+                return true;
+            }
+            if(ev.type==SDL_EVENT_FINGER_MOTION && state.finger_active) {
+                if(std::abs(y-state.finger_down_y)>10.f)state.finger_moved=true;
+                if(state.finger_moved){
+                    state.scroll=state.finger_start_scroll+int(state.finger_down_y-y);
+                    clamp_scroll(geo,p);
+                }
+                return true;
+            }
+            if(ev.type==SDL_EVENT_FINGER_UP) {
+                if(state.finger_active && !state.finger_moved && state.pending_item>=0) {
+                    const auto current=calculate(geo,p);
+                    if(state.pending_item<current.count &&
+                       contains(current.items[state.pending_item].rect,x,y)) {
+                        state.focus=state.pending_item;
+                        choose(p,geo,current.items[state.pending_item]);
+                    }
+                }
+                state.finger_active=false;
+                state.pending_item=-1;
+                return true;
+            }
+        }
         if(down) {
             const auto v=calculate(geo,p);
             if(contains(v.close,x,y)) {p.dusk.menu_open=false;return true;}

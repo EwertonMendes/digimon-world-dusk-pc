@@ -13,8 +13,8 @@ int main(int argc,char**argv) {
     const std::vector<std::uint8_t> original(
         (std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
     if(original.size()!=67108864u)return 4;
-    static_assert(dusk_sprites::kSprites.size()>=20,
-                  "both locales must include original UI labels and isolated NCER state assets");
+    static_assert(dusk_sprites::kSprites.size()>=10,
+                  "both locales must include original Digivice buttons");
     const auto fat=dusk_msgpak::read32(original,0x48);
     const auto arm9=dusk_msgpak::read32(original,0x20);
     const auto arm9_size=dusk_msgpak::read32(original,0x2c);
@@ -25,7 +25,13 @@ int main(int argc,char**argv) {
             std::cerr<<locale<<": "<<error<<"\n";
             return 5;
         }
-        for(const std::size_t fileid:{25u,26u}){
+        // NCER MUST remain byte-for-byte identical; translating by
+        // reallocating cell tile indices produced corrupted UI/VRAM.
+        if(dusk_msgpak::read32(modified,fat+25*8)!=
+           dusk_msgpak::read32(original,fat+25*8) ||
+           dusk_msgpak::read32(modified,fat+25*8+4)!=
+           dusk_msgpak::read32(original,fat+25*8+4))return 14;
+        for(const std::size_t fileid:{26u}){
             const auto old_start=dusk_msgpak::read32(original,fat+fileid*8);
             const auto old_stop=dusk_msgpak::read32(original,fat+fileid*8+4);
             const auto now_start=dusk_msgpak::read32(modified,fat+fileid*8);
@@ -40,6 +46,7 @@ int main(int argc,char**argv) {
                        original.begin()+arm9+arm9_size,
                        modified.begin()+arm9))return 9;
         for(const auto& record:dusk_sprites::kSprites){
+            if(record.pak_file_id!=26)return 15;
             if(record.locale!=locale)continue;
             const std::size_t start=dusk_msgpak::read32(
                 modified,fat+record.pak_file_id*8);
@@ -53,7 +60,7 @@ int main(int argc,char**argv) {
                !std::equal(record.compressed,record.compressed+n,
                            modified.begin()+start+a))return 10;
         }
-        std::cout<<locale<<": translated original NCGR+NCER packages verified in RAM\n";
+        std::cout<<locale<<": mode-correct original NCGR updated; NCER and source preserved\n";
     }
     auto corrupted=original;
     const std::size_t original_chr=dusk_msgpak::read32(original,fat+26*8);

@@ -108,6 +108,11 @@ jobs:
         run: |
           python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 620,621,622,625,626,633,634 --count 8
           if ($LASTEXITCODE -ne 0) { throw 'Title neighbors sprite audit failed' }
+      - name: Decode authentic PUSH START title sprite 620 with proper OAM mapping
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_prompt_exact.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title logo prompt exact OAM decode failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

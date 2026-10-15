@@ -15,7 +15,7 @@ int main(int argc,char** argv) {
     if(fst+23*8+8>original.size())return 5;
     const auto old_begin=dusk_msgpak::read32(original,fst+23*8);
     const auto old_end=dusk_msgpak::read32(original,fst+23*8+4);
-    static_assert(dusk_msgpak::proof.size()>=18, "must include repeatable gameplay checks");
+    static_assert(dusk_msgpak::proof.size()>=36, "must include repeatable gameplay checks in two locales");
     auto record=[](const std::vector<uint8_t>& data,int group,int id) {
         using dusk_msgpak::read32;
         const size_t fat=read32(data,0x48);
@@ -49,9 +49,9 @@ int main(int argc,char** argv) {
         // Every translated row must be present in the relocated file, using
         // the exact DS two-byte encoding and terminator, not a fake SDL label.
         for(const auto& row:dusk_msgpak::proof) {
+            if(row.language!=locale)continue;
             std::vector<uint8_t> expected;
-            const auto localized=std::string_view(locale)=="pt-BR"?row.pt:row.es;
-            if(!dusk_msgpak::encode_text(localized,expected))return 13;
+            if(!dusk_msgpak::encode_text(row.translated,expected))return 13;
             const auto before=record(original,row.group,row.id);
             const auto after=record(image,row.group,row.id);
             if(before.empty() || after.empty() || before==after)return 14;

@@ -21,6 +21,7 @@ from research_dusk_menu_strings import rle_decompress
 from dusk_sprite_inplace_editor import extract_cell
 from probe_dusk_sprite_cells import packed_resource
 from nitro_bg_preview import palette
+from dusk_original_glyph_atlas import collect_original_glyphs, layout_native_word
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -116,19 +117,21 @@ def _regions(sprite: int):
 
 
 def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str,
-               pristine=None, icon_mask=None) -> Image.Image:
+               pristine=None, icon_mask=None, glyph_atlas=None) -> Image.Image:
     view = extract_cell(src,nclr,ncer,cell)
     rect = REGIONS[sprite]
     rx,ry,rw,rh = rect
-    dots,width,height = composition(word,rw-3)
-    scale_x=min(1.7,(rw-4)/width)
-    scale_y=min(1.62,(rh-3)/height)
-    scaled_width=int(round(width*scale_x))
-    scaled_height=int(round(height*scale_y))
+    if glyph_atlas is None:
+        raise ValueError("must supply pixel-font glyphs extracted from source cartridge")
+    lettering,width=layout_native_word(word,glyph_atlas,rw-3)
+    # Never upscale cartridge glyphs or rasterize desktop fonts. Only long
+    # translations can require a native nearest-neighbor width reduction.
+    scale_x=min(1.0,(rw-3)/width)
+    scaled_width=max(1,int(width*scale_x))
     xbase=rx+(rw-scaled_width)//2
-    ybase=ry+(rh-scaled_height)//2
-    if xbase<=rx or ybase<=ry or xbase+scaled_width>=rx+rw or ybase+scaled_height>=ry+rh:
-        raise ValueError(f"{word!r}: native font outside caption")
+    ybase=33
+    if xbase<rx or ybase<ry or xbase+scaled_width>rx+rw or ybase+11>ry+rh:
+        raise ValueError(f"{word!r}: original DS pixel glyphs outside caption")
     colors=palette(nclr)
     # Select authentic index-14 lime (if present) and OAM-dark index 2.
     # Source palette/char indices are never extended.
@@ -158,43 +161,28 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         else:
             idx=view.mapping[(60,y)][2]
         out[x,y] = transparent if idx==0 else colors[bank*16+idx][:3]
-    # Draw dark drop shadow then authentic lime glyphs. No antialias or
-    # transforms: a single pixel is exactly one native Nintendo DS pixel.
-    bright=set()
-    for xx,yy in dots:
-        ax=int(xx*scale_x);bx=max(ax+1,int((xx+1)*scale_x))
-        ay=int(yy*scale_y);by=max(ay+1,int((yy+1)*scale_y))
-        for px in range(ax,bx):
-            for py in range(ay,by):
-                bright.add((xbase+px,ybase+py))
-    # Native Dusk captions use FOUR distinct original NCLR ink indices,
-    # not one lime fill: deep indigo outline (2), cool green top/bottom
-    # (13), electric lime (14), white specular stripe (15). Original
-    # Items/Save pixel rows were measured on the authenticated cartridge.
-    # Keep each glyph in its caption bounds, including the contour.
-    outlines={(x+dx,y+dy)
-              for x,y in bright
-              for dx,dy in ((-1,0),(1,0),(0,-1),(0,1),(1,1))
-              if (x+dx,y+dy) not in bright}
-    for x,y in outlines:
-        if (x,y) not in affected:
-            continue
+    # Transplant the authentic foreground palette indices for every
+    # recovered letter. No synthesized lime-only rasterization: index 13
+    # (green), 14 (yellow-green), and 15 (specular white) are copied from
+    # the original English Nintendo DS glyphs.
+    bright={}
+    for (gx,gy),idx in lettering.items():
+        xp=xbase+min(scaled_width-1,int(gx*scale_x))
+        yp=ybase+gy
+        key=(xp,yp)
+        # Preserve the more luminous native source pixel if two columns
+        # collapse into one destination column on a longer translation.
+        bright[key]=max(idx,bright.get(key,0))
+    shadows={(x+dx,y+dy) for x,y in bright
+             for dx,dy in ((1,0),(0,1),(1,1))
+             if (x+dx,y+dy) not in bright}
+    for x,y in shadows:
+        if (x,y) not in affected:continue
         bank=view.mapping[(x,y)][3]
         out[x,y]=colors[bank*16+2][:3]
-    for x,y in bright:
-        if (x,y) not in affected:raise ValueError("text glyph outside mask")
+    for (x,y),idx in bright.items():
+        if (x,y) not in affected:raise ValueError("original pixel glyph outside text mask")
         bank=view.mapping[(x,y)][3]
-        relative=y-ybase
-        if relative<=1 or relative>=8:
-            idx=13
-        elif relative==2 or relative==6 or relative==7:
-            idx=14
-        elif relative==3:
-            idx=15 if (x-xbase)%3==0 else 14
-        elif relative in (4,5):
-            idx=15 if relative==4 or (x-xbase)%3!=0 else 14
-        else:
-            idx=14
         out[x,y]=colors[bank*16+idx][:3]
     return arr
 
@@ -210,6 +198,7 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
     clean_chr=packed_resource(rom,fs,"dat/SPR_CHR.PAK",479)
     clean_pal=packed_resource(rom,fs,"dat/SPR_PAL.PAK",479)
     clean_cel=packed_resource(rom,fs,"dat/SPR_CEL.PAK",479)
+    glyph_atlas=collect_original_glyphs(rom,fs)
     for sid,word in MENUS[locale].items():
         source=packed_resource(rom,fs,"dat/SPR_CHR.PAK",sid)
         palette_data=packed_resource(rom,fs,"dat/SPR_PAL.PAK",sid)
@@ -231,7 +220,7 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
             for state in range(4):
                 original=extract_cell(source,palette_data,cell_data,state).image
                 pristine=extract_cell(clean_chr,clean_pal,clean_cel,state) if sid==482 else None
-                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,icon_mask)
+                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,icon_mask,glyph_atlas)
                 output=outdir/f"{sid}-state{state}.png"
                 art.save(output,optimize=True)
                 images.append((original,art))

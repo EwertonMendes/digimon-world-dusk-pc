@@ -53,6 +53,11 @@ jobs:
         run: |
           python tools/research_dusk_ui_sources.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Failed to scan text origins' }
+      - name: Classify DS-encoded menu labels outside the message pack
+        shell: pwsh
+        run: |
+          python tools/research_dusk_ui_encoding.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to locate UI data' }
       - name: Validate generated language catalogs and source synchrony
         shell: pwsh
         run: |

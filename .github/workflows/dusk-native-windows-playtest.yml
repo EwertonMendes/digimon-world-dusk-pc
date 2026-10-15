@@ -48,11 +48,20 @@ jobs:
           python-version: '3.11'
       - name: Install Pillow for original game atlas analysis
         run: python -m pip install Pillow==11.3.0
-      - name: Reconstruct actual graphic sprites from NCER OAM attributes
+      - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |
           python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 517,518,519,520,521,522,523,524,527,528,529,530 --count 1
-          if ($LASTEXITCODE -ne 0) { throw 'Sprite cell source verification failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'DS sprite-cell inspection failed' }
+      - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
+        shell: pwsh
+        run: |
+          python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Translated sprite generation failed' }
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/sprite_ui_runtime_probe.cpp -o .private/sprite-ui-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite localization runtime build failed' }
+          & .private/sprite-ui-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original ROM sprite integration test failed' }
 
   research-localization:
     if: inputs.research_only == true && inputs.sprite_scan_only != true

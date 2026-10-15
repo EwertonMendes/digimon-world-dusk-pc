@@ -61,8 +61,14 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     scale_x=min(1.0,(rw-3)/width)
     scaled_width=max(1,int(width*scale_x))
     xbase=rx+(rw-scaled_width)//2
-    ybase=33
-    if xbase<rx or ybase<ry or xbase+scaled_width>rx+rw or ybase+11>ry+rh:
+    # The nine-letter Tamer replacement cannot retain its full original
+    # width. Reduce X and Y uniformly, keeping DS glyph proportions,
+    # instead of squeezing only its columns into illegible tall strokes.
+    # Shorter main-menu captions keep the full original 11px glyph height.
+    scale_y=scale_x if sprite==482 else 1.0
+    scaled_height=max(1,int(11*scale_y))
+    ybase=ry+(rh-scaled_height)//2
+    if xbase<rx or ybase<ry or xbase+scaled_width>rx+rw or ybase+scaled_height>ry+rh:
         raise ValueError(f"{word!r}: original DS pixel glyphs outside caption")
     colors=palette(nclr)
     # Select authentic index-14 lime (if present) and OAM-dark index 2.
@@ -100,7 +106,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     bright={}
     for (gx,gy),idx in lettering.items():
         xp=xbase+min(scaled_width-1,int(gx*scale_x))
-        yp=ybase+gy
+        yp=ybase+min(scaled_height-1,int(gy*scale_y))
         key=(xp,yp)
         # Preserve the more luminous native source pixel if two columns
         # collapse into one destination column on a longer translation.

@@ -86,10 +86,25 @@ public:
         const auto it=entries_.find({std::string(region),id});
         if (it==entries_.end()) return original;
         const auto& translated=it->second.values[index(language)];
-        return translated ? std::string_view(*translated) : original;
+        if(!translated || !tokens_compatible(original,*translated))return original;
+        return *translated;
     }
     std::size_t size() const { return entries_.size(); }
 private:
+    static std::map<std::string,int> tokens(std::string_view text) {
+        std::map<std::string,int> found;
+        for(std::size_t i=0;i<text.size();) {
+            if(text[i]!='[') { ++i;continue; }
+            const auto end=text.find(']',i+1);
+            if(end==std::string_view::npos)break;
+            if(end-i<48)++found[std::string(text.substr(i,end-i+1))];
+            i=end+1;
+        }
+        return found;
+    }
+    static bool tokens_compatible(std::string_view original,std::string_view translated) {
+        return tokens(original)==tokens(translated);
+    }
     static bool valid_utf8(std::string_view value) {
         // Prevent broken UTF-8 bytes entering a guest-facing text pipeline.
         std::size_t i=0;

@@ -45,6 +45,11 @@ def research(rom):
     for name,(fid,lo,hi) in catalog.items():
         print("TITLE_ROM_FILE",fid,name,hi-lo) if name.lower().endswith(
             (".pak",".ncgr",".nclr",".nscr",".ncer",".nftr",".narc")) else None
+    for name,(fid,lo,hi) in catalog.items():
+        if fid<=17 or any(k in name.lower() for k in
+            ("title","tex","intro","opening","start","push","press","font","logo","model","3d","op_")):
+            print("TITLE_EXTRA_ROM_FILE",fid,name,hi-lo,
+                  rom[lo:min(hi,lo+16)].hex())
     needles=["Push Start","PUSH START","PushStart","Press Start","PRESS START"]
     print("TITLE_TEXT_SEARCH",needles)
     for name,(fid,lo,hi) in catalog.items():

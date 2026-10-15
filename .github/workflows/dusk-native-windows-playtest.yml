@@ -107,6 +107,11 @@ jobs:
         run: |
           python tools/research_dusk_menu_strings.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'NitroFS option search failed' }
+      - name: Diagnose sprite-backed menu button resources
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprite_paks.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite research failed' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |

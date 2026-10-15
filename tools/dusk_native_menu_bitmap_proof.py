@@ -55,21 +55,39 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     rx,ry,rw,rh = rect
     if glyph_atlas is None:
         raise ValueError("must supply pixel-font glyphs extracted from source cartridge")
-    lettering,width=layout_native_word(word,glyph_atlas,rw-3)
-    # Never upscale cartridge glyphs or rasterize desktop fonts. Only long
-    # translations can require a native nearest-neighbor width reduction.
-    scale_x=min(1.0,(rw-3)/width)
-    scaled_width=max(1,int(width*scale_x))
-    xbase=rx+(rw-scaled_width)//2
-    # The nine-letter Tamer replacement cannot retain its full original
-    # width. Reduce X and Y uniformly, keeping DS glyph proportions,
-    # instead of squeezing only its columns into illegible tall strokes.
-    # Shorter main-menu captions keep the full original 11px glyph height.
-    scale_y=scale_x if sprite==482 else 1.0
-    scaled_height=max(1,int(11*scale_y))
-    ybase=ry+(rh-scaled_height)//2
-    if xbase<rx or ybase<ry or xbase+scaled_width>rx+rw or ybase+scaled_height>ry+rh:
-        raise ValueError(f"{word!r}: original DS pixel glyphs outside caption")
+    if sprite==482:
+        # The source Tamer / Info button uses TWO rows. Reuse this exact
+        # typographic structure for the longer localized word instead of
+        # crushing nine 11px-tall glyphs into one illegible row. The top
+        # row stays left of the hardware icon; the lower row spans the plate.
+        lines={"Treinador":("Trei","nador"),
+               "Entrenador":("Entr","enador")}
+        if word not in lines:
+            raise ValueError("unreviewed Trainer two-line translation")
+        lettering={}
+        for line,row_y,row_x,row_width in (
+            (lines[word][0],23,10,23),
+            (lines[word][1],34,9,51),
+        ):
+            dots,width=layout_native_word(line,glyph_atlas,row_width)
+            if width>row_width:
+                raise ValueError(f"{line!r} exceeds original Nintendo text band")
+            left=row_x+(row_width-width)//2
+            for (gx,gy),idx in dots.items():
+                key=(left+gx,row_y+gy)
+                if key in lettering:
+                    raise ValueError("native two-row lettering overlap")
+                lettering[key]=idx
+    else:
+        dots,width=layout_native_word(word,glyph_atlas,rw-3)
+        scale_x=min(1.0,(rw-3)/width)
+        scaled_width=max(1,int(width*scale_x))
+        xbase=rx+(rw-scaled_width)//2
+        ybase=ry+(rh-11)//2
+        if xbase<rx or ybase<ry or xbase+scaled_width>rx+rw or ybase+11>ry+rh:
+            raise ValueError(f"{word!r}: original DS glyph outside caption")
+        lettering={(xbase+min(scaled_width-1,int(gx*scale_x)),ybase+gy):idx
+                   for (gx,gy),idx in dots.items()}
     colors=palette(nclr)
     # Select authentic index-14 lime (if present) and OAM-dark index 2.
     # Source palette/char indices are never extended.
@@ -103,14 +121,9 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     # recovered letter. No synthesized lime-only rasterization: index 13
     # (green), 14 (yellow-green), and 15 (specular white) are copied from
     # the original English Nintendo DS glyphs.
-    bright={}
-    for (gx,gy),idx in lettering.items():
-        xp=xbase+min(scaled_width-1,int(gx*scale_x))
-        yp=ybase+min(scaled_height-1,int(gy*scale_y))
-        key=(xp,yp)
-        # Preserve the more luminous native source pixel if two columns
-        # collapse into one destination column on a longer translation.
-        bright[key]=max(idx,bright.get(key,0))
+    # Letter coordinates are now final original-resolution DS coordinates;
+    # no anisotropic glyph compression is allowed for Tamer Info.
+    bright=dict(lettering)
     # Original Nintendo menu letters have a full one-pixel indigo contour,
     # including the top/left edge, not only a bottom-right drop shadow.
     # Keep it wholly inside the authored caption masks and preserve glyph

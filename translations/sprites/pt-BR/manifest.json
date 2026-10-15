@@ -189,12 +189,13 @@
           "color": "lime",
           "erase_regions": [
             [
-              6,
-              20,
-              54,
-              9
+              14,
+              26,
+              42,
+              2
             ]
-          ]
+          ],
+          "erase_background_index": 2
         },
         {
           "cell": 1,
@@ -208,12 +209,13 @@
           "color": "lime",
           "erase_regions": [
             [
-              6,
-              20,
-              54,
-              9
+              14,
+              26,
+              42,
+              2
             ]
-          ]
+          ],
+          "erase_background_index": 2
         },
         {
           "cell": 2,
@@ -227,12 +229,13 @@
           "color": "lime",
           "erase_regions": [
             [
-              6,
-              20,
-              54,
-              9
+              14,
+              26,
+              42,
+              2
             ]
-          ]
+          ],
+          "erase_background_index": 2
         },
         {
           "cell": 3,
@@ -246,12 +249,13 @@
           "color": "lime",
           "erase_regions": [
             [
-              6,
-              20,
-              54,
-              9
+              14,
+              26,
+              42,
+              2
             ]
-          ]
+          ],
+          "erase_background_index": 2
         }
       ]
     }

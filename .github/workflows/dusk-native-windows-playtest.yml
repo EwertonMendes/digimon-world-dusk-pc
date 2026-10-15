@@ -51,7 +51,7 @@ jobs:
       - name: Identify graphic letters in main Digivice and shops
         shell: pwsh
         run: |
-          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --ids 380,383,385,386,387,388,389,531,538,539,542,506,507,508,509,610
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --ids 380,383,388,389,484,486,516,517,518,519,520,531
           if ($LASTEXITCODE -ne 0) { throw 'Game UI graphic index inspection failed' }
 
   research-localization:

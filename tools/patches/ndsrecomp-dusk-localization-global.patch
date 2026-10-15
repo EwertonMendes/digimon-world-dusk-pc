@@ -1,0 +1,8 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1,3 +1,4 @@
+ #include "frontend.h"
++#include "dusk_localization.hpp"
+ #include "dusk_native_ui.h"
+ #include "host_profile.h"

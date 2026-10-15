@@ -53,6 +53,11 @@ jobs:
         run: |
           python tools/research_dusk_ui_sources.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Failed to scan text origins' }
+      - name: Validate generated language catalogs and source synchrony
+        shell: pwsh
+        run: |
+          python tools/generate_dusk_msgpak_header.py --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid translation catalog' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |
@@ -147,6 +152,11 @@ jobs:
         with:
           go-version: '1.23'
           cache: false
+      - name: Validate localization catalogs before compiling the game
+        shell: pwsh
+        run: |
+          python tools/generate_dusk_msgpak_header.py --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid locale resources' }
       - name: Checkout pinned NDSRecomp and recomp-ui
         shell: msys2 {0}
         run: |
@@ -168,6 +178,7 @@ jobs:
           cp tools/native-ui/dusk_ui_font.hpp upstream/runner/src/dusk_ui_font.hpp
           cp tools/native-ui/dusk_localization.hpp upstream/runner/src/dusk_localization.hpp
           cp tools/native-ui/dusk_msgpak_runtime.hpp upstream/runner/src/dusk_msgpak_runtime.hpp
+          cp tools/native-ui/dusk_msgpak_catalog.generated.hpp upstream/runner/src/dusk_msgpak_catalog.generated.hpp
           cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch

@@ -68,6 +68,11 @@ jobs:
         run: |
           python tools/research_dusk_arm9_shop_context.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'ARM9 shop text source inspection failed' }
+      - name: Probe safe ARM9 shop text relocation targets
+        shell: pwsh
+        run: |
+          python tools/research_dusk_shop_pointer_map.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Shop label pointer mapping failed' }
       - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
         shell: pwsh
         run: |

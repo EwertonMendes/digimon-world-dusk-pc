@@ -13,14 +13,14 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  
  PresentationTicks present_screens(FrontendPresentation& presentation,
                                    const uint32_t* top_pixels,
-@@ -2010,5 +2010,6 @@
+@@ -2010,5 +2016,6 @@
              draw_savestate_notice(renderer,bottom,savestate_notice);
              dusk_toolbar(renderer,presentation,geo);
 +            dusk_blend_intro_guest(renderer);
              ticks.draw+=SDL_GetPerformanceCounter()-start;
              start=SDL_GetPerformanceCounter();
              SDL_RenderPresent(renderer);
-@@ -2405,6 +2405,81 @@
+@@ -2405,6 +2412,81 @@
  static const char* dusk_project_title() {
      const char* configured = std::getenv("NDS_DUSK_WINDOW_TITLE");
      return configured && configured[0] ? configured :
@@ -102,24 +102,24 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 +    dusk_draw_version_label(renderer, width, height, opacity);
 +}
  // Host-only splash: ROM/guest frames, timing and save state are untouched.
-@@ -2460,2 +2460,3 @@
+@@ -2460,2 +2542,3 @@
      SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
 +    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
      // Five seconds of visible presentation by default. Future cosmetic
-@@ -2520,5 +2520,3 @@
+@@ -2520,5 +2603,3 @@
          const uint64_t fade_in = std::min(elapsed, fade_ms);
 -        const uint64_t fade_out = std::min(duration_ms - std::min(elapsed, duration_ms), fade_ms);
 -        const uint8_t opacity = static_cast<uint8_t>(
 -            255u * std::min(fade_in, fade_out) / fade_ms);
 +        const uint8_t opacity = static_cast<uint8_t>(255u * fade_in / fade_ms);
          SDL_SetTextureAlphaMod(texture, opacity);
-@@ -2530,4 +2530,5 @@
+@@ -2530,4 +2611,5 @@
          SDL_RenderClear(renderer);
          SDL_RenderTexture(renderer, texture, nullptr, &destination);
 +        dusk_draw_version_label(renderer, width, height, opacity);
          SDL_RenderPresent(renderer);
          SDL_Delay(16);  // Presentation-only; guest emulation has not started.
-@@ -2540,4 +2540,11 @@
+@@ -2540,4 +2622,11 @@
      }
 -    SDL_DestroyTexture(texture);
 +    // Keep the last splash frame until the first guest frame is available.

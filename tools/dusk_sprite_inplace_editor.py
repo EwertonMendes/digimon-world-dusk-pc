@@ -77,10 +77,10 @@ def _draw_label(image:Image.Image,rect,text):
     draw=ImageDraw.Draw(glyph)
     for fontsize in range(min(17,rh+4),5,-1):
         font=ImageFont.load_default(size=fontsize)
-        l,t,r,b=draw.textbbox((0,0),text,font=font)
+        l,t,r,b=draw.textbbox((0,0),text,font=font,stroke_width=1)
         if r-l<=rw-2 and b-t<=rh-2:
             draw.text(((rw-(r-l))//2-l,(rh-(b-t))//2-t),
-                      text,font=font,fill=1)
+                      text,font=font,fill=1,stroke_width=1,stroke_fill=1)
             return glyph
     raise ValueError(f"translated text {text!r} does not fit {rw}x{rh}")
 

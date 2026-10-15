@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: false
+      direct_exe_release:
+        description: 'Publish a private owner playtest release with direct standalone .exe asset'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -70,6 +75,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid translation catalog' }
           python tools/generate_dusk_arm9_header.py --check
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 UI catalog' }
+      - name: Inventory graphics, palettes and font containers for localization
+        shell: pwsh
+        run: |
+          python tools/research_dusk_graphics.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-graphics-inventory.json
+          if ($LASTEXITCODE -ne 0) { throw 'Graphics inventory failed' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |
@@ -93,6 +103,9 @@ jobs:
 
   build-dusk-native-game:
     if: inputs.approve_game_bundle == true && inputs.fast_repack != true && inputs.research_only != true
+    permissions:
+      contents: write
+      actions: read
     runs-on: windows-latest
     timeout-minutes: 120
     env:
@@ -356,6 +369,18 @@ jobs:
           "$sha  $env:RELEASE_FILENAME" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
           "Digimon World Dusk Recompiled v0.29 - Recompiled by Tblack. 4K Lunamon splash with five-second hold and host-only 800ms crossfade, verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
+      - name: Publish standalone Windows EXE (direct download, never zip)
+        if: inputs.direct_exe_release == true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $asset = "dist/$env:RELEASE_FILENAME"
+          if (!(Test-Path -LiteralPath $asset)) { throw 'No verified standalone EXE exists' }
+          $tag = "l10n-playtest-$env:GITHUB_RUN_ID"
+          gh release create $tag $asset --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "Dusk Localization Playtest $env:GITHUB_RUN_NUMBER" --notes "Experimental localization work from PR #27. Standalone Windows x64 executable. Original verified game bundle and saves preserved. This is not yet a certified 100% translation." --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Failed publishing direct EXE to prerelease' }
+          Write-Host "DIRECT_EXE=https://github.com/$env:GITHUB_REPOSITORY/releases/download/$tag/$env:RELEASE_FILENAME"
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:

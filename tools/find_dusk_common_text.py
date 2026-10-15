@@ -75,9 +75,47 @@ def discover(raw,limit=85):
         print(f"{group:03}/{mid:03}: {s[:115]} [bytes={bytes_}]")
     print(f"hits={len(candidates)} groups={len(set(x[1] for x in candidates))}")
 
+def inspect(raw:bytes,spec:str):
+    if hashlib.sha256(raw).hexdigest()!=SHA256:raise ValueError("unexpected ROM")
+    _,lo,hi=files(raw)["dat/MSG.PAK"]
+    for pair in spec.split(","):
+        group,mid=map(int,pair.split(":"))
+        if not 0<=group<138:raise ValueError("group outside MSG.PAK")
+        off=u32(raw,lo+4+group*8)
+        size=u32(raw,lo+8+group*8)&0x7fffffff
+        begin=lo+off
+        ptrbytes=u32(raw,begin)
+        if ptrbytes%4 or ptrbytes<4 or ptrbytes>size:raise ValueError("not a valid group")
+        if not 0<=mid<ptrbytes//4:raise ValueError("message outside group")
+        a=u32(raw,begin+4*mid)
+        b=u32(raw,begin+4*(mid+1)) if (mid+1)<ptrbytes//4 else size
+        if a<ptrbytes or b<=a or b>size:raise ValueError("bad offsets")
+        decoded=[]
+        for i in range(a,b,2):
+            v=u16(raw,begin+i)
+            if v==0xffff:decoded.append("[FFFF]");continue
+            if v==0xfffe:decoded.append("[END]");continue
+            if v==0xfffd:decoded.append("\\n");continue
+            if v==0xffed:decoded.append("[PLAYER_NAME]");continue
+            if v==0xfff0:decoded.append("[VAR]");continue
+            if v==0xffee:decoded.append("[RED]");continue
+            if v==0:decoded.append(" ");continue
+            if 1<=v<=10:decoded.append(chr(48+v-1));continue
+            if 0x20<=v<=0x39:decoded.append(chr(65+v-0x20));continue
+            if 0x3a<=v<=0x53:decoded.append(chr(97+v-0x3a));continue
+            table={0x0b:"/",0x0c:"%",0x0d:":",0x0e:"'",0x0f:'"',
+              0x11:",",0x12:".",0x13:"!",0x14:"?",0x15:"(",0x16:")",
+              0x17:"+",0x18:"-",0x19:"=",0x9f:"¿",0x9e:"¡"}
+            decoded.append(table.get(v,f"[{v:04x}]"))
+        print(f"EXACT {group:03}/{mid:03}: {''.join(decoded)[:240]} (bytes={b-a})")
+
+
 if __name__=="__main__":
     cli=argparse.ArgumentParser()
     cli.add_argument("--rom",type=Path,required=True)
     cli.add_argument("--limit",type=int,default=85)
+    cli.add_argument("--inspect",default="")
     opts=cli.parse_args()
-    discover(opts.rom.read_bytes(),opts.limit)
+    raw=opts.rom.read_bytes()
+    discover(raw,opts.limit)
+    if opts.inspect:inspect(raw,opts.inspect)

@@ -14,6 +14,7 @@ from probe_dusk_strings import SHA256,files,u32
 from research_dusk_menu_strings import rle_decompress
 from nitro_bg_preview import graphics,chunk,palette,tile_atlas
 from dusk_sprite_oam_editor import edit_ncer_title
+from dusk_sprite_tile_isolation import isolate_selected_cells
 ROOT=Path(__file__).resolve().parents[1]
 DEST=ROOT/"tools/native-ui/dusk_sprite_catalog.generated.hpp"
 
@@ -66,16 +67,23 @@ def generate(rom:bytes,preview=False)->str:
             if src is None or pal is None:raise ValueError("bad compressed Nitro sprite data")
             if hashlib.sha256(src).hexdigest()!=spec.get("source_sha256"):
                 raise ValueError(f"sprite {i} source SHA-256 mismatch")
-            dest=edit_ncer_title(src,pal,rle_decompress(read_resource(celpack,i)),spec.get("edits",[]))
+            cel_raw=read_resource(celpack,i)
+            cel_source=rle_decompress(cel_raw)
+            if cel_source is None:raise ValueError("invalid compressed NCER cell")
+            isolated_chr,isolated_cel=isolate_selected_cells(src,cel_source,spec.get("edits",[]))
+            dest=edit_ncer_title(isolated_chr,pal,isolated_cel,spec.get("edits",[]))
             packed=rle_compress(dest)
-            rows.append((locale,i,zlib.crc32(raw)&0xffffffff,packed))
+            rows.append((locale,i,26,zlib.crc32(raw)&0xffffffff,packed))
+            if isolated_cel!=cel_source:
+                rows.append((locale,i,25,zlib.crc32(cel_raw)&0xffffffff,rle_compress(isolated_cel)))
             if preview:
                 print("EDITED_SPRITE",locale,i,"oldbytes",len(raw),"newbytes",len(packed))
                 if locale=="pt-BR":
                     from probe_dusk_sprite_cells import get_cell_groups,render_one
-                    cells,mode=get_cell_groups(rle_decompress(read_resource(celpack,i)))
+                    cells,mode=get_cell_groups(cel_source)
+                    translated_cells,_=get_cell_groups(isolated_cel)
                     original_image=render_one(graphics(src)[1],palette(pal),cells[0],mode)
-                    translated_image=render_one(graphics(dest)[1],palette(pal),cells[0],mode)
+                    translated_image=render_one(graphics(dest)[1],palette(pal),translated_cells[0],mode)
                     if original_image is None or translated_image is None:
                         raise ValueError("could not visualize real OAM cell")
                     w=max(original_image.width,translated_image.width)
@@ -89,14 +97,14 @@ def generate(rom:bytes,preview=False)->str:
                     print("TRANSLATED_SPRITE64 "+base64.b64encode(buf.getvalue()).decode("ascii"))
 
     lines=["// Generated from translations/sprites/<locale>/manifest.json by generate_dusk_sprite_header.py."]
-    for n,(_,_,_,data) in enumerate(rows):
+    for n,(_,_,_,_,data) in enumerate(rows):
         lines.append(f"inline constexpr std::array<std::uint8_t,{len(data)}> kSpriteData{n}{{")
         for x in range(0,len(data),18):lines.append("    "+",".join(f"0x{k:02x}" for k in data[x:x+18])+",")
         lines.append("};")
     if rows:
         lines.append(f"inline constexpr std::array<SpriteAsset,{len(rows)}> kSprites{{{{")
-        for n,(locale,i,crc,data) in enumerate(rows):
-            lines.append(f'    SpriteAsset{{"{locale}",{i},0x{crc:08x}u,kSpriteData{n}.data(),std::uint32_t(kSpriteData{n}.size())}},')
+        for n,(locale,i,pak,crc,data) in enumerate(rows):
+            lines.append(f'    SpriteAsset{{"{locale}",{pak},{i},0x{crc:08x}u,kSpriteData{n}.data(),std::uint32_t(kSpriteData{n}.size())}},')
         lines.append("}};")
     else:lines.append("inline constexpr std::array<SpriteAsset,0> kSprites{};")
     lines.append("")

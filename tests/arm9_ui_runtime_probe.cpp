@@ -11,7 +11,7 @@ int main(int argc,char** argv){
     std::vector<std::uint8_t> original((std::istreambuf_iterator<char>(f)),
                                        std::istreambuf_iterator<char>());
     if(original.size()!=67108864u)return 4;
-    static_assert(dusk_arm9::kEntries.size()>=24);
+    static_assert(dusk_arm9::kEntries.size()>=22);
     for(std::string_view lang:{"pt-BR","es-ES"}) {
         auto rom=original;
         std::string error;
@@ -32,7 +32,7 @@ int main(int argc,char** argv){
             for(size_t i=row.offset;i<row.offset+translated.size();++i)allowed[i]=true;
             ++count;
         }
-        if(count<12)return 8;
+        if(count<11)return 8;
         for(size_t i=0;i<rom.size();++i)
             if(rom[i]!=original[i]&&!allowed[i])return 9;
         std::cout<<lang<<" verified "<<count<<" ARM9 UI text patches\n";

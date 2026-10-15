@@ -76,6 +76,7 @@ jobs:
           restore-keys: |
             dusk-ucrt64-objects-v2-${{ github.ref_name }}-
             dusk-ucrt64-objects-v2-
+            dusk-native-windows-ucrt64-ccache-v1-
       - name: Verify compiler cache and reset hit/miss statistics
         shell: msys2 {0}
         run: |

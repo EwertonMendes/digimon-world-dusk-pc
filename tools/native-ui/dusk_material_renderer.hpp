@@ -200,6 +200,7 @@ inline void pip(SDL_Renderer* r,const FrontendPresentation& p,
 // A GPU-rendered vector cog, rather than text or a DPI-dependent bitmap.
 // Eight equal teeth surround an open center, preserving sharpness at any UI scale.
 inline void gear_icon(SDL_Renderer* r,Rect bounds,Rgb tint){
+    if(bounds.w<18 || bounds.h<18) return;
     constexpr int teeth=8, samples=teeth*6;
     constexpr float tau=6.2831853071795864769f;
     const float cx=float(bounds.x)+float(bounds.w)*0.5f;
@@ -214,7 +215,7 @@ inline void gear_icon(SDL_Renderer* r,Rect bounds,Rgb tint){
             return SDL_FPoint{cx+std::cos(a)*radius,cy+std::sin(a)*radius};
         };
         const auto radius=[](int j){
-            const int segment=j%samples%6;
+            const int segment=j%6;
             return segment>=2 && segment<=4 ? 1.f : 0.79f;
         };
         const SDL_FPoint p0=point(i,outer*radius(i));

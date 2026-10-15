@@ -82,7 +82,11 @@ def _draw_label(image:Image.Image,rect,text):
             x=(rw-(r-l))//2-l
             y=(rh-(b-t))//2-t
             draw.text((x,y),text,font=font,fill=1)
-            draw.text((x+1,y),text,font=font,fill=1)
+            # A second horizontal stroke is attractive for short labels,
+            # but merges glyphs in seven-plus character DS menu titles.
+            # Preserve one clear pixel stroke for longer localized words.
+            if len(text)<=6:
+                draw.text((x+1,y),text,font=font,fill=1)
             return glyph
     raise ValueError(f"translated text {text!r} does not fit {rw}x{rh}")
 

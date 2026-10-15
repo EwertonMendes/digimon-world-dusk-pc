@@ -98,6 +98,8 @@ def inspect(rom,ids,count=10):
         print("SPRITE_CELLS",sid,"depth",depth,"n",len(cells),"mode",mode,
               "sizes",[len(x) for x in cells[:20]])
         if depth!=3:continue
+        for idx,group in enumerate(cells[:3]):
+            print("SPRITE_OAM",sid,idx,"attrs",group)
         pictures=[]
         for i,objects in enumerate(cells[:count]):
             try:im=render_one(chars,colors,objects,mode)

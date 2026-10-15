@@ -38,6 +38,7 @@ inline uint16_t encode_char(char32_t c) {
         case U'/':return 0x0b;case U'%':return 0x0c;case U':':return 0x0d;
         case U'\'':return 0x0e;case U'"':return 0x0f;case U',':return 0x11;
         case U'.':return 0x12;case U'!':return 0x13;case U'?':return 0x14;
+        case U'¿':return 0x9f;case U'¡':return 0x9e;
         case U'(':return 0x15;case U')':return 0x16;case U'+':return 0x17;
         case U'-':return 0x18;case U'=':return 0x19;
         case U'à':return 0xa0;case U'á':return 0xa1;case U'â':return 0xa2;

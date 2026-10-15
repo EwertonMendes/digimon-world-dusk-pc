@@ -231,5 +231,6 @@ if __name__=="__main__":
     ap.add_argument("--rom",required=True,type=Path)
     ap.add_argument("--locale",default="pt-BR",choices=MENUS.keys())
     ap.add_argument("--outdir",type=Path,default=ROOT/".private"/"authored-menu-preview")
+    ap.add_argument("--no-preview",action="store_true")
     a=ap.parse_args()
-    generate(a.rom.read_bytes(),a.locale,a.outdir)
+    generate(a.rom.read_bytes(),a.locale,a.outdir,preview=not a.no_preview)

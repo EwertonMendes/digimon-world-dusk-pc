@@ -58,6 +58,11 @@ jobs:
         run: |
           python tools/probe_dusk_text_style.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Original DS font palette scan failed' }
+      - name: Inspect original DS title screen background maps and tile atlases
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_backgrounds.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title screen Nitro graphic source inspection failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

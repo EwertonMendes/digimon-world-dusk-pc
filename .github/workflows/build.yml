@@ -67,6 +67,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p test_spanish_dusk_reference.py -v
           python3 -m unittest discover -s tests -p test_dusk_sprite_authored_art.py -v
+          python3 -m unittest discover -s tests -p test_dusk_native_title_prompt.py -v
           python3 -m unittest discover -s tests -p test_icon_assets.py -v
           python3 -m unittest discover -s tests -p test_splash_assets.py -v
           python3 -m unittest discover -s tests -p test_adaptive_ui_contract.py -v

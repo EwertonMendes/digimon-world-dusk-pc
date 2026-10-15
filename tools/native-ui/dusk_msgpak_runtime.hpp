@@ -118,8 +118,16 @@ inline bool rebuild_group(const std::vector<uint8_t>& original,int group,
             bool new_end=false;
             for(size_t j=0;j+1<encoded.size();j+=2)
                 if(encoded[j]==0xfe && encoded[j+1]==0xff)new_end=true;
-            if(has_end!=new_end || original[offsets[i+1]-2]!=0xff ||
-               original[offsets[i+1]-1]!=0xff)return false;
+            if(has_end!=new_end)return false;
+            const uint16_t original_last=read16(original,offsets[i+1]-2);
+            if(original_last==0xfffe) {
+                // Dialogue entries end directly with [END] (FE FF).
+                // Do not append another FFFF terminator: the game's paging
+                // engine treats that as another record, not spare padding.
+                if(encoded.size()<4 || read16(encoded,encoded.size()-4)!=0xfffe)
+                    return false;
+                encoded.resize(encoded.size()-2);
+            } else if(original_last!=0xffff) return false;
             output.insert(output.end(),encoded.begin(),encoded.end());
             changed=true;++replacements;break;
         }

@@ -19,6 +19,10 @@
       "source": "Check DigiFarm status",
       "text": "Status da DigiFarm"
     },
+    "1012998": {
+      "source": "Check info for [PLAYER_NAME]",
+      "text": "Ver info de [PLAYER_NAME]"
+    },
     "1013032": {
       "source": "Save your game progress",
       "text": "Salvar seu progresso"

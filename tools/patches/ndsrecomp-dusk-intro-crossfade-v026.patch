@@ -1,9 +1,7 @@
 diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 --- a/runner/src/frontend.cpp
 +++ b/runner/src/frontend.cpp
-@@ -1914,5 +1914,11 @@
- }
- 
+@@ -1916,2 +1916,8 @@
 +#if defined(NDS_HAVE_SDL3)
 +// Only the opening texture is retained; guest video and timing are untouched.
 +static SDL_Texture* g_dusk_intro_overlay = nullptr;

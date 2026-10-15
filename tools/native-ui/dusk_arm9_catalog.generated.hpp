@@ -4,7 +4,7 @@ inline constexpr std::array<std::string_view, 2> kLanguages{{
     "es-ES",
     "pt-BR",
 }};
-inline constexpr std::array<Arm9Entry, 24> kEntries{{
+inline constexpr std::array<Arm9Entry, 22> kEntries{{
     Arm9Entry{1012836, "es-ES", U"Check Digimon progress", U"Ver progreso Digimon"},
     Arm9Entry{1012836, "pt-BR", U"Check Digimon progress", U"Ver progresso Digimon"},
     Arm9Entry{1012882, "es-ES", U"Check inventory", U"Ver inventario"},
@@ -15,8 +15,6 @@ inline constexpr std::array<Arm9Entry, 24> kEntries{{
     Arm9Entry{1012954, "pt-BR", U"Check DigiFarm status", U"Status da DigiFarm"},
     Arm9Entry{1013032, "es-ES", U"Save your game progress", U"Guardar progreso"},
     Arm9Entry{1013032, "pt-BR", U"Save your game progress", U"Salvar seu progresso"},
-    Arm9Entry{1013080, "es-ES", U"Check usable attacks", U"Ver ataques utiles"},
-    Arm9Entry{1013080, "pt-BR", U"Check usable attacks", U"Ver ataques ativos"},
     Arm9Entry{1079304, "es-ES", U"Money", U"Saldo"},
     Arm9Entry{1079304, "pt-BR", U"Money", U"Saldo"},
     Arm9Entry{1079316, "es-ES", U"Stock", U"Pzas."},

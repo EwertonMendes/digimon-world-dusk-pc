@@ -40,12 +40,11 @@ def source_rows():
                 raise ValueError(f"{file}: empty or invalid translation")
             if len(translated)>len(original):
                 raise ValueError(f"{file}: longer text at {offset}, needs pointer/asset handling")
-            token_re=re.compile(r"\\[PLAYER_NAME\\]")
-            tokens=[token_re.findall(text) for text in (original,translated)]
-            if tokens[0]!=tokens[1]:
+            marker="[PLAYER_NAME]"
+            if original.count(marker)!=translated.count(marker):
                 raise ValueError(f"{file}: runtime variable markers changed at {offset}")
             for text in (original,translated):
-                plain=token_re.sub("",text)
+                plain=text.replace(marker,"")
                 if any(ch not in CHARSET for ch in plain):
                     raise ValueError(f"{file}: unencodable ARM9 text at {offset}")
                 if len(text)>100 or "[" in plain or "]" in plain:

@@ -23,7 +23,7 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
  static const char* dusk_project_title() {
      const char* configured = std::getenv("NDS_DUSK_WINDOW_TITLE");
      return configured && configured[0] ? configured :
-         "Digimon World Dusk Recompiled | v0.27";
+         "Digimon World Dusk Recompiled | v0.28";
  }
 +// The version is drawn by SDL, not burned into the 4K illustration.
 +static const uint8_t* dusk_version_glyph(char c) {

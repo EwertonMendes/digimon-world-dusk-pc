@@ -484,16 +484,16 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     if(ev.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
         const uint8_t key=sdl_controller_button(ev);
         const auto v=calculate(geo,p);
-        if(key==SDL_GAMEPAD_BUTTON_DPAD_UP){navigate(geo,p,0,-1);return true;}
-        if(key==SDL_GAMEPAD_BUTTON_DPAD_DOWN){navigate(geo,p,0,1);return true;}
-        if(key==SDL_GAMEPAD_BUTTON_DPAD_LEFT || key==SDL_GAMEPAD_BUTTON_DPAD_RIGHT){
-            int dir=key==SDL_GAMEPAD_BUTTON_DPAD_RIGHT?1:-1;
+        if(key==SDL_CONTROLLER_BUTTON_DPAD_UP){navigate(geo,p,0,-1);return true;}
+        if(key==SDL_CONTROLLER_BUTTON_DPAD_DOWN){navigate(geo,p,0,1);return true;}
+        if(key==SDL_CONTROLLER_BUTTON_DPAD_LEFT || key==SDL_CONTROLLER_BUTTON_DPAD_RIGHT){
+            int dir=key==SDL_CONTROLLER_BUTTON_DPAD_RIGHT?1:-1;
             if(v.count && state.tab==0 && state.focus<6)navigate(geo,p,dir,0);
             else if(v.count && v.items[state.focus].kind==1)choose(p,geo,v.items[state.focus],dir);
             else choose_tab(geo,p,(state.tab+4+dir)%4);
             return true;
         }
-        if(key==SDL_GAMEPAD_BUTTON_A){if(v.count)choose(p,geo,v.items[state.focus]);return true;}
+        if(key==SDL_CONTROLLER_BUTTON_A){if(v.count)choose(p,geo,v.items[state.focus]);return true;}
         // B/Select go through the original capture and toggling paths.
     }
     return false;

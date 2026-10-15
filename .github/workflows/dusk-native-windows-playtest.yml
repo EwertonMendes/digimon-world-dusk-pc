@@ -68,6 +68,8 @@ jobs:
         run: |
           python tools/generate_dusk_msgpak_header.py --check
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid translation catalog' }
+          python tools/generate_dusk_arm9_header.py --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 UI catalog' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |
@@ -75,6 +77,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK C++ test compilation failed' }
           & .private/msgpak-probe.exe 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK RAM relocation proof failed' }
+      - name: Verify in-memory ARM9 UI data-only patches
+        shell: pwsh
+        run: |
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/arm9_ui_runtime_probe.cpp -o .private/arm9-ui-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 UI probe failed to compile' }
+          & .private/arm9-ui-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 UI data patch validation failed' }
+
       - uses: actions/upload-artifact@v4
         with:
           name: dusk-msgpak-structure-only
@@ -167,6 +177,8 @@ jobs:
         run: |
           python tools/generate_dusk_msgpak_header.py --check
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid locale resources' }
+          python tools/generate_dusk_arm9_header.py --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 resources' }
       - name: Checkout pinned NDSRecomp and recomp-ui
         shell: msys2 {0}
         run: |
@@ -189,6 +201,8 @@ jobs:
           cp tools/native-ui/dusk_localization.hpp upstream/runner/src/dusk_localization.hpp
           cp tools/native-ui/dusk_msgpak_runtime.hpp upstream/runner/src/dusk_msgpak_runtime.hpp
           cp tools/native-ui/dusk_msgpak_catalog.generated.hpp upstream/runner/src/dusk_msgpak_catalog.generated.hpp
+          cp tools/native-ui/dusk_arm9_runtime.hpp upstream/runner/src/dusk_arm9_runtime.hpp
+          cp tools/native-ui/dusk_arm9_catalog.generated.hpp upstream/runner/src/dusk_arm9_catalog.generated.hpp
           cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch

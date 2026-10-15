@@ -26,4 +26,4 @@ View calculate(const dusk_native::Geometry&,const FrontendPresentation&){return 
 int max_scroll(const View&){return 0;}
 }
 #include "dusk_material_renderer.hpp"
-int main(){SDL_Renderer r;dusk_native::Geometry g{};g.play={0,0,1280,720};FrontendPresentation p;if(!dusk_font::ensure(&r)) return 4;if(dusk_font::measure("Settings",24,true)<30) return 5;dusk_material::panel(&r,p,g);return 0;}
+int main(){SDL_Renderer r;dusk_native::Geometry g{};g.play={0,0,1280,720};FrontendPresentation p;if(!dusk_font::ensure(&r)) return 4;if(dusk_font::measure("Settings",24,true)<30) return 5;if(dusk_font::measure("Configurações",24,true)<100) return 6;dusk_font::draw(&r,10,10,"Configurações",24);dusk_material::panel(&r,p,g);return 0;}

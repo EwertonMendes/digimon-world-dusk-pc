@@ -1,3 +1,41 @@
+## Game-owned animated sprite button labels (15 Oct 2026)
+
+The 6-button Digivice/S-key menu was traced to the compressed game-native
+`SPR_CHR.PAK`, `SPR_CEL.PAK`, `SPR_PAL.PAK` resource triplets:
+- 477 Digimon (proper name retained)
+- 478 DigiFarm (proper name retained)
+- 479 Items → Itens / Objetos
+- 480 Save → Salvar / Guardar
+- 481 Quests → Missões / Misiones
+- 482 Tamer Info → Treinador / Entrenador
+
+The source ROM SHA-256 and each source NCGR subresource SHA-256 are pinned in
+`translations/sprites/{pt-BR,es-ES}/manifest.json`. The renderer rebuilds the
+original Nintendo DS RLE files, **not an external overlay**. Since all four
+animation states of each menu button share original tile ranges, translation
+allocates independent NCGR tile banks and rewrites verified NCER cell tile IDs.
+Both rebuilt PAK files are placed in authenticated free ROM padding *only
+in memory* after the original game hash verification. All source bytes, ARM9
+instructions, palettes and saves stay unchanged.
+
+Generate using the original ROM:
+```bash
+python -m pip install Pillow==11.3.0
+python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
+```
+CI compiles a checksum-pinned C++ asset catalog. Tests verify byte-for-byte
+preservation of ARM9 and original PAKs, atomic rejection on checksum mismatch,
+four state-specific OAM tile assignments, and that sprite edits change
+pixels only inside each named button's label region (never the icons/frames).
+
+**Remaining interface gap:** Equipment Shop `Buy/Sell/Quit` is not included.
+A source scan located its ARM9 entries near ROM offset 1130728/1130780,
+but each action is followed immediately by control codes and dynamic text.
+Those are **not safely expandable in place**. They require relocating the
+actual ARM9 text/script resource and its verified references, or a game-native
+string-resolution hook, before translation. Do not claim the shop is
+fully localized. The rest of the 14,223 MSG.PAK messages also need cataloging.
+
 # Game localization catalogs (Digimon World Dusk USA)
 
 This project ships one verified USA game ROM. Players never supply or switch ROMs.

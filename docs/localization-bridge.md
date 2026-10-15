@@ -104,12 +104,33 @@ selection, insufficient Bits and full inventory).
   changed**. The replacement must fit the original encoded slot, so nearby
   strings and ARM9 code stay untouched. Anything unknown safely remains
   English.
-- This does **not** yet translate game-owned baked graphics: the
-  large Digivice icons/text for Digimon, Items, Quests, etc., and shop action
-  buttons Buy / Sell / Quit. Those are not covered by IMG.PAK text patches or
-  the exact 16-bit ARM9 help strings identified in this research. They need a
-  separate verified sprite/tile asset-localization implementation, not
-  incorrectly painted-on SDL labels.
+- The native sprite pack adapter now replaces **four Digivice button
+  graphics** in PT-BR (479 Items -> Itens; 480 Save -> Salvar; 481 Quests ->
+  Missões; 482 Tamer Info -> Treinador) and corresponding Spanish labels.
+  The two proper names (477 Digimon; 478 DigiFarm) deliberately remain
+  unchanged. Secondary item/equipment captions (388/389) are also in the
+  per-language sprite manifests. This is an NCGR graphics edit, not an
+  SDL/desktop text overlay.
+- Dusk's actual NCER mapping uses **1D 128-byte OAM names** (mode 2):
+  the four animation cells start at decoded tile indices 0, 64, 128, 128,
+  and the last two cells share the third frame. All original 192 tiles,
+  NCER cell definitions, NCLR palettes and visible icon pixels outside the
+  declared text-only masks remain unchanged. Multi-row captions are
+  cleared using original palette indices rather than expanding the VRAM
+  bank or relocating OAM structures.
+- Deterministic owner-ROM preprocessing checks decoded source SHA-256,
+  RLE roundtrip, original cell mapping, fixed NCGR size, unchanged pixels
+  outside the defined label areas, and PT-BR/Spanish relocation against the
+  unmodified cartridge. The Windows pipeline can render side-by-side
+  comparisons for all four states. **These are isolated sprite validations;
+  no automated screenshot of the actual game menu has been certified.**
+- **Equipment Shop Buy / Sell / Quit remains untranslated.** The
+  Buy {VAR} for ? and Sell {VAR} for ? data records at original ARM9
+  offsets 1130728/1130780 (and quantity variants 1130824/1130908)
+  are tightly packed with control tokens. Direct 32-bit absolute-pointer
+  searches did not find callers. Length-changing writes are forbidden
+  until a verified message dispatcher or index-based callsite can supply
+  a correctly sized native buffer without corrupting adjacent records.
 
 Translations are authored in locale JSON files, with generators and safeguards
 documented in `translations/README.md`.

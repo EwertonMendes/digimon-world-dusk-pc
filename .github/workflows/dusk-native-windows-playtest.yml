@@ -58,6 +58,11 @@ jobs:
         run: |
           python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --ids 477,478,479,480,481,482
           if ($LASTEXITCODE -ne 0) { throw 'Original Digivice graphics could not be inspected' }
+      - name: Locate original Equipment Shop action labels by exact game encoding
+        shell: pwsh
+        run: |
+          python tools/research_dusk_shop_options.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Shop text source inventory failed' }
       - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
         shell: pwsh
         run: |

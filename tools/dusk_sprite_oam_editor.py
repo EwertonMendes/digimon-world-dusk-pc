@@ -76,7 +76,7 @@ def edit_ncer_title(ncgr:bytes,nclr:bytes,ncer:bytes,labels:list[dict])->bytes:
         glyph=Image.new("1",(rw,rh))
         draw=ImageDraw.Draw(glyph)
         chosen=None
-        for fontsize in range(min(rh+4,12),5,-1):
+        for fontsize in range(min(rh+4,17),5,-1):
             font=ImageFont.load_default(size=fontsize)
             l,t,r,b=draw.textbbox((0,0),title,font=font)
             if r-l<=rw-2 and b-t<=rh:
@@ -91,18 +91,22 @@ def edit_ncer_title(ncgr:bytes,nclr:bytes,ncer:bytes,labels:list[dict])->bytes:
             ink=max(range(1,16),key=lambda c:sum(colors[c][:3]))
         line_background={}
         if region is not None:
-            from collections import Counter
+            # Read the original horizontal stripe *outside* the lettering at
+            # the same Y coordinate. Sampling the text area itself can pick the
+            # bright lime glyph as background and create a neon rectangle.
+            # This keeps the game's native plate stripes and selected colors.
             for row in range(ry,ry+rh):
-                options=[]
-                for col in range(rx,rx+rw):
-                    xy=(minx+col,miny+row)
-                    if xy not in mapping:continue
-                    source=mapping[xy]
-                    val=px[source[0],source[1]]
-                    if val!=ink:options.append(val)
-                freq=Counter(options)
-                # Preserve the striped original button plate behind its label.
-                line_background[row]=freq.most_common(1)[0][0] if freq else 0
+                sources=[]
+                for col in (w-3,w-4,w-2,2,3,4):
+                    if not (0<=col<w) or rx<=col<rx+rw:continue
+                    key=(minx+col,miny+row)
+                    if key not in mapping:continue
+                    at=mapping[key]
+                    value=px[at[0],at[1]]
+                    if value!=ink:sources.append(value)
+                if not sources:
+                    raise ValueError("cannot reconstruct unmodified native button plate")
+                line_background[row]=sources[0]
         for point,(pxx,pyy) in mapping.items():
             gx=point[0]-minx;gy=point[1]-miny
             if not (rx<=gx<rx+rw and ry<=gy<ry+rh):continue

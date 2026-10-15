@@ -123,6 +123,13 @@ jobs:
           & .private/arm9-ui-probe.exe 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'ARM9 UI data patch validation failed' }
 
+      - name: Verify native graphics CRCs and no-op resource fallback
+        shell: pwsh
+        run: |
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/nitro_graphics_runtime_probe.cpp -o .private/nitro-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Nitro graphics code failed to compile' }
+          & .private/nitro-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Nitro graphics resource guard failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: dusk-msgpak-structure-only

@@ -40,6 +40,16 @@ def index(rom):
     print("INDEX",json.dumps({key:{"count":len(values),"small":values[:6],"large":sorted(values,key=lambda x:-x[1])[:35]} for key,values in groups.items()}))
     print("SIZE_COUNTS",json.dumps(dict(collections.Counter((i[1]//512)*512 for v in groups.values() for i in v).most_common())))
 
+def inspect_ids(rom,ids):
+    chosen=set(ids)
+    for i,ca,pa,size in sprites(rom):
+        if i not in chosen: continue
+        if ca is None or pa is None:continue
+        im=tile_atlas(ca,pa)
+        out=io.BytesIO();im.save(out,"PNG",optimize=True)
+        print("SPRITE_DETAIL",i,im.size,len(out.getvalue()))
+        print("SPRITE_DETAIL64 "+base64.b64encode(out.getvalue()).decode("ascii"))
+
 def sheet(rom,begin,num,min_pixels,max_pixels):
     picks=[]
     for i,ca,pa,size in sprites(rom):
@@ -74,6 +84,8 @@ if __name__=="__main__":
     ap.add_argument("--count",type=int,default=48)
     ap.add_argument("--min-pixels",type=int,default=256)
     ap.add_argument("--max-pixels",type=int,default=16384)
+    ap.add_argument("--ids",default="",help="comma-separated sprite IDs to inspect at native resolution")
     a=ap.parse_args();rom=a.rom.read_bytes()
-    if a.index:index(rom)
+    if a.ids:inspect_ids(rom,[int(i) for i in a.ids.split(",")])
+    elif a.index:index(rom)
     else:sheet(rom,a.begin,a.count,a.min_pixels,a.max_pixels)

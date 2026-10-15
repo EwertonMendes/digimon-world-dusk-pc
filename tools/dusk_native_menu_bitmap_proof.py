@@ -34,7 +34,7 @@ FONT = {
     "E":("11111","10000","10000","11110","10000","10000","11111"),
     "F":("11111","10000","10000","11110","10000","10000","10000"),
     "G":("01111","10000","10000","10111","10001","10001","01110"),
-    "I":("111","010","010","010","010","010","111"),
+    "I":("11111","00100","00100","00100","00100","00100","11111"),
     "M":("10001","11011","10101","10101","10001","10001","10001"),
     "O":("01110","10001","10001","10001","10001","10001","01110"),
     "S":("01111","10000","10000","01110","00001","00001","11110"),
@@ -122,7 +122,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     rx,ry,rw,rh = rect
     dots,width,height = composition(word,rw-3)
     scale_x=min(1.7,(rw-4)/width)
-    scale_y=min(1.43,(rh-3)/height)
+    scale_y=min(1.62,(rh-3)/height)
     scaled_width=int(round(width*scale_x))
     scaled_height=int(round(height*scale_y))
     xbase=rx+(rw-scaled_width)//2
@@ -167,15 +167,35 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         for px in range(ax,bx):
             for py in range(ay,by):
                 bright.add((xbase+px,ybase+py))
-    shadows={(x+1,y+1) for x,y in bright if (x+1,y+1) not in bright}
-    for x,y in shadows:
-        if (x,y) not in affected:raise ValueError("text shadow outside mask")
+    # Native Dusk captions use FOUR distinct original NCLR ink indices,
+    # not one lime fill: deep indigo outline (2), cool green top/bottom
+    # (13), electric lime (14), white specular stripe (15). Original
+    # Items/Save pixel rows were measured on the authenticated cartridge.
+    # Keep each glyph in its caption bounds, including the contour.
+    outlines={(x+dx,y+dy)
+              for x,y in bright
+              for dx,dy in ((-1,0),(1,0),(0,-1),(0,1),(1,1))
+              if (x+dx,y+dy) not in bright}
+    for x,y in outlines:
+        if (x,y) not in affected:
+            continue
         bank=view.mapping[(x,y)][3]
         out[x,y]=colors[bank*16+2][:3]
     for x,y in bright:
         if (x,y) not in affected:raise ValueError("text glyph outside mask")
         bank=view.mapping[(x,y)][3]
-        out[x,y]=colors[bank*16+14][:3]
+        relative=y-ybase
+        if relative<=1 or relative>=8:
+            idx=13
+        elif relative==2 or relative==6 or relative==7:
+            idx=14
+        elif relative==3:
+            idx=15 if (x-xbase)%3==0 else 14
+        elif relative in (4,5):
+            idx=15 if relative==4 or (x-xbase)%3!=0 else 14
+        else:
+            idx=14
+        out[x,y]=colors[bank*16+idx][:3]
     return arr
 
 

@@ -98,6 +98,11 @@ jobs:
         run: |
           python tools/probe_dusk_all_graphic_formats.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Sprite graphic-format coverage inspection failed' }
+      - name: Examine 8bpp title and small HUD sprites omitted from previous probes
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_8bpp.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw '8bpp sprite audit failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

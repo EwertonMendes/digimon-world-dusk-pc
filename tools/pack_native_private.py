@@ -43,11 +43,11 @@ def build(launcher: Path, runner: Path, sdl: Path, rom: Path, output: Path,
         files['window-icon.rgba'] = icon_bytes
     if splash is not None:
         splash_data = splash.read_bytes()
-        if (len(splash_data) < 54 or len(splash_data) > 4 * 1024 * 1024 or
+        if (len(splash_data) < 54 or len(splash_data) > 32 * 1024 * 1024 or
                 splash_data[:2] != b'BM' or
-                struct.unpack_from('<iiH', splash_data, 18)[:2] != (1280, 720) or
+                struct.unpack_from('<iiH', splash_data, 18)[:2] != (3840, 2160) or
                 struct.unpack_from('<H', splash_data, 28)[0] != 24):
-            raise ValueError('Splash must be a 1280x720 uncompressed 24-bit BMP')
+            raise ValueError('Splash must be a 3840x2160 uncompressed 24-bit BMP')
         files['dusk-splash.bmp'] = splash_data
     if hashlib.sha256(files['game.nds']).hexdigest() != ROM_SHA256:
         raise ValueError('Expected the verified Dusk USA ROM')
@@ -88,7 +88,7 @@ def main() -> None:
     p.add_argument('--candidate-dispatch', type=Path)
     p.add_argument('--iconv', type=Path, help='Windows libiconv-2.dll needed by certain SDL3 builds')
     p.add_argument('--window-icon', type=Path, help='128x128 RGBA32 icon displayed by SDL3')
-    p.add_argument('--splash', type=Path, help='1280x720 BMP displayed by SDL3 before boot')
+    p.add_argument('--splash', type=Path, help='3840x2160 BMP displayed by SDL3 before boot')
     args = p.parse_args()
     print(build(args.launcher, args.runner, args.sdl, args.rom, args.output,
                 args.baseline_dispatch, args.candidate_dispatch, args.iconv,

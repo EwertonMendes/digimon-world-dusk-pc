@@ -103,6 +103,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_8bpp.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw '8bpp sprite audit failed' }
+      - name: Inspect title screen sprite IDs neighboring logo and character art
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 620,621,622,625,626,633,634 --count 8
+          if ($LASTEXITCODE -ne 0) { throw 'Title neighbors sprite audit failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

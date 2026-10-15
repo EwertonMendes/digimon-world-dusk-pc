@@ -14,7 +14,7 @@ from probe_dusk_strings import SHA256,files
 def u16(b,i):return struct.unpack_from("<H",b,i)[0]
 def u32(b,i):return struct.unpack_from("<I",b,i)[0]
 def chunk(src,outer,chunkname):
-    if len(src)<32 or src[:4]!=outer or u16(src,4)!=0xfffe:
+    if len(src)<32 or src[:4]!=outer or u16(src,4)!=0xfeff:
         raise ValueError(f"invalid {outer!r} magic/endian")
     at=u16(src,12)
     for _ in range(u16(src,14)):

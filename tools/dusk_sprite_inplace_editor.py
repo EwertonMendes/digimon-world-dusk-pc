@@ -207,4 +207,13 @@ def assert_frames(ncgr,nclr,ncer,replacement,edits):
                                for rx,ry,rw,rh in regions):
                         raise ValueError("sprite icon, outline or other frame pixels changed")
         if changed<4:raise ValueError("translation did not change visible text")
+        bg=edit.get("erase_background_index")
+        if bg is not None:
+            rx,ry,rw,rh=edit.get("region",[0,0,*before.size])
+            for ex,ey,ew,eh in edit.get("erase_regions",[]):
+                for y0 in range(ey,ey+eh):
+                    for x0 in range(ex,ex+ew):
+                        if rx<=x0<rx+rw and ry<=y0<ry+rh:continue
+                        if after.mapping[(x0,y0)][2]!=bg:
+                            raise ValueError("original source glyph survives an erase band")
     print("VERIFIED_OAM_FRAME_PIXELS",len(edits),"original frames preserved outside labels")

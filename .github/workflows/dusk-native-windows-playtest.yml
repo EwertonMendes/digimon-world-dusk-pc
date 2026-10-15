@@ -95,6 +95,12 @@ jobs:
           python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_00 --tiles
           python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_01 --tiles
           python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_2 --tiles
+      - name: Identify all baked-in menu labels from tiled backgrounds
+        shell: pwsh
+        run: |
+          python tools/nitro_bg_contact_sheet.py --rom 'Digimon World - Dusk (USA).nds' --prefix dat/bg/m --start 0 --count 24
+          python tools/nitro_bg_contact_sheet.py --rom 'Digimon World - Dusk (USA).nds' --prefix dat/bg/m --start 24 --count 24
+          if ($LASTEXITCODE -ne 0) { throw 'Original graphical UI research failed' }
       - name: Detect precise menu text IDs in compressed Nintendo DS files
         shell: pwsh
         run: |

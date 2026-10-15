@@ -46,7 +46,7 @@ jobs:
       - name: Discover frequently accessible in-game message IDs
         shell: pwsh
         run: |
-          python tools/find_dusk_common_text.py --rom 'Digimon World - Dusk (USA).nds' --limit 110
+          python tools/find_dusk_common_text.py --rom 'Digimon World - Dusk (USA).nds' --limit 35 --inspect 124:45,125:33,70:31,70:32,70:33,70:34,71:19,66:90,69:67,69:35,72:26,64:88,63:36
           if ($LASTEXITCODE -ne 0) { throw 'Failed to discover common text' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh

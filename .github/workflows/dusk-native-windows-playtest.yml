@@ -43,6 +43,13 @@ jobs:
         run: |
           python tools/probe_dusk_strings.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-msgpak-report.json
           if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK probe failed' }
+      - name: Compile and run live-resource relocation assertions (no ROM export)
+        shell: pwsh
+        run: |
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/msgpak_runtime_probe.cpp -o .private/msgpak-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK C++ test compilation failed' }
+          & .private/msgpak-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK RAM relocation proof failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: dusk-msgpak-structure-only

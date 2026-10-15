@@ -46,7 +46,7 @@ class AdaptiveUiTests(unittest.TestCase):
     def test_settings_title_and_overlay_controls(self):
         self.assertIn('dusk_localization::ui("settings",dusk_localization::active_language)', MATERIAL)
         catalog=(ROOT/'tools/native-ui/dusk_localization.hpp').read_text(encoding='utf-8')
-        self.assertIn('"Settings","Configuracoes","Configuracion"', catalog)
+        self.assertIn('"Settings","Configurações","Configuración"', catalog)
         self.assertNotIn('DUSK  /  PC EDITION', MATERIAL)
         self.assertIn('center_label(r,g.pip_restore,"Show",14,ink,true)', MATERIAL)
         self.assertNotIn('label(r,g.pip_restore.x+8', MATERIAL)

@@ -76,3 +76,36 @@ Pixel integrity checks, animation references and release build success are
 necessary but **not sufficient**: translated labels must be legible, not
 cover the original art, and match the visual style of the authentic game.
 Await game-level screenshots of all six buttons and Equipment Shop options.
+
+## Replacement implementation prepared on PR #27
+
+`tools/dusk_sprite_authored_art.py` and the native catalog generator support
+an optional `artwork` array in each locale's existing sprite manifest.
+Artwork has to be drawn **at the native OAM cell size**, not resized from the
+PC presentation and not generated using Pillow desktop fonts. For example:
+
+```json
+{
+  "id": 479,
+  "source_sha256": "<verified original NCGR SHA-256>",
+  "artwork": [
+    {
+      "cell": 0,
+      "png": "art/479-state0.png",
+      "regions": [[6, 32, 53, 16]]
+    }
+  ]
+}
+```
+
+This JSON illustrates the format only; no artwork is currently checked in.
+Each PNG must use exact `NCLR` palette colors at 1:1 pixel size; alpha is
+forbidden; pixels beyond the caption masks are forbidden. The importer
+detects conflicting animation data when different NCER cells share tiles,
+validates the palette bank and re-renders each cell after editing. Metadata
+and original file size remain unchanged. No external SDL label overlay or
+rendered font is added.
+
+When a sprite uses `artwork`, it must **not** also contain procedural
+`edits`. This makes the transition to curated full-frame art explicit:
+it is not a silent modification of the existing experimental graphics.

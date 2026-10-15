@@ -73,6 +73,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_remaining_sprites.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Narrow DS sprite source inventory failed' }
+      - name: Inspect large Nintendo sprite resources used by title and logo
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_large_sprites.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Large OAM title graphic inventory failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

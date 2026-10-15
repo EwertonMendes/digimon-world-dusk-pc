@@ -74,6 +74,8 @@ jobs:
           python tools/generate_dusk_msgpak_header.py --check
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid translation catalog' }
           python tools/generate_dusk_arm9_header.py --check
+          python tools/generate_dusk_graphics_header.py --rom 'Digimon World - Dusk (USA).nds' --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or malformed game-native graphic assets' }
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 UI catalog' }
       - name: Inventory graphics, palettes and font containers for localization
         shell: pwsh
@@ -217,6 +219,8 @@ jobs:
           python tools/generate_dusk_msgpak_header.py --check
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid locale resources' }
           python tools/generate_dusk_arm9_header.py --check
+          python tools/generate_dusk_graphics_header.py --rom 'Digimon World - Dusk (USA).nds' --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or malformed game-native graphic assets' }
           if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 resources' }
       - name: Checkout pinned NDSRecomp and recomp-ui
         shell: msys2 {0}
@@ -242,6 +246,8 @@ jobs:
           cp tools/native-ui/dusk_msgpak_catalog.generated.hpp upstream/runner/src/dusk_msgpak_catalog.generated.hpp
           cp tools/native-ui/dusk_arm9_runtime.hpp upstream/runner/src/dusk_arm9_runtime.hpp
           cp tools/native-ui/dusk_arm9_catalog.generated.hpp upstream/runner/src/dusk_arm9_catalog.generated.hpp
+          cp tools/native-ui/dusk_graphics_runtime.hpp upstream/runner/src/dusk_graphics_runtime.hpp
+          cp tools/native-ui/dusk_graphics_catalog.generated.hpp upstream/runner/src/dusk_graphics_catalog.generated.hpp
           cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch

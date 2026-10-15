@@ -41,24 +41,54 @@ or insufficient padding, the host logs the reason and continues with the
 unmodified English original. It never patches guest execution addresses
 nor changes the EEPROM.
 
-## Tiny experimental gameplay catalog
+## Repeatable experimental gameplay catalog
 
-To verify the end-to-end pathway without creating unreviewed story translations,
-`dusk_msgpak_runtime.hpp` currently replaces only 5 message IDs:
+The verified MSG.PAK resource catalog now has **18 Portuguese and Spanish
+message IDs**. The selected texts were inspected in the original cartridge,
+including original line breaks, green/red color toggles, player-name tokens,
+and FEFF record terminators. The rebuilder refuses any record whose special
+tokens differ between source and translation.
 
-- Group 0, IDs 0 and 1 — party wipe / flee messages.
-- Group 1, IDs 0 and 1 — NPC dialogue about TV programs and comedies.
-- Group 3, ID 2 — NPC's lucky-day dialogue.
+The selections are intended to be reachable from existing saves:
 
-These have PT-BR and ES translations using the original DS font codes.
-**The rest of the story, menus, Digimon descriptions, items and battle
-strings remain in English.** Japanese also remains in English. This is not
-a full localization release. The host Settings UI shows a partial-translation
-notice, and accents are rendered as composited Inter glyphs.
+- **Title/menu string (124/45):** New, Continue, Nintendo Wi-Fi Connection,
+  Back. Select a non-English language in Settings, exit and restart. Check
+  whether the cartridge-driven title choices become Novo/Continuar/Voltar
+  or Nuevo/Continuar/Volver.
+- **Confirmation (125/33):** Are you sure? (context may vary).
+- **Shops:** Equipment, consumables, farm goods, and Farm Island upgrades
+  in group 70 (IDs 31–34), plus equipment/consumables greetings in
+  groups 63, 64, 69 and 71. Visit a shopkeeper rather than waiting for
+  a story dialogue.
+- **Dark Square:** player-name greeting messages 66/90 and 69/35;
+  **elevator:** group 72/26.
+- **Earlier five proof records:** party defeat/fleeing and three NPC lines.
 
-The existing separate `TranslationCatalog` is an ID-based host-side
-library and still needs to be connected to a full, human-reviewed message
-catalog; it should not be confused with the five game-resource test entries.
+Exact MSG.PAK IDs are validated, but **their runtime callsites have not
+been traced**. The title text may be used in a particular game context rather
+than always on the title screen. That is a game-playtest hypothesis, not
+a certified guarantee. No gameplay automation was used to claim otherwise.
+
+All other in-game strings remain English. Japanese remains unsupported.
+The host preference changes gameplay resources on **next restart**.
+We did not implement dynamic relayout for longer multi-page dialogue; the
+selected messages have conservative hand-authored line breaks, keeping the
+original end/color/control markers.
+
+### Simple owner test
+
+1. Select Portuguese (Brazil) or Spanish in PC Settings.
+2. Close the application and reopen the new test EXE.
+3. Observe the title options (Novo / Continuar / Voltar, if actually
+   read from MSG.PAK 124/45). If still in English, do not assume the
+   MSG.PAK rebuild failed: report the context for further hook tracing.
+4. Continue an existing save. Talk to shopkeepers and to NPCs in Dark
+   Square, if accessible; check elevator interaction.
+5. Revert to English and restart. Original strings and save must remain
+   unchanged. Report screenshots of any overlong or truncated message.
+
+A private-ROM test checks **every one of the 18 translated encoded records**,
+and verifies that a neighboring unmodified record remains byte-identical.
 
 ## Before promoting the PR
 
@@ -70,7 +100,7 @@ catalog; it should not be confused with the five game-resource test entries.
 - Verify original game-menu labels still behave, especially typewriter
   dialogue delays, scripted [END] markers and runtime variables.
 - Convert the proof translations into external validated text catalogs,
-  translate the remaining 138 groups, and define an explicit source
+  translate the remaining messages across 138 groups, and define an explicit source
   identity and token schema. ARM9 and overlay strings require a separate
   extraction/rendering path, not a guessed MSG.PAK ID.
 - Extend Unicode host glyph coverage for Japanese before enabling CJK menus.

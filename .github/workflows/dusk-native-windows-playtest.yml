@@ -68,6 +68,11 @@ jobs:
         run: |
           python tools/probe_dusk_menu_glyphs.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Original pixel font sampling failed' }
+      - name: Inspect remaining small and alternate-frame sprites for PUSH START
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_remaining_sprites.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Narrow DS sprite source inventory failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

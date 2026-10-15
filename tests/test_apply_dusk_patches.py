@@ -43,7 +43,7 @@ class IntegrationTests(unittest.TestCase):
                  "ndsrecomp-dusk-recompiled-splash.patch").read_text()
         self.assertIn("dusk_show_startup", patch)
         self.assertIn("SDL_LoadBMP(path)", patch)
-        self.assertIn("Digimon World Dusk Recompiled | v0.26", patch)
+        self.assertIn("Digimon World Dusk Recompiled | v0.27", patch)
         self.assertNotIn("scheduler_run_round", patch)
         self.assertNotIn("cartridge", patch)
 

@@ -54,6 +54,27 @@ def research(rom):
             for encoding in ("ascii","utf-16-le"):
                 if needle.encode(encoding) in raw:found.append(needle+"/"+encoding)
         if found:print("TITLE_TEXT_MATCH",fid,name,found)
+    from research_dusk_menu_strings import enc
+    game_code_needles=["Push Start","PUSH START","Push START",
+                       "Press Start","PRESS START","START",
+                       "Push","Press"]
+    arm_start=u32(rom,0x20);arm_size=u32(rom,0x2c)
+    sources=[("ARM9",rom[arm_start:arm_start+arm_size]),
+             *[(name,rom[lo:hi]) for name,(fid,lo,hi) in catalog.items()]]
+    for name,blob in sources:
+        # For direct strings, Nintendo DS text encoding stores each symbol
+        # in a 16-bit codepoint unrelated to ASCII and UTF-16 glyph values.
+        decoded=rle_decompress(blob)
+        for form,dat in (("raw",blob),("RLE",decoded)):
+            if dat is None:continue
+            for phrase in game_code_needles:
+                token=enc(phrase)
+                if not token:continue
+                hits=[];at=dat.find(token)
+                while at!=-1 and len(hits)<8:
+                    hits.append(at);at=dat.find(token,at+len(token))
+                if hits:
+                    print("TITLE_ENCODED_MATCH",name,form,repr(phrase),hits)
     packs={}
     for name in ("dat/SPR_CHR.PAK","dat/SPR_PAL.PAK","dat/SPR_CEL.PAK"):
         _,lo,hi=catalog[name];packs[name]=dict(entries(rom[lo:hi]))

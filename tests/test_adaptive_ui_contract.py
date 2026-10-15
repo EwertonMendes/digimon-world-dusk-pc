@@ -23,8 +23,8 @@ class AdaptiveUiTests(unittest.TestCase):
             with self.subTest(item=item):self.assertIn(item,HEADER)
     def test_keyboard_gamepad_mouse():
         for item in ('SDL_SCANCODE_LEFT','SDL_SCANCODE_UP','SDL_SCANCODE_TAB',
-                     'SDL_SCANCODE_RETURN','SDL_GAMEPAD_BUTTON_DPAD_UP',
-                     'SDL_GAMEPAD_BUTTON_A','SDL_EVENT_MOUSE_WHEEL',
+                     'SDL_SCANCODE_RETURN','SDL_CONTROLLER_BUTTON_DPAD_UP',
+                     'SDL_CONTROLLER_BUTTON_A','SDL_EVENT_MOUSE_WHEEL',
                      'dusk_modern::input(presentation,event)',
                      'dusk_modern::draw_panel(renderer,presentation,geo)',
                      'dusk_modern::draw_pip(renderer,presentation,geo)'):

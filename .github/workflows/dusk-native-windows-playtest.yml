@@ -53,6 +53,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_prompt.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Title prompt source asset scan failed' }
+      - name: Analyze original shaded Nintendo Digivice label pixels
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_text_style.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original DS font palette scan failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

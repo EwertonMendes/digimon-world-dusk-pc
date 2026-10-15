@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "language": "pt-BR",
-  "description": "Native menu sprite titles that use independent OAM tile ranges; shared-tile labels require NCER relocation.",
+  "description": "In-place 1D 128-byte OAM sprite captions, preserving original NCER/NCLR and tile counts.",
   "sprites": [
     {
       "id": 388,
@@ -186,7 +186,15 @@
             17
           ],
           "text": "Treinador",
-          "color": "lime"
+          "color": "lime",
+          "erase_regions": [
+            [
+              6,
+              20,
+              54,
+              9
+            ]
+          ]
         },
         {
           "cell": 1,
@@ -197,7 +205,15 @@
             17
           ],
           "text": "Treinador",
-          "color": "lime"
+          "color": "lime",
+          "erase_regions": [
+            [
+              6,
+              20,
+              54,
+              9
+            ]
+          ]
         },
         {
           "cell": 2,
@@ -208,7 +224,15 @@
             17
           ],
           "text": "Treinador",
-          "color": "lime"
+          "color": "lime",
+          "erase_regions": [
+            [
+              6,
+              20,
+              54,
+              9
+            ]
+          ]
         },
         {
           "cell": 3,
@@ -219,7 +243,15 @@
             17
           ],
           "text": "Treinador",
-          "color": "lime"
+          "color": "lime",
+          "erase_regions": [
+            [
+              6,
+              20,
+              54,
+              9
+            ]
+          ]
         }
       ]
     }

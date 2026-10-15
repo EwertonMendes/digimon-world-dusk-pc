@@ -43,7 +43,12 @@ jobs:
         run: |
           python tools/probe_dusk_strings.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-msgpak-report.json
           if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK probe failed' }
-      - name: Discover frequently accessible in-game message IDs\n        shell: pwsh\n        run: |\n          python tools/find_dusk_common_text.py --rom 'Digimon World - Dusk (USA).nds' --limit 110\n          if ($LASTEXITCODE -ne 0) { throw 'Failed to discover common text' }\n      - name: Compile and run live-resource relocation assertions (no ROM export)
+      - name: Discover frequently accessible in-game message IDs
+        shell: pwsh
+        run: |
+          python tools/find_dusk_common_text.py --rom 'Digimon World - Dusk (USA).nds' --limit 110
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to discover common text' }
+      - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |
           clang++ -std=c++20 -O2 -Itools/native-ui tests/msgpak_runtime_probe.cpp -o .private/msgpak-probe.exe

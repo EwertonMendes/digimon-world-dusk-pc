@@ -111,9 +111,8 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
     rr(r,v.panel,dp(23,s),background,{90,76,137,255});
     // Accent is confined to header and is never behind text.
     rr(r,{v.panel.x+dp(18,s),v.panel.y+dp(18,s),dp(5,s),dp(37,s)},dp(3,s),accent);
-    label(r,v.title.x+dp(11,s),v.title.y+dp(5,s),"DUSK  /  PC EDITION",mpx,accent,true,
-          std::max(20,v.close.x-v.title.x-dp(40,s)));
-    label(r,v.title.x+dp(11,s),v.title.y+dp(26,s),"Settings",hpx,ink,true,
+    // One clear heading; align it vertically with the left accent bar.
+    label(r,v.title.x+dp(11,s),v.title.y+dp(17,s),"Settings",hpx,ink,true,
           std::max(20,v.close.x-v.title.x-dp(40,s)));
     rr(r,v.close,dp(13,s),elevated);
     center_label(r,v.close,"X",bpx,ink,true);
@@ -185,7 +184,7 @@ inline void pip(SDL_Renderer* r,const FrontendPresentation& p,
     if(p.dusk.cfg.layout!=dusk_native::Layout::Focus)return;
     if(g.pip_restore.w>0){
         rr(r,{g.pip_restore.x,g.pip_restore.y,g.pip_restore.w,g.pip_restore.h},12,surface,{82,63,135});
-        label(r,g.pip_restore.x+8,g.pip_restore.y+4,"Show",14,ink,true,g.pip_restore.w-10);return;
+        center_label(r,g.pip_restore,"Show",14,ink,true);return;
     }
     if(g.pip_bar.w<=0)return;
     // Draw over the already-rendered top chrome, do not alter the DS image.
@@ -198,9 +197,43 @@ inline void pip(SDL_Renderer* r,const FrontendPresentation& p,
     center_label(r,g.pip_swap,"<>",13,ink,true);
     center_label(r,g.pip_minimize,"-",17,ink,true);
 }
+// A GPU-rendered vector cog, rather than text or a DPI-dependent bitmap.
+// Eight equal teeth surround an open center, preserving sharpness at any UI scale.
+inline void gear_icon(SDL_Renderer* r,Rect bounds,Rgb tint){
+    constexpr int teeth=8, samples=teeth*6;
+    constexpr float tau=6.2831853071795864769f;
+    const float cx=float(bounds.x)+float(bounds.w)*0.5f;
+    const float cy=float(bounds.y)+float(bounds.h)*0.5f;
+    const float outer=std::max(5.f,float(std::min(bounds.w,bounds.h))*0.28f);
+    const float inner=outer*0.39f;
+    const SDL_FColor color{tint.r/255.f,tint.g/255.f,tint.b/255.f,tint.a/255.f};
+    SDL_Vertex vertices[samples*6]{};
+    for(int i=0;i<samples;i++){
+        const auto point=[&](int j,float radius){
+            const float a=tau*float(j)/float(samples)-tau*0.25f;
+            return SDL_FPoint{cx+std::cos(a)*radius,cy+std::sin(a)*radius};
+        };
+        const auto radius=[](int j){
+            const int segment=j%samples%6;
+            return segment>=2 && segment<=4 ? 1.f : 0.79f;
+        };
+        const SDL_FPoint p0=point(i,outer*radius(i));
+        const SDL_FPoint p1=point(i+1,outer*radius(i+1));
+        const SDL_FPoint q0=point(i,inner);
+        const SDL_FPoint q1=point(i+1,inner);
+        const int o=i*6;
+        vertices[o+0]={p0,color,{0,0}};
+        vertices[o+1]={p1,color,{0,0}};
+        vertices[o+2]={q0,color,{0,0}};
+        vertices[o+3]={q0,color,{0,0}};
+        vertices[o+4]={p1,color,{0,0}};
+        vertices[o+5]={q1,color,{0,0}};
+    }
+    SDL_RenderGeometry(r,nullptr,vertices,samples*6,nullptr,0);
+}
 inline void corner(SDL_Renderer* r,const FrontendPresentation& p,
                    const dusk_native::Geometry& g){
     rr(r,g.settings,10,p.dusk.menu_open?selected:surface,{75,67,130});
-    center_label(r,g.settings,"PC",14,ink,true);
+    gear_icon(r,g.settings,ink);
 }
 } // namespace dusk_material

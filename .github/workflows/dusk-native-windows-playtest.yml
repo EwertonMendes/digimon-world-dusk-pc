@@ -1,4 +1,4 @@
-name: Digimon World Dusk Recompiled - Windows v0.28
+name: Digimon World Dusk Recompiled - Windows v0.29
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +18,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: dusk-recompiled-v028-${{ github.ref }}-${{ inputs.fast_repack }}
+  group: dusk-recompiled-v029-${{ github.ref }}-${{ inputs.fast_repack }}
   cancel-in-progress: true
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
       CCACHE_MAXSIZE: 1536M
       CCACHE_COMPILERCHECK: content
       CCACHE_BASEDIR: ${{ github.workspace }}
-      RELEASE_FILENAME: Digimon-World-Dusk-Recompiled-v0.28-Windows.exe
+      RELEASE_FILENAME: Digimon-World-Dusk-Recompiled-v0.29-Windows.exe
     steps:
       - uses: actions/checkout@v4
         with:
@@ -268,17 +268,17 @@ jobs:
           $meta = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
           if ($meta.ProductName -ne 'Digimon World Dusk Recompiled' -or
               $meta.FileDescription -ne 'Digimon World Dusk Recompiled' -or
-              $meta.ProductVersion -ne 'v0.28') {
+              $meta.ProductVersion -ne 'v0.29') {
             throw "Windows PE branding incorrect: $($meta.ProductName) / $($meta.FileDescription) / $($meta.ProductVersion)"
           }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$sha  $env:RELEASE_FILENAME" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Digimon World Dusk Recompiled v0.28 - Recompiled by Tblack. 4K Lunamon splash with five-second hold and host-only 800ms crossfade, verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "Digimon World Dusk Recompiled v0.29 - Recompiled by Tblack. 4K Lunamon splash with five-second hold and host-only 800ms crossfade, verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-World-Dusk-Recompiled-v0.28-Windows-NATIVE-GAME
+          name: Digimon-World-Dusk-Recompiled-v0.29-Windows-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7

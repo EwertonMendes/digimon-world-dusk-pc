@@ -72,7 +72,14 @@ def collect_original_glyphs(rom:bytes,fs:dict)->dict[str,Glyph]:
                      for y in range(y0,y1) for x in range(x0,x1)
                      if source.mapping[(x,y)][2] in (13,14,15))
         if not points:raise ValueError(f"source glyph {letter} has no authentic color pixels")
-        out[letter]=Glyph(x1-x0,points)
+        # Original OAM label rectangles include spacer/background columns.
+        # Do not include those invisible margins in translated glyph advance:
+        # nine-letter Portuguese labels otherwise get squeezed until their
+        # letters collide, especially Tamer Info -> Treinador.
+        min_ink=min(x for x,y,index in points)
+        max_ink=max(x for x,y,index in points)
+        tight=tuple((x-min_ink,y,index) for x,y,index in points)
+        out[letter]=Glyph(max_ink-min_ink+1,tight)
     for char,shape in MISSING.items():out[char]=handmade(shape)
     # The original game's lower-case 'o' and its authentic shading anchor
     # Portuguese nasal vowels; add the 3-pixel accent in the empty top rows.
@@ -85,7 +92,13 @@ def collect_original_glyphs(rom:bytes,fs:dict)->dict[str,Glyph]:
 def layout_native_word(word:str,glyphs:dict[str,Glyph],max_width:int)->tuple[dict[tuple[int,int],int],int]:
     missing=set(word)-glyphs.keys()
     if missing:raise ValueError(f"no native-font glyph for {sorted(missing)!r}")
-    spacer=2 if sum(glyphs[ch].width for ch in word)+2*(len(word)-1)<=max_width else 1
+    widths=sum(glyphs[ch].width for ch in word)
+    # Prefer the source 2px tracking. In a long localized label, remove
+    # inter-glyph spacing BEFORE touching any original character pixels.
+    # A zero-tracking word can still be readable because real DS glyph
+    # margins are measured from the original foreground bounding box.
+    spacer=2 if widths+2*(len(word)-1)<=max_width else (
+        1 if widths+(len(word)-1)<=max_width else 0)
     positions={}
     x=0
     for ch in word:

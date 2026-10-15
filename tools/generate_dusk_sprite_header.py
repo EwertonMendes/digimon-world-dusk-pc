@@ -13,6 +13,7 @@ from PIL import Image,ImageDraw,ImageFont
 from probe_dusk_strings import SHA256,files,u32
 from research_dusk_menu_strings import rle_decompress
 from nitro_bg_preview import graphics,chunk,palette,tile_atlas
+from dusk_sprite_oam_editor import edit_ncer_title
 ROOT=Path(__file__).resolve().parents[1]
 DEST=ROOT/"tools/native-ui/dusk_sprite_catalog.generated.hpp"
 
@@ -128,7 +129,7 @@ def generate(rom:bytes,preview=False)->str:
     f=files(rom)
     def load(name):
         _,lo,hi=f[name];return rom[lo:hi]
-    chrpack=load("dat/SPR_CHR.PAK");palpack=load("dat/SPR_PAL.PAK")
+    chrpack=load("dat/SPR_CHR.PAK");palpack=load("dat/SPR_PAL.PAK");celpack=load("dat/SPR_CEL.PAK")
     if u32(chrpack,0)!=1627 or u32(palpack,0)!=1627:raise ValueError("original sprite pack layout changed")
     rows=[]
     for manifest in sorted((ROOT/"translations/sprites").glob("*/manifest.json")):
@@ -145,7 +146,7 @@ def generate(rom:bytes,preview=False)->str:
             if src is None or pal is None:raise ValueError("bad compressed Nitro sprite data")
             if hashlib.sha256(src).hexdigest()!=spec.get("source_sha256"):
                 raise ValueError(f"sprite {i} source SHA-256 mismatch")
-            dest=modify(src,pal,spec.get("edits",[]))
+            dest=edit_ncer_title(src,pal,rle_decompress(read_resource(celpack,i)),spec.get("edits",[]))
             packed=rle_compress(dest)
             rows.append((locale,i,zlib.crc32(raw)&0xffffffff,packed))
             if preview:

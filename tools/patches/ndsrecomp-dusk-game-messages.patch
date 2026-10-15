@@ -1,13 +1,14 @@
 diff --git a/runner/src/main.cpp b/runner/src/main.cpp
 --- a/runner/src/main.cpp
 +++ b/runner/src/main.cpp
-@@ -60,3 +60,5 @@
+@@ -60,3 +60,6 @@
  #include "title_patches.h"
 +#include "dusk_msgpak_runtime.hpp"
 +#include "dusk_arm9_runtime.hpp"
++#include "dusk_graphics_runtime.hpp"
  #if defined(NDS_HAVE_COMPUTE_RENDERER)
  #include "melonds_compute/ComputeHost.h"
-@@ -1718,2 +1719,21 @@
+@@ -1718,2 +1719,28 @@
      }
 +    // The on-disk ROM and verified ARM code banks are unchanged. Rebuild only
 +    // the message file in RAM after the canonical cartridge SHA-1 gate.
@@ -27,5 +28,12 @@ diff --git a/runner/src/main.cpp b/runner/src/main.cpp
 +            std::fprintf(stderr, "[dusk-lang] ARM9 UI strings translated: %s\\n", dusk_selected_language);
 +        else
 +            std::fprintf(stderr, "[dusk-lang] original ARM9 UI strings used: %s\\n", arm9_error.c_str());
++        if (!dusk_graphics::kResources.empty()) {
++            std::string graphic_error;
++            if (dusk_graphics::apply(rom, dusk_selected_language, &graphic_error))
++                std::fprintf(stderr, "[dusk-lang] original Nitro graphics replaced in memory: %s\\n", dusk_selected_language);
++            else
++                std::fprintf(stderr, "[dusk-lang] keeping original Nitro graphics: %s\\n", graphic_error.c_str());
++        }
 +    }
      std::string save_path;

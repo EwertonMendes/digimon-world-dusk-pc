@@ -41,7 +41,7 @@ jobs:
           python3 - <<'PY'
           from PIL import Image
           with Image.open('assets/splash/generated/dusk-splash.bmp') as art:
-              assert art.size == (1280, 720)
+              assert art.size == (3840, 2160)
               art.save('dusk-splash-preview.png', optimize=True)
           PY
       - uses: actions/upload-artifact@v4

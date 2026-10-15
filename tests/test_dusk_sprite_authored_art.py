@@ -17,7 +17,7 @@ COLORS=[(0,0,0,255),(20,30,40,255),(255,255,255,255)]+[(0,0,0,255)]*13
 def view(ncgr, _pal, _cel, cell):
     if cell not in (0,1):
         raise ValueError("unknown synthetic animation")
-    im=Image.new("RGB",(8,8))
+    im=Image.new("RGB",(8,8),(22,26,40))
     mapping={}
     for y in range(8):
         for x in range(8):
@@ -25,7 +25,8 @@ def view(ncgr, _pal, _cel, cell):
             hi=bool(x%2)
             raw=ncgr[32+off]
             idx=(raw>>4 if hi else raw&15)
-            im.putpixel((x,y),COLORS[idx][:3])
+            if idx:
+                im.putpixel((x,y),COLORS[idx][:3])
             mapping[x,y]=(off,hi,idx,0)
     return CellView((8,8),mapping,im)
 

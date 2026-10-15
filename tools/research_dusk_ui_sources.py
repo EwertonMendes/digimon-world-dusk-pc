@@ -15,8 +15,7 @@ PHRASES=(
  "what would you", "would you like", "shop", "digivolve",
  "farm goods", "press", "are you sure"
 )
-def extract(raw,group,mid):
-    _,lo,hi=files(raw)["dat/MSG.PAK"]
+def extract(raw,group,mid,lo):
     sub=lo+u32(raw,lo+4+8*group)
     nbytes=u32(raw,sub)
     if nbytes%4 or nbytes<=0 or nbytes>4096*4 or (mid+1)*4>nbytes:return ""
@@ -33,7 +32,7 @@ def research(raw):
         sub=pak+u32(raw,pak+4+8*g);nbytes=u32(raw,sub)
         if nbytes%4 or nbytes<=0 or nbytes>4096*4:continue
         for mid in range(nbytes//4):
-            s=extract(raw,g,mid)
+            s=extract(raw,g,mid,pak)
             if not s:continue
             lower=s.lower()
             keys=[p for p in PHRASES if p in lower]

@@ -76,9 +76,9 @@ jobs:
       - name: Render custom Nintendo-native pixel glyphs for side-by-side quality review
         shell: pwsh
         run: |
-          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale pt-BR
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale pt-BR --outdir translations/sprites/pt-BR/art
           if ($LASTEXITCODE -ne 0) { throw 'Original palette bitmap proof failed for PT-BR' }
-          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale es-ES
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale es-ES --outdir translations/sprites/es-ES/art
           if ($LASTEXITCODE -ne 0) { throw 'Original palette bitmap proof failed for Spanish' }
       - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
         shell: pwsh
@@ -294,6 +294,10 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install Pillow==11.3.0
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale pt-BR --outdir translations/sprites/pt-BR/art --no-preview
+          if ($LASTEXITCODE -ne 0) { throw 'PT-BR custom Nintendo sprite artwork failed' }
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale es-ES --outdir translations/sprites/es-ES/art --no-preview
+          if ($LASTEXITCODE -ne 0) { throw 'Spanish custom Nintendo sprite artwork failed' }
           python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Sprite translation catalog generation failed' }
       - name: Validate localization catalogs before compiling the game

@@ -74,11 +74,11 @@ REGIONS = {
     479:(6,32,53,16),
     480:(10,32,47,16),
     481:(6,32,54,16),
-    482:(6,33,54,12),
+    482:(9,33,51,12),
 }
 # Only source-caption fragments known from the ROM mapping, outside the new
 # text band. These masks deliberately avoid the character's original icon.
-EXTRA = {482:((10,22,23,11),(33,32,23,1))}
+EXTRA = {482:((10,22,50,11),)}
 
 
 def glyph(char: str) -> tuple[str,...]:
@@ -115,7 +115,8 @@ def _regions(sprite: int):
     return (region,*EXTRA.get(sprite,()))
 
 
-def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str, pristine:Image.Image|None=None) -> Image.Image:
+def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str,
+               pristine=None, icon_mask=None) -> Image.Image:
     view = extract_cell(src,nclr,ncer,cell)
     rect = REGIONS[sprite]
     rx,ry,rw,rh = rect
@@ -142,42 +143,21 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         for yy in range(y,y+h):
             for xx in range(x,x+w):
                 affected.add((xx,yy))
-    # Determine original horizontal stripe from outside the source caption:
-    # then reconstruct ONLY the declared text mask, never the border or icon.
-    row_bg={}
-    for yy in sorted({y for x,y in affected}):
-        samples=[view.mapping[(xx,yy)][2] for xx in range(12,54)
-                 if (xx,yy) in view.mapping and (xx,yy) not in affected]
-        if not samples:
-            samples=[view.mapping[(xx,yy)][2] for xx in (11,12,54,55,56,57)
-                     if (xx,yy) in view.mapping]
-        safe=[v for v in samples if v not in (12,13,14,15)]
-        # Fully occupied rows offer no untouched background samples.
-        # Dark index 2 is the verified original DS plate color, not a
-        # desktop RGB guess; keep the fallback localized to this row.
-        if not safe: safe=[2]
-        row_bg[yy]=Counter(safe).most_common(1)[0][0]
+    # Native background is a 4-row striped pattern. The right-hand
+    # control sample (x=60) is outside every original label, so it retains
+    # palette index zero transparency rather than painting solid stripes.
+    # Sprite 482's overlapping two-row title is restored from the original
+    # unlettered top half of sprite 479, matched by animation state.
+    transparent=(22,26,40)
     for x,y in affected:
         bank=view.mapping[(x,y)][3]
-        if sprite==482 and pristine is not None and 10<=x<33 and 22<=y<32:
-            # Restore the untouched original *game* button backplate;
-            # unlike a flat fill, this keeps the native cyan top trim,
-            # the original horizontal stripes and highlights.
-            sample=pristine.getpixel((x,y))
-            bank_colors=[c[:3] for c in colors[bank*16:bank*16+16]]
-            if sample==(22,26,40):
-                # Renderer preview color for transparent palette index zero:
-                # write only a native dark pixel when clearing a source glyph.
-                original_index=view.mapping[(x,y)][2]
-                out[x,y]=(orig[x,y] if original_index==0
-                          else colors[bank*16+2][:3])
-            elif sample in bank_colors:
-                out[x,y]=sample
-            else:
-                raise ValueError("original game template uses a different NCLR palette")
+        if sprite==482 and icon_mask is not None and (x,y) in icon_mask:
+            continue  # preserve hardware/clipboard icon exactly
+        if sprite==482 and pristine is not None and x<34 and y<32:
+            idx=pristine.mapping[(x,y)][2]
         else:
-            idx=2 if (sprite==482 and y<33) else row_bg[y]
-            out[x,y]=colors[bank*16+idx][:3]
+            idx=view.mapping[(60,y)][2]
+        out[x,y] = transparent if idx==0 else colors[bank*16+idx][:3]
     # Draw dark drop shadow then authentic lime glyphs. No antialias or
     # transforms: a single pixel is exactly one native Nintendo DS pixel.
     bright=set()
@@ -216,10 +196,22 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
         cell_data=packed_resource(rom,fs,"dat/SPR_CEL.PAK",sid)
         if sid in (479,480,481,482):
             images=[]
+            icon_mask=None
+            if sid==482:
+                original_icon=extract_cell(source,palette_data,cell_data,0)
+                seeds={(x,y) for y in range(10,32) for x in range(32,64)
+                       if original_icon.mapping[(x,y)][2] in (3,4,5,6,7,10,11)
+                       or (y<23 and original_icon.mapping[(x,y)][2]==15)}
+                # Dilate a single pixel to preserve the native dark outline
+                # around all three color phases of the original hardware icon.
+                icon_mask={(u,v) for x,y in seeds
+                           for u in range(max(32,x-1),min(64,x+2))
+                           for v in range(max(10,y-1),min(32,y+2))}
+
             for state in range(4):
                 original=extract_cell(source,palette_data,cell_data,state).image
-                pristine=extract_cell(clean_chr,clean_pal,clean_cel,state).image if sid==482 else None
-                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine)
+                pristine=extract_cell(clean_chr,clean_pal,clean_cel,state) if sid==482 else None
+                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,icon_mask)
                 output=outdir/f"{sid}-state{state}.png"
                 art.save(output,optimize=True)
                 images.append((original,art))

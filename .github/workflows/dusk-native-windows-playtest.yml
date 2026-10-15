@@ -113,6 +113,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_prompt_exact.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Title logo prompt exact OAM decode failed' }
+      - name: Decode original title PUSH START glyph shapes and color indices
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_letter_grid.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original title glyph geometry probe failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

@@ -118,6 +118,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_letter_grid.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Original title glyph geometry probe failed' }
+      - name: Validate real native title sprite translation and all four animation frames
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_translation.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Native APERTE START title artwork failed integrity assertions' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

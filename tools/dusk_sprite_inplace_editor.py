@@ -98,7 +98,6 @@ def replace_labels(ncgr:bytes,nclr:bytes,ncer:bytes,edits:list[dict])->bytes:
     at,_=chunk(replacement,b"RGCN",b"RAHC")
     raw_begin=at+32
     seen=set()
-    original_tile_owners={}
     pending={}
     for spec in edits:
         cell=spec.get("cell",0)
@@ -175,6 +174,8 @@ def replace_labels(ncgr:bytes,nclr:bytes,ncer:bytes,edits:list[dict])->bytes:
                         erase_background is not None else row_bg[yy])
             target=ink if inside and ink_pixels[xx-rx,yy-ry] else background
             place=(off,hi)
+            # Animation cells 2/3 legitimately share the third NCGR frame.
+            # Shared pixels may be updated only to the same palette index.
             if place in pending and pending[place]!=target:
                 raise ValueError("cross-cell shared character pixels cannot be edited")
             pending[place]=target

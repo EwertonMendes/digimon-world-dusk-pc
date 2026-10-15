@@ -19,7 +19,7 @@ class IconTests(unittest.TestCase):
                 ("windows/dusk.ico", "ICO"),
                 
                 ("macos/dusk.icns", "ICNS"),
-                ("linux/hicolor/256x256/apps/dusk-pc.png", "PNG"),
+                ("linux/hicolor/256x256/apps/digimon-world-dusk-recompiled.png", "PNG"),
                 ("android/mipmap-xxxhdpi/ic_launcher.png", "PNG"),
                 ("android/drawable-nodpi/ic_launcher_foreground.png", "PNG"),
             ):
@@ -30,7 +30,7 @@ class IconTests(unittest.TestCase):
                 "dusk-icon-transparent.png",
                 "windows/dusk.ico",
                 "macos/dusk.icns",
-                "linux/hicolor/256x256/apps/dusk-pc.png",
+                "linux/hicolor/256x256/apps/digimon-world-dusk-recompiled.png",
                 "android/drawable-nodpi/ic_launcher_foreground.png",
             ):
                 with Image.open(out / relative) as icon:
@@ -45,7 +45,12 @@ class IconTests(unittest.TestCase):
                 self.assertIn((16, 16), icon.info["sizes"])
             ET.parse(out / "android/mipmap-anydpi-v26/ic_launcher.xml")
             ET.parse(out / "android/drawable/ic_launcher_background.xml")
-            self.assertIn("Icon=dusk-pc", (out / "linux/dusk-pc.desktop").read_text())
+            self.assertIn("Name=Digimon World Dusk Recompiled", (out / "linux/digimon-world-dusk-recompiled.desktop").read_text())
+            self.assertIn("Icon=digimon-world-dusk-recompiled", (out / "linux/digimon-world-dusk-recompiled.desktop").read_text())
+            self.assertIn("Digimon World Dusk Recompiled", (out / "android/values/strings.xml").read_text())
+            resource = (out / "windows/dusk.rc").read_text()
+            self.assertIn('VALUE "FileDescription", "Digimon World Dusk Recompiled"', resource)
+            self.assertIn('VALUE "ProductVersion", "v0.26"', resource)
 
     def test_rejects_missing_master(self):
         with tempfile.TemporaryDirectory() as tmp:

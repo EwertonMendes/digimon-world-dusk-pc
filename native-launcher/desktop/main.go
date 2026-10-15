@@ -1,6 +1,6 @@
 //go:build windows
 
-// Digimon World Dusk PC native desktop launcher.
+// Digimon World Dusk Recompiled native desktop launcher.
 // No HTTP server, browser, WSL, external emulator, or build tools at runtime.
 // A private ROM-owner build appends a SHA256-authenticated ZIP and fixed footer.
 package main
@@ -48,11 +48,11 @@ func readPayload(executable string) (map[string][]byte, error) {
 	if !bytes.Equal(checksum[:], trailer[20:52]) { return nil, errors.New("assinatura do pacote divergente") }
 	reader, err := zip.NewReader(bytes.NewReader(buffer), int64(n))
 	if err != nil { return nil, err }
-	required := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "window-icon.rgba":128 * 128 * 4}
+	required := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "window-icon.rgba":128 * 128 * 4, "dusk-splash.bmp":32 << 20}
 	// SDL3's MSYS2 UCRT package uses libiconv. When present, it must be
 	// packaged in the same SHA256-verified archive and deployed beside SDL3.
 	// Older 3-file owner builds remain compatible with this reader.
-	allowed := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "libiconv-2.dll":20 << 20, "window-icon.rgba":128 * 128 * 4}
+	allowed := map[string]uint64{"runner.exe":100 << 20, "game.nds":100 << 20, "SDL3.dll":20 << 20, "libiconv-2.dll":20 << 20, "window-icon.rgba":128 * 128 * 4, "dusk-splash.bmp":32 << 20}
 	if len(reader.File) < len(required) || len(reader.File) > len(allowed) {
 		return nil, errors.New("quantidade de arquivos incorreta")
 	}
@@ -80,6 +80,14 @@ func readPayload(executable string) (map[string][]byte, error) {
 	}
 	if icon, ok := contents["window-icon.rgba"]; ok && (len(icon) != 128*128*4 || icon[3] != 0 || icon[len(icon)-1] != 0) {
 		return nil, errors.New("ícone SDL3 inválido")
+	}
+	// Require a 24-bit 1280x720 BMP with a bounded, authenticated payload.
+	if bmp := contents["dusk-splash.bmp"]; len(bmp) < 54 || len(bmp) > 32<<20 ||
+		!bytes.Equal(bmp[:2], []byte("BM")) ||
+		binary.LittleEndian.Uint32(bmp[18:22]) != 3840 ||
+		binary.LittleEndian.Uint32(bmp[22:26]) != 2160 ||
+		binary.LittleEndian.Uint16(bmp[28:30]) != 24 {
+		return nil, errors.New("splash BMP ausente ou inválido")
 	}
 	romHash := sha256.Sum256(contents["game.nds"])
 	if hex.EncodeToString(romHash[:]) != romSHA256 { return nil, errors.New("esta versão exige Dusk USA original") }
@@ -126,6 +134,7 @@ func launch(p gamePaths) error {
 	cmd.Dir = p.install
 	cmd.Stdout, cmd.Stderr = file, file
 	cmd.Env = append(os.Environ(), "NDS_FRONTEND_STATS=1", "NDS_DEEP_TRACE=0", "NDS_DUSK_NATIVE_UI=1", "NDS_DUSK_DISABLE_SAVESTATES=1")
+	cmd.Env = append(cmd.Env, "NDS_DUSK_SPLASH_PATH="+filepath.Join(p.install, "dusk-splash.bmp"), "NDS_DUSK_SPLASH_DURATION_MS=5000", "NDS_DUSK_SPLASH_VERSION="+appVersion, "NDS_DUSK_WINDOW_TITLE=Digimon World Dusk Recompiled | "+appVersion)
 	if _, iconErr := os.Stat(filepath.Join(p.install, "window-icon.rgba")); iconErr == nil {
 		cmd.Env = append(cmd.Env, "NDS_DUSK_ICON_PATH="+filepath.Join(p.install, "window-icon.rgba"))
 	}
@@ -143,7 +152,7 @@ func main() {
 	files, err := readPayload(exe)
 	if err != nil { fatal(err) }
 	if len(os.Args)==2 && strings.EqualFold(os.Args[1],"--verify-bundle") {
-		fmt.Printf("Pacote privado Dusk %s íntegro\n", appVersion)
+		fmt.Printf("Digimon World Dusk Recompiled %s — pacote íntegro\n", appVersion)
 		return
 	}
 	base := os.Getenv("LOCALAPPDATA")

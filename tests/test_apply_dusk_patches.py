@@ -14,10 +14,12 @@ class IntegrationTests(unittest.TestCase):
         names = module.DESKTOP
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(names[0], "ndsrecomp-dusk-native-ui.patch")
-        self.assertEqual(names[-4], "ndsrecomp-dusk-pc-menu-input-capture.patch")
-        self.assertEqual(names[-3], "ndsrecomp-dusk-battle-frame-spikes.patch")
-        self.assertEqual(names[-2], "ndsrecomp-dusk-precise-pacing.patch")
-        self.assertEqual(names[-1], "ndsrecomp-dusk-window-icon.patch")
+        self.assertEqual(names[-6], "ndsrecomp-dusk-pc-menu-input-capture.patch")
+        self.assertEqual(names[-5], "ndsrecomp-dusk-battle-frame-spikes.patch")
+        self.assertEqual(names[-4], "ndsrecomp-dusk-precise-pacing.patch")
+        self.assertEqual(names[-3], "ndsrecomp-dusk-window-icon.patch")
+        self.assertEqual(names[-2], "ndsrecomp-dusk-recompiled-splash.patch")
+        self.assertEqual(names[-1], "ndsrecomp-dusk-intro-crossfade-v026.patch")
         for name in names:
             self.assertTrue((p.parent / "patches" / name).is_file(), name)
 
@@ -34,6 +36,15 @@ class IntegrationTests(unittest.TestCase):
         self.assertNotIn("scheduler_run_round", patch)
         self.assertEqual(patch.count("-                SDL_Delay(1);"), 1)
         self.assertEqual(patch.count("-        SDL_Delay(1);"), 1)
+
+    def test_splash_patch_does_not_touch_guest_execution(self):
+        patch = (p.parent / "patches" /
+                 "ndsrecomp-dusk-recompiled-splash.patch").read_text()
+        self.assertIn("dusk_show_startup", patch)
+        self.assertIn("SDL_LoadBMP(path)", patch)
+        self.assertIn("Digimon World Dusk Recompiled | v0.26", patch)
+        self.assertNotIn("scheduler_run_round", patch)
+        self.assertNotIn("cartridge", patch)
 
     def test_small_contract_is_prefix_of_desktop(self):
         self.assertEqual(module.DESKTOP[:len(module.NATIVE_UI)], module.NATIVE_UI)

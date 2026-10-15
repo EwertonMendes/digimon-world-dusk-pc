@@ -1,4 +1,4 @@
-# Digimon World Dusk PC — recompilação nativa
+# Digimon World Dusk Recompiled — recompilação nativa
 
 Projeto de recompilação estática do **Digimon World Dusk (Nintendo DS)**,
 preservando o código ARM9/ARM7 original. Não é uma reescrita de batalhas,
@@ -6,14 +6,16 @@ menus ou campanha em linguagem de alto nível.
 
 ## Estado verificável — 14/10/2026
 
-- **v0.16**: build privada Windows x64 jogável, com SDL3 nativo, Focus + PiP,
-  janela/tela cheia, PC Options, teclado, mouse, gamepad e save de cartucho
-  EEPROM 64 KiB. Os testes do proprietário continuam durante o gameplay;
-  não há alegação de campanha inteira certificada.
-- **v0.17 (em desenvolvimento)**: consolidação segura de cobertura AOT,
-  telemetria de sessões reais, retenção e restauração de saves, documentação
-  e melhorias progressivas de arquitetura. Consulte a [PR #17](https://github.com/EwertonMendes/digimon-world-dusk-pc/pull/17)
-  e [roadmap](docs/roadmap.md) para itens aprovados e pendentes.
+- **v0.23**: versão integrada anterior, com ícone de janela e EXE sem cantos
+  pretos, interface SDL3 nativa, salvamento EEPROM estável e gameplay em
+  acompanhamento pelo responsável.
+- **v0.26 (candidata de testes)**: nome **Digimon World Dusk Recompiled**,
+  versão nos metadados e artefatos, splash host SDL3 de 2,6 segundos
+  **“RECOMPILED BY TBLACK”**, pulável por teclado, mouse ou controle.
+  A ROM, o áudio, a emulação ARM e os saves não são modificados.
+  A versão só deve ser considerada jogável após build privada e teste real.
+- **Histórico v0.16–v0.22**: etapas de recompilação/AOT, interface e
+  estabilidade; consulte o histórico de PRs e os relatórios em `docs/research/`.
 - O `dusk_pc.exe` produzido no CI público é **somente a demonstração
   gráfica sintética**, não o jogo completo.
 - O GitHub público não publica o executável com ROM nem código ARM derivado.
@@ -69,10 +71,10 @@ Documentos: [arquitetura](docs/architecture.md),
 
 ## Identidade visual do aplicativo
 
-O ícone oficial é gerado de uma única [arte aprovada](assets/icons/dusk-icon-master.webp)
+O ícone oficial e a nova tela de abertura reutilizam uma única [arte aprovada](assets/icons/dusk-icon-master.webp)
 para Windows, Linux, macOS e Android por `tools/generate_icons.py`.
 O launcher Windows e a janela SDL3 do jogo recebem seus respectivos ícones
-nas builds privadas **v0.23**. Os ports Linux/macOS/Android ainda exigem
+nas builds privadas; a splash é gerada por `tools/generate_splash.py` e integrada na **v0.26**. Os ports Linux/macOS/Android ainda exigem
 integração e compilação próprias. Consulte [recursos e instruções](docs/icon-assets.md).
 
 ## Desenvolvimento e testes

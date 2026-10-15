@@ -1,0 +1,26 @@
+name: Dusk localization resource research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-msgpak:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Inspect original Dusk ROM message package without changing data
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_strings.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-msgpak-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK structural probe failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dusk-msgpak-structure-only
+          path: .private/dusk-msgpak-report.json
+          retention-days: 7

@@ -105,8 +105,12 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         # Preserve the more luminous native source pixel if two columns
         # collapse into one destination column on a longer translation.
         bright[key]=max(idx,bright.get(key,0))
+    # Original Nintendo menu letters have a full one-pixel indigo contour,
+    # including the top/left edge, not only a bottom-right drop shadow.
+    # Keep it wholly inside the authored caption masks and preserve glyph
+    # highlights after drawing the surrounding dark pixels.
     shadows={(x+dx,y+dy) for x,y in bright
-             for dx,dy in ((1,0),(0,1),(1,1))
+             for dx,dy in ((-1,0),(1,0),(0,-1),(0,1),(1,1))
              if (x+dx,y+dy) not in bright}
     for x,y in shadows:
         if (x,y) not in affected:continue

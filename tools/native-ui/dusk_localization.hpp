@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <optional>
 #include <string>
@@ -29,6 +31,32 @@ inline Language parse(std::string_view value) {
 inline Language next(Language lang,int direction) {
     const int n=static_cast<int>(kCodes.size());
     return static_cast<Language>((static_cast<int>(index(lang))+(direction<0?-1:1)+n)%n);
+}
+
+// Locale preference is independent of guest EEPROM and survives application upgrades.
+// Re-using the existing SDL preference directory avoids roaming/versioned game files.
+inline Language active_language=Language::english;
+inline std::filesystem::path preference_path;
+inline bool preference_loaded=false;
+inline void load_preference(const std::filesystem::path& native_layout_config) {
+    if(native_layout_config.empty())return;
+    const auto file=native_layout_config.parent_path()/"native-language-v1.cfg";
+    if(preference_loaded && preference_path==file)return;
+    preference_path=file;
+    preference_loaded=true;
+    active_language=Language::english;
+    std::ifstream in(file);
+    std::string raw;
+    if(in && std::getline(in,raw)) active_language=parse(raw);
+}
+inline bool select(Language language) {
+    if(!preference_loaded || preference_path.empty())return false;
+    std::ofstream out(preference_path,std::ios::trunc);
+    if(!out || !(out<<code(language)<<'\\n'))return false;
+    out.close();
+    if(!out)return false;
+    active_language=language;
+    return true;
 }
 
 // Stable composite identity: file/region and message number, never the English phrase.

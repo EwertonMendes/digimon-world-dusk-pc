@@ -7,12 +7,12 @@ No host SDL overlay or game-font pointer length assumptions. Builds a small
 RLE-compressed C++ asset table; original English resources are not included.
 """
 from __future__ import annotations
-import argparse,collections,hashlib,io,json,zlib
+import argparse,base64,collections,hashlib,io,json,zlib
 from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont
 from probe_dusk_strings import SHA256,files,u32
 from research_dusk_menu_strings import rle_decompress
-from nitro_bg_preview import graphics,chunk,palette
+from nitro_bg_preview import graphics,chunk,palette,tile_atlas
 ROOT=Path(__file__).resolve().parents[1]
 DEST=ROOT/"tools/native-ui/dusk_sprite_catalog.generated.hpp"
 
@@ -150,6 +150,14 @@ def generate(rom:bytes,preview=False)->str:
             rows.append((locale,i,zlib.crc32(raw)&0xffffffff,packed))
             if preview:
                 print("EDITED_SPRITE",locale,i,"oldbytes",len(raw),"newbytes",len(packed))
+                if locale=="pt-BR":
+                    a=tile_atlas(src,pal);z=tile_atlas(dest,pal)
+                    side=Image.new("RGB",(a.width,a.height*2+4),(30,25,46))
+                    side.paste(a,(0,0));side.paste(z,(0,a.height+4))
+                    side=side.resize((side.width*4,side.height*4),Image.Resampling.NEAREST)
+                    buf=io.BytesIO();side.save(buf,"PNG",optimize=True)
+                    print("TRANSLATED_SPRITE_ID",i)
+                    print("TRANSLATED_SPRITE64 "+base64.b64encode(buf.getvalue()).decode("ascii"))
     lines=["// Generated from translations/sprites/<locale>/manifest.json by generate_dusk_sprite_header.py."]
     for n,(_,_,_,data) in enumerate(rows):
         lines.append(f"inline constexpr std::array<std::uint8_t,{len(data)}> kSpriteData{n}{{")

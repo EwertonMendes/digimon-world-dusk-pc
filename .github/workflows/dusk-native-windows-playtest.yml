@@ -91,7 +91,13 @@ jobs:
         run: |
           python -m pip install Pillow==11.3.0
           python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/mshp00
-          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/t_kk01text
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/mtsin_bt00
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_00
+      - name: Detect precise menu text IDs in compressed Nintendo DS files
+        shell: pwsh
+        run: |
+          python tools/research_dusk_menu_strings.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'NitroFS option search failed' }
       - name: Compile and run live-resource relocation assertions (no ROM export)
         shell: pwsh
         run: |

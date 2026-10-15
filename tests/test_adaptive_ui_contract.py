@@ -4,6 +4,8 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 HEADER=(ROOT/'tools/native-ui/dusk_modern_ui.hpp').read_text(encoding='utf-8')
+MATERIAL=(ROOT/'tools/native-ui/dusk_material_renderer.hpp').read_text(encoding='utf-8')
+FONT=(ROOT/'tools/native-ui/dusk_ui_font.hpp').read_text(encoding='utf-8')
 PATCH=(ROOT/'tools/patches/ndsrecomp-dusk-adaptive-ui-v027.patch').read_text(encoding='utf-8')
 BUILD=(ROOT/'.github/workflows/dusk-native-windows-playtest.yml').read_text(encoding='utf-8')
 
@@ -22,15 +24,15 @@ class AdaptiveUiTests(unittest.TestCase):
                      'SDL_EVENT_FINGER_UP','finger_moved','finger_start_scroll',
                      'g.pip_restore','g.pip_swap','g.pip_minimize',
                      'pip_drag','floating_x','floating_y'):
-            with self.subTest(item=item):self.assertIn(item,HEADER)
+            with self.subTest(item=item):self.assertIn(item,HEADER+MATERIAL)
     def test_keyboard_gamepad_mouse(self):
         for item in ('SDL_SCANCODE_LEFT','SDL_SCANCODE_UP','SDL_SCANCODE_TAB',
                      'SDL_SCANCODE_RETURN','SDL_CONTROLLER_BUTTON_DPAD_UP',
                      'SDL_CONTROLLER_BUTTON_A','SDL_EVENT_MOUSE_WHEEL',
                      'dusk_modern::input(presentation,event)',
-                     'dusk_modern::draw_panel(renderer,presentation,geo)',
-                     'dusk_modern::draw_pip(renderer,presentation,geo)'):
-            with self.subTest(item=item):self.assertIn(item,HEADER+PATCH)
+                     'dusk_material::panel(renderer,presentation,geo)',
+                     'dusk_material::pip(renderer,presentation,geo)'):
+            with self.subTest(item=item):self.assertIn(item,HEADER+PATCH+MATERIAL)
     def test_original_gameplay_input_is_preserved(self):
         self.assertIn('return false;',HEADER)
         self.assertIn('if(p.dusk.quit_confirm)return false;',HEADER)
@@ -38,6 +40,15 @@ class AdaptiveUiTests(unittest.TestCase):
         self.assertIn('!p.dusk.menu_open',HEADER)
         self.assertIn('if (dusk_modern::input(presentation,event)) continue;',PATCH)
     def test_native_header_must_be_copied_into_real_runner(self):
-        self.assertIn('cp tools/native-ui/dusk_modern_ui.hpp upstream/runner/src/',BUILD)
+        for filename in ('dusk_modern_ui.hpp','dusk_material_renderer.hpp',
+                         'dusk_ui_font.hpp','dusk_font_atlas.hpp'):
+            self.assertIn('cp tools/native-ui/'+filename+' upstream/runner/src/',BUILD)
+    def test_no_debug_font_in_new_renderer(self):
+        self.assertNotIn('SDL_RenderDebugText',MATERIAL+FONT)
+        self.assertIn('SDL_RenderGeometry',MATERIAL)
+        self.assertIn('SDL_SetRenderClipRect',MATERIAL)
+        self.assertIn('SDL_RenderTexture',FONT)
+        self.assertIn('max_width',MATERIAL)
+
 
 if __name__=="__main__":unittest.main()

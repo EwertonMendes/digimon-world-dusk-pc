@@ -63,6 +63,11 @@ jobs:
         run: |
           python tools/research_dusk_shop_options.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Shop text source inventory failed' }
+      - name: Inspect exact ARM9 shop action string capacities
+        shell: pwsh
+        run: |
+          python tools/research_dusk_arm9_shop_context.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 shop text source inspection failed' }
       - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
         shell: pwsh
         run: |

@@ -70,6 +70,15 @@ def generate(rom:bytes,preview=False)->str:
             cel_source=rle_decompress(cel_raw)
             if cel_source is None:raise ValueError("invalid compressed NCER cell")
             edits=spec.get("edits",[])
+            if i in (479,480,481,482):
+                from probe_dusk_sprite_cells import get_cell_groups
+                groups,mode=get_cell_groups(cel_source)
+                if mode!=2 or len(groups)!=4 or any(len(g)!=1 for g in groups):
+                    raise ValueError("original S-menu OAM mapping / animation layout changed")
+                anchors=[(g[0][2]&0x3ff)*(1<<mode) for g in groups]
+                if anchors!=[0,64,128,192] or len(graphics(src)[1])//32 < 256:
+                    raise ValueError("128-byte OAM alignment differs from verified original menu")
+                print("NITROPAINT_VERIFIED_128_BYTE_MAPPING",i,anchors)
             dest=replace_labels(src,pal,cel_source,edits)
             assert_frames(src,pal,cel_source,dest,edits)
             packed=rle_compress(dest)

@@ -18,7 +18,8 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(names[-4], "ndsrecomp-dusk-battle-frame-spikes.patch")
         self.assertEqual(names[-3], "ndsrecomp-dusk-precise-pacing.patch")
         self.assertEqual(names[-2], "ndsrecomp-dusk-window-icon.patch")
-        self.assertEqual(names[-1], "ndsrecomp-dusk-recompiled-splash.patch")
+        self.assertEqual(names[-2], "ndsrecomp-dusk-recompiled-splash.patch")
+        self.assertEqual(names[-1], "ndsrecomp-dusk-intro-crossfade-v026.patch")
         for name in names:
             self.assertTrue((p.parent / "patches" / name).is_file(), name)
 
@@ -41,7 +42,7 @@ class IntegrationTests(unittest.TestCase):
                  "ndsrecomp-dusk-recompiled-splash.patch").read_text()
         self.assertIn("dusk_show_startup", patch)
         self.assertIn("SDL_LoadBMP(path)", patch)
-        self.assertIn("Digimon World Dusk Recompiled | v0.25", patch)
+        self.assertIn("Digimon World Dusk Recompiled | v0.26", patch)
         self.assertNotIn("scheduler_run_round", patch)
         self.assertNotIn("cartridge", patch)
 

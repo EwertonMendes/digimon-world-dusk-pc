@@ -50,8 +50,10 @@ inline bool apply(std::vector<std::uint8_t>& rom,std::string_view language,std::
            pos+expected.size()>size_t(arm9_begin)+arm9_length ||
            pos<previous_end)
             return fail("ARM9 text would overlap a neighbor");
-        if(!std::equal(expected.begin(),expected.end(),rom.begin()+pos))
-            return fail("ARM9 string original bytes do not match");
+        if(!std::equal(expected.begin(),expected.end(),rom.begin()+pos)) {
+            if(reason)*reason="ARM9 source mismatch at "+std::to_string(row.offset);
+            return false;
+        }
         changes.push_back({pos,std::move(translated),expected.size()});
         previous_end=pos+expected.size();
     }

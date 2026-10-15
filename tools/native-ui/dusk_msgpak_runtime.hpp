@@ -61,6 +61,7 @@ inline bool encode_text(std::u32string_view text,std::vector<uint8_t>& out) {
         if(text.substr(i,13)==U"[PLAYER_NAME]"){push16(out,0xffed);i+=13;continue;}
         if(text.substr(i,5)==U"[END]"){push16(out,0xfffe);i+=5;continue;}
         if(text.substr(i,5)==U"[RED]"){push16(out,0xffee);i+=5;continue;}
+        if(text.substr(i,7)==U"[GREEN]"){push16(out,0xffea);i+=7;continue;}
         if(text[i]==U'\n'){push16(out,0xfffd);++i;continue;}
         const auto code=encode_char(text[i++]);
         if(code==0xffff)return false;
@@ -70,21 +71,51 @@ inline bool encode_text(std::u32string_view text,std::vector<uint8_t>& out) {
     return true;
 }
 struct Replacement {int group;int id;std::u32string_view pt;std::u32string_view es;};
-// Initial gameplay proof: original engine renders these messages and supports
-// all required Latin glyphs. Additional entries require human-reviewed catalogs.
-// Keep translations page-sized; the NDS box is NOT automatically expandable.
-inline constexpr std::array<Replacement,5> proof{{
-    {0,0,U"[PLAYER_NAME] e sua equipe\nforam derrotados...",
-         U"El equipo de [PLAYER_NAME]\nfue derrotado..."},
-    {0,1,U"A equipe de [PLAYER_NAME]\ntentou fugir...",
-         U"El equipo de [PLAYER_NAME]\nintentó escapar..."},
-    {1,0,U"[PLAYER_NAME], que tipo de\nprogramas de TV você gosta?[END]",
-         U"[PLAYER_NAME], ¿qué tipo de\nprogramas de TV te gustan?[END]"},
-    {1,1,U"Vejo comédias na TV\ntodos os dias.[END]",
-         U"Veo comedias en la TV\ntodos los días.[END]"},
-    {3,2,U"Hoje é meu dia\nde sorte![END]",
-         U"Hoy es mi día\nde suerte![END]"},
-}};
+// Reachable playtest surfaces from exact-ROM (MSG.PAK) inspection.
+// Title menu can be inspected at boot. Shops and location greetings can be
+// inspected from an existing save without a story-specific event. These
+// preserve original color/control tokens; never change save or ARM instructions.
+// This is a SMALL TEST CATALOG, not a complete in-game localization.
+inline constexpr std::array proof{
+    Replacement{0,0,U"[PLAYER_NAME] e sua equipe\nforam derrotados...",
+                   U"El equipo de [PLAYER_NAME]\nfue derrotado..."},
+    Replacement{0,1,U"A equipe de [PLAYER_NAME]\ntentou fugir...",
+                   U"El equipo de [PLAYER_NAME]\nintentó escapar..."},
+    Replacement{1,0,U"[PLAYER_NAME], que tipo de\nprogramas de TV você gosta?[END]",
+                   U"[PLAYER_NAME], ¿qué tipo de\nprogramas de TV te gustan?[END]"},
+    Replacement{1,1,U"Vejo comédias na TV\ntodos os dias.[END]",
+                   U"Veo comedias en la TV\ntodos los días.[END]"},
+    Replacement{3,2,U"Hoje é meu dia\nde sorte![END]",
+                   U"Hoy es mi día\nde suerte![END]"},
+    // The single title-screen option list appears before story progression.
+    Replacement{124,45,U"Novo\nContinuar\nConexão Wi-Fi Nintendo\nVoltar[END]",
+                        U"Nuevo\nContinuar\nConexión Wi-Fi Nintendo\nVolver[END]"},
+    Replacement{125,33,U"Tem certeza?[END]",U"¿Estás seguro?[END]"},
+    // Common shopkeeper interactions and repeat visits.
+    Replacement{70,31,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
+    Replacement{70,32,U"Olá!\nDeseja comprar\n[GREEN]Itens consumíveis[GREEN]?[END]",
+                       U"¡Hola!\n¿Quieres comprar\n[GREEN]Consumibles[GREEN]?[END]"},
+    Replacement{70,33,U"Olá!\nDeseja comprar\n[GREEN]Itens da fazenda[GREEN]?[END]",
+                       U"¡Hola!\n¿Quieres comprar\n[GREEN]Objetos de granja[GREEN]?[END]"},
+    Replacement{70,34,U"Olá!\nDeseja reformar\nsua [RED]Ilha Agrícola[RED]?[END]",
+                       U"¡Hola!\n¿Quieres remodelar\ntu [RED]Isla Granja[RED]?[END]"},
+    Replacement{71,19,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
+    Replacement{69,67,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
+    Replacement{63,36,U"Olá! Deseja\nver [GREEN]Equipamentos[GREEN]?[END]",
+                       U"¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]"},
+    Replacement{64,88,U"Olá!\nDeseja comprar\n[GREEN]Itens consumíveis[GREEN]?[END]",
+                       U"¡Hola!\n¿Quieres comprar\n[GREEN]Consumibles[GREEN]?[END]"},
+    // Reachable city and elevator prompts (both Dusk and common-area variants).
+    Replacement{66,90,U"Olá, [PLAYER_NAME].\nEsta é a [RED]Praça Sombria[RED].[END]",
+                       U"Hola, [PLAYER_NAME].\nEsta es la [RED]Plaza Oscura[RED].[END]"},
+    Replacement{69,35,U"Olá, [PLAYER_NAME]. Esta é a\n[RED]Praça Sombria[RED].[END]",
+                       U"Hola, [PLAYER_NAME]. Esta es la\n[RED]Plaza Oscura[RED].[END]"},
+    Replacement{72,26,U"Deseja usar\no elevador?[END]",
+                       U"¿Quieres tomar\nel ascensor?[END]"},
+};
 inline bool rebuild_group(const std::vector<uint8_t>& original,int group,
                           std::string_view language,std::vector<uint8_t>& output,
                           int& replacements) {
@@ -120,6 +151,18 @@ inline bool rebuild_group(const std::vector<uint8_t>& original,int group,
             for(size_t j=0;j+1<encoded.size();j+=2)
                 if(encoded[j]==0xfe && encoded[j+1]==0xff)new_end=true;
             if(has_end!=new_end)return false;
+            // Never remove game variables, color toggles, or other control
+            // markers. Only textual glyph codes and line breaks may change.
+            auto controls=[](const std::vector<uint8_t>& data,size_t begin,size_t end){
+                std::vector<uint16_t> result;
+                for(size_t i=begin;i+1<end;i+=2) {
+                    const auto value=read16(data,i);
+                    if(value>=0xffe7 && value<=0xfff0)result.push_back(value);
+                }
+                return result;
+            };
+            if(controls(original,offsets[i],offsets[i+1]) !=
+               controls(encoded,0,encoded.size()))return false;
             const uint16_t original_last=read16(original,offsets[i+1]-2);
             if(original_last==0xfffe) {
                 // Dialogue entries end directly with [END] (FE FF).
@@ -165,7 +208,7 @@ inline bool apply(std::vector<uint8_t>& rom,std::string_view language,std::strin
             return fail("invalid MSG.PAK subfile");
         std::vector<uint8_t> sub(original.begin()+off,original.begin()+off+size);
         std::vector<uint8_t> translated;
-        if(group==0 || group==1 || group==3) {
+        if(std::any_of(proof.begin(),proof.end(),[&](const Replacement& r){return r.group==int(group);})) {
             if(!rebuild_group(sub,int(group),language,translated,replaced))
                 return fail("invalid internal message offsets or terminators");
         } else translated=std::move(sub);

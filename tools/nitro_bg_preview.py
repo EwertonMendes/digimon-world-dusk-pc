@@ -36,6 +36,7 @@ def graphics(src):
 def palette(src):
     at,length=chunk(src,b"RLCN",b"TTLP")
     size=u32(src,at+16)
+    if size==0 or size>length-24: size=length-24
     begin=at+24
     if size<32 or size%2 or begin+size>at+length:raise ValueError("bad palette allocation")
     return [((x&31)*255//31,((x>>5)&31)*255//31,((x>>10)&31)*255//31,255)

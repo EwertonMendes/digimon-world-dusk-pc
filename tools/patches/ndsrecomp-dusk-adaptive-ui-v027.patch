@@ -8,11 +8,11 @@ diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
 @@ -2510,5 +2510,5 @@
 -            dusk_pip_chrome(renderer,presentation,geo);
 -            dusk_corner_options(renderer,presentation,geo);
-+            dusk_modern::draw_pip(renderer,presentation,geo);
-+            dusk_modern::draw_corner(renderer,presentation,geo);
++            dusk_material::pip(renderer,presentation,geo);
++            dusk_material::corner(renderer,presentation,geo);
              if(presentation.dusk.menu_open) {
 -                dusk_menu(renderer,presentation,geo);
-+                dusk_modern::draw_panel(renderer,presentation,geo);
++                dusk_material::panel(renderer,presentation,geo);
                  if(presentation.dusk.quit_confirm)
 @@ -3640,2 +3640,4 @@
  #if defined(NDS_HAVE_SDL3)

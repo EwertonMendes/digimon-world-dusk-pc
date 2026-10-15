@@ -43,7 +43,7 @@ nor changes the EEPROM.
 
 ## Repeatable experimental gameplay catalog
 
-The verified MSG.PAK resource catalog now has **18 Portuguese and Spanish
+The verified MSG.PAK resource catalog now has **24 Portuguese and Spanish
 message IDs**. The selected texts were inspected in the original cartridge,
 including original line breaks, green/red color toggles, player-name tokens,
 and FEFF record terminators. The rebuilder refuses any record whose special
@@ -87,8 +87,32 @@ original end/color/control markers.
 5. Revert to English and restart. Original strings and save must remain
    unchanged. Report screenshots of any overlong or truncated message.
 
-A private-ROM test checks **every one of the 18 translated encoded records**,
+A private-ROM test checks **every one of the 24 translated encoded records**,
 and verifies that a neighboring unmodified record remains byte-identical.
+
+## Additional ARM9 in-memory interface text
+
+A second, independent data-only adapter translates a verified subset of
+repeatedly visible original 16-bit ARM9 strings, including Digivice/S-key menu
+bottom help (Digimon progress, inventory, quests, DigiFarm, Tamer information
+and save progress) and shop prompts (balance, stock, action question, category
+selection, insufficient Bits and full inventory).
+
+- The 12 entries per language are stored in
+  `translations/arm9/<locale>.json`; the checked-in C++ table is generated.
+- Each exact original value is checked in the owner's ROM **before any data is
+  changed**. The replacement must fit the original encoded slot, so nearby
+  strings and ARM9 code stay untouched. Anything unknown safely remains
+  English.
+- This does **not** yet translate game-owned baked graphics: the
+  large Digivice icons/text for Digimon, Items, Quests, etc., and shop action
+  buttons Buy / Sell / Quit. Those are not covered by IMG.PAK text patches or
+  the exact 16-bit ARM9 help strings identified in this research. They need a
+  separate verified sprite/tile asset-localization implementation, not
+  incorrectly painted-on SDL labels.
+
+Translations are authored in locale JSON files, with generators and safeguards
+documented in `translations/README.md`.
 
 ## Before promoting the PR
 

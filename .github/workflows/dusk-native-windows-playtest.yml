@@ -12,18 +12,45 @@ on:
         required: false
         type: boolean
         default: false
+      research_only:
+        description: 'Run read-only localization resource probe (no game bundle)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: dusk-recompiled-v029-${{ github.ref }}-${{ inputs.fast_repack }}
+  group: dusk-recompiled-v029-${{ github.ref }}-${{ inputs.fast_repack }}-${{ inputs.research_only }}
   cancel-in-progress: true
 
 jobs:
+  research-localization:
+    if: inputs.research_only == true
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify and inspect MSG.PAK resource offsets
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_strings.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-msgpak-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK probe failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dusk-msgpak-structure-only
+          path: .private/dusk-msgpak-report.json
+          retention-days: 7
+
   build-dusk-native-game:
-    if: inputs.approve_game_bundle == true && inputs.fast_repack != true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack != true && inputs.research_only != true
     runs-on: windows-latest
     timeout-minutes: 120
     env:
@@ -287,7 +314,7 @@ jobs:
 
 
   fast-cosmetic-repack:
-    if: inputs.approve_game_bundle == true && inputs.fast_repack == true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack == true && inputs.research_only != true
     runs-on: windows-latest
     timeout-minutes: 20
     env:

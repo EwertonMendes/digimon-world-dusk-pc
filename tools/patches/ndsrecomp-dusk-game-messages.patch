@@ -6,7 +6,7 @@ diff --git a/runner/src/main.cpp b/runner/src/main.cpp
 +#include "dusk_msgpak_runtime.hpp"
  #if defined(NDS_HAVE_COMPUTE_RENDERER)
  #include "melonds_compute/ComputeHost.h"
-@@ -1718,2 +1719,15 @@
+@@ -1718,2 +1719,16 @@
      }
 +    // The on-disk ROM and verified ARM code banks are unchanged. Rebuild only
 +    // the message file in RAM after the canonical cartridge SHA-1 gate.

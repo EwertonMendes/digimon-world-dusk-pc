@@ -88,6 +88,11 @@ jobs:
         run: |
           python tools/probe_dusk_title_ordinal.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Title ordinal text encoding scan failed' }
+      - name: Check alternative PUSH and START glyph encoding in original ARM9 and overlays
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_short_glyphs.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title short glyph encoding probe failed' }
       - name: Identify original shop option and item-action cells
         shell: pwsh
         run: |

@@ -136,7 +136,7 @@ private:
 inline const char* ui(std::string_view id,Language language) {
     struct Row { const char* key; std::array<const char*,4> value; };
     static constexpr Row text[]={
-        {"settings",{"Settings","Configuracoes","Configuracion","Settings"}},
+        {"settings",{"Settings","Configurações","Configuración","Settings"}},
         {"screens",{"Screens","Telas","Pantallas","Screens"}},
         {"video",{"Video","Video","Video","Video"}},
         {"controls",{"Controls","Controles","Controles","Controls"}},
@@ -146,8 +146,8 @@ inline const char* ui(std::string_view id,Language language) {
         {"quit",{"Quit game","Sair do jogo","Salir del juego","Quit game"}},
         {"return",{"Return to your adventure","Voltar para a aventura","Volver a la aventura","Return to your adventure"}},
         {"confirm_quit",{"Ask before closing","Confirmar antes de sair","Confirmar antes de salir","Ask before closing"}},
-        {"bridge_notice",{"Game dialogue is still English","Dialogos do jogo ainda em ingles",
-                           "Los dialogos siguen en ingles","Game dialogue is still English"}},
+        {"bridge_notice",{"Partial game translation; restart","Tradução parcial; reinicie o jogo",
+                           "Traducción parcial; reinicia el juego","Game dialogue is still English"}},
     };
     for (const auto& row:text) if(id==row.key) return row.value[index(language)];
     return "";

@@ -29,7 +29,8 @@ def main(rom):
                     "end_word":(hex(after[stopper]) if stopper is not None else "none"),
                     "slots_bytes":(stopper*2 if stopper is not None else None),
                     "zero_words_after":zeros,
-                    "next_words":[hex(v) for v in after[next_start:next_start+9]]})
+                    "next_words":[hex(v) for v in after[next_start:next_start+9]],
+                    "full_text":decode(after[:next((i for i,v in enumerate(after) if v in (0xffff,0xfffe)),min(len(after),60))])})
             at=rom.find(raw,at+2,end)
         print("LABEL",word,"hits",len(results))
         for row in results[:22]:print("AROUND",row)

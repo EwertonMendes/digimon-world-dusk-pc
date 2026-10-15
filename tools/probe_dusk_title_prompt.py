@@ -42,6 +42,9 @@ def candidate_size(objects):
 def research(rom):
     if hashlib.sha256(rom).hexdigest()!=SHA256:raise ValueError("invalid source ROM")
     catalog=files(rom)
+    for name,(fid,lo,hi) in catalog.items():
+        print("TITLE_ROM_FILE",fid,name,hi-lo) if name.lower().endswith(
+            (".pak",".ncgr",".nclr",".nscr",".ncer",".nftr",".narc")) else None
     needles=["Push Start","PUSH START","PushStart","Press Start","PRESS START"]
     print("TITLE_TEXT_SEARCH",needles)
     for name,(fid,lo,hi) in catalog.items():

@@ -25,7 +25,7 @@ def run(rom):
         except (ValueError,IndexError) as exc:
             print("TITLE_BG_ERROR",base,str(exc));continue
         if im.width>512 or im.height>512:continue
-        canvas=Image.new("RGB",(max(im.width,atlas.width)*2,im.height+atlas.height+32),(14,18,34))
+        canvas=Image.new("RGB",(max(im.width,atlas.width)*2,(im.height+atlas.height)*2+16),(14,18,34))
         for y in (0,):
             canvas.paste(im.resize((im.width*2,im.height*2),Image.Resampling.NEAREST),(0,y))
             canvas.paste(atlas.resize((atlas.width*2,atlas.height*2),Image.Resampling.NEAREST),(0,im.height*2+16))

@@ -29,6 +29,7 @@ DESKTOP = NATIVE_UI + (
     "ndsrecomp-dusk-window-icon.patch",
     "ndsrecomp-dusk-recompiled-splash.patch",
     "ndsrecomp-dusk-intro-crossfade-v026.patch",
+    "ndsrecomp-dusk-adaptive-ui-v027.patch",
 )
 
 

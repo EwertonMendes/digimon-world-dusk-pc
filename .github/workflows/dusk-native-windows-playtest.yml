@@ -51,7 +51,7 @@ jobs:
       - name: Reconstruct actual graphic sprites from NCER OAM attributes
         shell: pwsh
         run: |
-          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 531,516,380,383,388,389 --count 10
+          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 517,518,519,520,521,522,523,524,527,528,529,530 --count 1
           if ($LASTEXITCODE -ne 0) { throw 'Sprite cell source verification failed' }
 
   research-localization:

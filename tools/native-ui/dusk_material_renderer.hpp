@@ -105,7 +105,7 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
                   const dusk_native::Geometry& geo){
     View v=dusk_modern::calculate(geo,p);
     float s=scale(v);
-    int hpx=dp(24,s), bpx=dp(17,s), mpx=dp(14,s), spx=dp(12,s);
+    int hpx=dp(24,s), bpx=dp(17,s), mpx=dp(14,s);
     rect(r,{0,0,geo.play.w,geo.play.h},dim);
     rr(r,{v.panel.x+4,v.panel.y+dp(8,s),v.panel.w,v.panel.h},dp(24,s),{0,0,0,70});
     rr(r,v.panel,dp(23,s),background,{90,76,137,255});

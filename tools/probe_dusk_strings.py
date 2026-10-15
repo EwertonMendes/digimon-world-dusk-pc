@@ -105,7 +105,8 @@ def probe(rom:bytes)->dict:
                                 else:tokens=f"<{v:04x}>"
                                 symbols.append(tokens)
                             sample.append({"message_id":mid,"text":"".join(symbols)[:230],
-                                           "raw_bytes":stop-start})
+                                           "raw_bytes":stop-start,
+                                           "last_words":[u16(rom,p) for p in range(lo+off+max(start,stop-8),lo+off+stop,2)]})
                     entry["samples"]=sample
             entries.append(entry)
         item["entry_count"]=n

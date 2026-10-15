@@ -11,6 +11,7 @@ from pathlib import Path
 from PIL import Image
 
 from dusk_sprite_inplace_editor import extract_cell, _write_pixel
+from probe_dusk_sprite_cells import get_cell_groups
 from nitro_bg_preview import graphics, palette, chunk
 
 
@@ -57,6 +58,8 @@ def import_authored_art(
         if not image_path.is_relative_to(root.resolve()):
             raise ValueError("art path escapes translation asset directory")
         with Image.open(image_path) as source_art:
+            if source_art.format != "PNG":
+                raise ValueError("artwork must be an actual PNG file")
             if source_art.mode not in ("RGB", "RGBA"):
                 raise ValueError("authored DS images must be RGB or RGBA PNG")
             if source_art.size != source_view.size:
@@ -96,16 +99,20 @@ def import_authored_art(
     if any(a!=b and index not in allowed
            for index,(a,b) in enumerate(zip(out,ncgr))):
         raise ValueError("art importer changed NCGR headers or non-caption pixels")
-    # Re-render all authored cells after the write, detecting shared-tile
-    # side effects even when two animation states render the same source bank.
-    for edit in edits:
-        before = extract_cell(ncgr,nclr,ncer,edit["cell"])
-        after = extract_cell(bytes(out),nclr,ncer,edit["cell"])
-        regions = _rectangles(edit["regions"], before.size)
+    # Inspect EVERY original NCER animation, even unedited cells. Shared
+    # 1D tile names can otherwise corrupt a frame omitted from the manifest.
+    groups, mode = get_cell_groups(ncer)
+    if mode not in (0,1,2,3):
+        raise ValueError("unsupported original NCER mapping mode")
+    authored = {edit["cell"]:edit for edit in edits}
+    for cell in range(len(groups)):
+        before = extract_cell(ncgr,nclr,ncer,cell)
+        after = extract_cell(bytes(out),nclr,ncer,cell)
+        regions = _rectangles(authored[cell]["regions"],before.size) if cell in authored else []
         for y in range(before.size[1]):
             for x in range(before.size[0]):
                 if before.image.getpixel((x,y)) != after.image.getpixel((x,y)):
                     if not any(rx<=x<rx+rw and ry<=y<ry+rh
                                for rx,ry,rw,rh in regions):
-                        raise ValueError("animated cell artwork changed outside caption bounds")
+                        raise ValueError(f"unapproved artwork change in OAM animation {cell}")
     return bytes(out)

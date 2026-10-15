@@ -21,7 +21,7 @@ class AdaptiveUiTests(unittest.TestCase):
                      'g.pip_restore','g.pip_swap','g.pip_minimize',
                      'pip_drag','floating_x','floating_y'):
             with self.subTest(item=item):self.assertIn(item,HEADER)
-    def test_keyboard_gamepad_mouse():
+    def test_keyboard_gamepad_mouse(self):
         for item in ('SDL_SCANCODE_LEFT','SDL_SCANCODE_UP','SDL_SCANCODE_TAB',
                      'SDL_SCANCODE_RETURN','SDL_CONTROLLER_BUTTON_DPAD_UP',
                      'SDL_CONTROLLER_BUTTON_A','SDL_EVENT_MOUSE_WHEEL',
@@ -34,7 +34,7 @@ class AdaptiveUiTests(unittest.TestCase):
         self.assertIn('if(p.dusk.quit_confirm)return false;',HEADER)
         self.assertIn('Existing confirmed quit modal stays authoritative',HEADER)
         self.assertIn('!p.dusk.menu_open',HEADER)
-        self.assertIn('if(dusk_modern::input(presentation,event)) continue;',PATCH)
+        self.assertIn('if (dusk_modern::input(presentation,event)) continue;',PATCH)
     def test_native_header_must_be_copied_into_real_runner(self):
         self.assertIn('cp tools/native-ui/dusk_modern_ui.hpp upstream/runner/src/',BUILD)
 

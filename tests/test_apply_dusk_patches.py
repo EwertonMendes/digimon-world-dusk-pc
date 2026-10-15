@@ -21,7 +21,8 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(names[-4], "ndsrecomp-dusk-recompiled-splash.patch")
         self.assertEqual(names[-3], "ndsrecomp-dusk-intro-crossfade-v026.patch")
         self.assertEqual(names[-2], "ndsrecomp-dusk-adaptive-ui-v027.patch")
-        self.assertEqual(names[-1], "ndsrecomp-dusk-localization-global.patch")
+        self.assertEqual(names[-2], "ndsrecomp-dusk-localization-global.patch")
+        self.assertEqual(names[-1], "ndsrecomp-dusk-game-messages.patch")
         for name in names:
             self.assertTrue((p.parent / "patches" / name).is_file(), name)
 

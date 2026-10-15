@@ -61,11 +61,11 @@ inline void append(View& v, Rect r, int kind, int value) {
 }
 inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation& p) {
     View out{};
-    const int w=std::max(320,g.play.w), h=std::max(280,g.play.h);
+    const int w=std::max(1,g.play.w), h=std::max(1,g.play.h);
     const bool narrow=w<730 || w<h;
     const int pad=narrow?12:22;
-    const int pw=std::min(w-2*pad,narrow?600:980);
-    const int ph=std::min(h-2*pad,narrow?h-24:750);
+    const int pw=std::max(1,std::min(w-2*pad,narrow?600:980));
+    const int ph=std::max(1,std::min(h-2*pad,narrow?h-24:750));
     out.panel={(w-pw)/2,(h-ph)/2,pw,ph};
     const Rect panel=out.panel;
     out.title={panel.x+18,panel.y+12,panel.w-36,58};
@@ -220,8 +220,9 @@ inline void draw_panel(SDL_Renderer* r,const FrontendPresentation& p,
         const bool active=state.tab==i;
         fill(r,tab,active?72:22,active?45:28,active?147:71);
         if(active)fill(r,{tab.x,tab.y+tab.h-3,tab.w,3},91,220,255);
-        text(r,tab.x+std::max(8,(tab.w-int(std::string(tab_name(i)).size()*11))/2),
-             tab.y+13,tab_name(i),1.35f);
+        const char* label=tab.w<95 ? (i==0?"DS":i==1?"VIDEO":i==2?"INPUT":"SYS") : tab_name(i);
+        text(r,tab.x+std::max(6,(tab.w-int(std::string(label).size()*10))/2),
+             tab.y+13,label,tab.w<95?1.05f:1.35f);
     }
     fill(r,v.content,13,20,55,220);
     // Strict clipping prevents content from painting over tabs or footer on small displays.
@@ -264,15 +265,23 @@ inline void draw_panel(SDL_Renderer* r,const FrontendPresentation& p,
     if(state.tab==2) {
         const int x=v.content.x+20, y=v.content.y+23;
         text(r,x,y,"ONE MENU. EVERY DEVICE.",1.6f);
-        const char* lines[]={
+        const char* desktop[]={
             "KEYBOARD   ARROWS / ENTER / ESC",
             "CONTROLLER DPAD / A / B / SELECT",
             "MOUSE      CLICK / WHEEL / DRAG",
             "TOUCH      TAP / SWIPE / DRAG",
             "DS TOUCH   USE THE LOWER SCREEN"
         };
+        const char* mobile[]={
+            "KEYS: ARROWS, ENTER, ESC",
+            "PAD: DPAD, A, B, SELECT",
+            "MOUSE: CLICK, SCROLL",
+            "TOUCH: TAP, SWIPE",
+            "DS TOUCH: LOWER SCREEN"
+        };
         for(int i=0;i<5;i++)
-            text(r,x,y+45+i*std::max(27,v.content.h/8),lines[i],1.3f);
+            text(r,x,y+45+i*std::max(27,v.content.h/8),
+                 v.content.w<530?mobile[i]:desktop[i],v.content.w<530?1.05f:1.3f);
     }
     SDL_SetRenderClipRect(r,nullptr);
     if(max_scroll(v)>0) {

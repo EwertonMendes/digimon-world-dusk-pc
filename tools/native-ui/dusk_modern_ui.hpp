@@ -33,7 +33,7 @@ struct State {
 };
 inline State state{};
 
-inline bool contains(Rect r, float x, float y) {
+inline bool hit_test(Rect r, float x, float y) {
     return r.w>0 && r.h>0 && x>=r.x && y>=r.y &&
            x<r.x+r.w && y<r.y+r.h;
 }
@@ -357,17 +357,17 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
         // the lower-screen touch remains owned by the original NDS mapper.
         if(finger && has_pos) {
             const bool focus=p.dusk.cfg.layout==dusk_native::Layout::Focus;
-            if(focus && down && contains(geo.pip_restore,x,y)) {
+            if(focus && down && hit_test(geo.pip_restore,x,y)) {
                 p.dusk.cfg.auxiliary=true;dusk_save(p);return true;
             }
-            if(focus && down && contains(geo.pip_swap,x,y)) {
+            if(focus && down && hit_test(geo.pip_swap,x,y)) {
                 p.dusk.cfg.focus_top=!p.dusk.cfg.focus_top;
                 dusk_save(p);return true;
             }
-            if(focus && down && contains(geo.pip_minimize,x,y)) {
+            if(focus && down && hit_test(geo.pip_minimize,x,y)) {
                 p.dusk.cfg.auxiliary=false;dusk_save(p);return true;
             }
-            if(focus && down && contains(geo.pip_bar,x,y) &&
+            if(focus && down && hit_test(geo.pip_bar,x,y) &&
                p.dusk.cfg.auxiliary) {
                 state.pip_drag=true;
                 state.pip_drag_x=x;state.pip_drag_y=y;
@@ -396,7 +396,7 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
             }
         }
         // Finger input is explicitly supported, without stealing gameplay taps.
-        if(finger && down && has_pos && contains(geo.settings,x,y)) {
+        if(finger && down && has_pos && hit_test(geo.settings,x,y)) {
             p.dusk.menu_open=true;
             p.dusk.quit_confirm=false;
             state.focus=0;
@@ -414,13 +414,13 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
                 state.finger_down_y=y;
                 state.finger_start_scroll=state.scroll;
                 state.pending_item=-1;
-                if(contains(v.close,x,y)){p.dusk.menu_open=false;return true;}
-                for(int i=0;i<4;i++) if(contains(v.tabs[i],x,y)) {
+                if(hit_test(v.close,x,y)){p.dusk.menu_open=false;return true;}
+                for(int i=0;i<4;i++) if(hit_test(v.tabs[i],x,y)) {
                     choose_tab(geo,p,i);return true;
                 }
-                if(contains(v.content,x,y))
+                if(hit_test(v.content,x,y))
                     for(int i=0;i<v.count;i++)
-                        if(contains(v.items[i].rect,x,y)){state.pending_item=i;break;}
+                        if(hit_test(v.items[i].rect,x,y)){state.pending_item=i;break;}
                 return true;
             }
             if(ev.type==SDL_EVENT_FINGER_MOTION && state.finger_active) {
@@ -435,7 +435,7 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
                 if(state.finger_active && !state.finger_moved && state.pending_item>=0) {
                     const auto current=calculate(geo,p);
                     if(state.pending_item<current.count &&
-                       contains(current.items[state.pending_item].rect,x,y)) {
+                       hit_test(current.items[state.pending_item].rect,x,y)) {
                         state.focus=state.pending_item;
                         choose(p,geo,current.items[state.pending_item]);
                     }
@@ -447,12 +447,12 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
         }
         if(down) {
             const auto v=calculate(geo,p);
-            if(contains(v.close,x,y)) {p.dusk.menu_open=false;return true;}
-            for(int i=0;i<4;i++)if(contains(v.tabs[i],x,y)) {
+            if(hit_test(v.close,x,y)) {p.dusk.menu_open=false;return true;}
+            for(int i=0;i<4;i++)if(hit_test(v.tabs[i],x,y)) {
                 choose_tab(geo,p,i);return true;
             }
-            if(contains(v.content,x,y)) {
-                for(int i=0;i<v.count;i++)if(contains(v.items[i].rect,x,y)) {
+            if(hit_test(v.content,x,y)) {
+                for(int i=0;i<v.count;i++)if(hit_test(v.items[i].rect,x,y)) {
                     state.focus=i;
                     choose(p,geo,v.items[i]);
                     return true;

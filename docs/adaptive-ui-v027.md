@@ -1,51 +1,44 @@
-# Dusk Adaptive UI — v0.27 (Windows Playtest)
+# Dusk Material UI v0.28 — revisão após teste visual
 
-This UI is native SDL3, not a browser or a guest-ROM modification.
-The original game ROM, video surfaces, scheduler, sound, cartridge and
-`userdata/A6RE` save profile are untouched.
+A v0.27 foi rejeitada pelo teste visual: utilizava `SDL_RenderDebugText`,
+rotulagem de fonte bitmap, valores recortados e painéis pouco adequados ao toque.
 
-## New options surface
+## Nova camada
 
-- Four navigation tabs: **Screens**, **Video**, **Controls**, **System**.
-- Layout selector cards with graphical previews for all six existing layouts.
-- Screens settings: main DS screen, show/hide auxiliary display, PiP sizing,
-  PiP corner. Video: original 4:3 versus 16:9 stretch, window mode, frame
-  presentation speed. System: resume and confirmed quit.
-- Responsive centered window on desktop; narrow layouts fit within output
-  bounds, use shorter tab labels and clip scrollable content inside a modal.
-- Always-visible small PC options control; the game no longer requires hover
-  to discover settings on touchscreens.
-- Auxiliary PiP chrome is slimmer and keeps the existing header, swap,
-  minimize, restore, drag and resize hit regions so tested gestures persist.
+- O compositor SDL3 agora chama `dusk_material::panel/pip/corner`.
+- `dusk_font_atlas.hpp`: cobertura antialias pré-rasterizada de
+  **Inter Display Regular/Semibold**, 64 px, compactada e renderizada em
+  textura GPU; sem SDL_ttf, font fallback do sistema ou fontes raster
+  de depuração. A fonte Inter é distribuída sob **SIL Open Font License 1.1**;
+  a versão deste projeto contém os glifos renderizados, não o arquivo de fonte.
+- `dusk_ui_font.hpp`: medidas proporcionais, interpolação linear,
+  reticências para textos longos e coloração por estado; a textura é criada
+  somente uma vez para cada renderer SDL.
+- `dusk_material_renderer.hpp`: componentes arredondados, paleta
+  índigo/violeta Dusk, acentos ciano, cartões de layouts, cabeçalhos, abas,
+  seleção evidente, legenda dos controles, rolagem isolada e limites
+  exatos de desenho. Não confundir a aparência do menu com a pixel art do jogo.
+- `dusk_modern_ui.hpp`: layout com dimensionamento em escala lógica,
+  3 colunas no desktop, 2 colunas onde couberem no mobile, rolagem
+  por toque e teclado/controle. No gameplay, a tela inferior do DS continua
+  utilizando o mesmo mapeamento de toque original.
 
-## Input behavior
+## Compilação
 
-- Keyboard: arrow keys move the focus and change values; Tab cycles tabs;
-  Enter/space selects; Esc/F10 use the original native close behavior.
-- Controller: D-pad + left analog move focus; A activates; B/Select retain
-  the original close/menu semantics and the native quit confirmation.
-- Mouse: click any tab/card/control and mouse-wheel scrolls long menus.
-- Touch: tap tabs/card controls; scroll the menu with a vertical swipe;
-  PiP header allows touch dragging, swapping, hiding and restoring.
-  Touches on the lower DS surface still go through the original guest mapper.
-- The original native PC Options input capture remains authoritative;
-  guest keys must never be held down while host settings are open.
+O fluxo completo v0.27 falhou em restaurar o cache de objetos. A v0.28
+usa chaves estáveis por branch com fallback para o cache antigo. O próprio
+ccache valida os conteúdos de fontes, includes, flags e toolchain; uma
+mudança de UI não implica recompilar todas as unidades de ARM.
 
-## Architecture
+O cache atualizado é salvo **imediatamente após** o runner compilar,
+mesmo quando uma etapa posterior de empacotamento tiver problemas.
+Não há cache de ROM, dados pessoais ou saves.
 
-`tools/native-ui/dusk_modern_ui.hpp` is the separate, self-contained
-presentation and input adapter. The thin
-`tools/patches/ndsrecomp-dusk-adaptive-ui-v027.patch` integrates it after
-the existing legacy settings helpers into the pinned NDSRecomp frontend.
-The native private workflow installs that header into its pinned checkout
-before compiling SDL3. No new SDL dependencies or backend are required.
+O CI ROM-free compila o renderer/material/font atlas isoladamente via
+`tests/material_ui_smoke.cpp`, evitando esperar por todo o NDSRecomp
+para descobrir erros sintáticos no menu.
 
-## Validation
-
-The ROM-free CI verifies patch integration, adaptive host UI contracts,
-native input capture and launcher source tests. A private Windows v0.27
-runner build is required before the EXE is considered playable.
-Real phone packaging is not present yet: touch support is a native SDL3
-capability prepared for the future Android/iOS ports, **not a claim that an
-APK has already been tested**. Test Windows mouse, keyboard and gamepad,
-then simulate touch or test on a touchscreen Windows device before merging.
+Nenhuma alteração no scheduler, ROM, áudio ou save.
+O Windows ainda depende de build real para validar a integração. A futura
+interface Android compartilhará os controles SDL3, mas uma versão APK não
+é considerada testada até termos um runner Android funcional.

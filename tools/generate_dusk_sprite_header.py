@@ -13,8 +13,7 @@ from PIL import Image
 from probe_dusk_strings import SHA256,files,u32
 from research_dusk_menu_strings import rle_decompress
 from nitro_bg_preview import graphics,chunk,palette,tile_atlas
-from dusk_sprite_oam_editor import edit_ncer_title
-from dusk_sprite_tile_isolation import isolate_selected_cells
+from dusk_sprite_inplace_editor import replace_labels, assert_frames, extract_cell
 ROOT=Path(__file__).resolve().parents[1]
 DEST=ROOT/"tools/native-ui/dusk_sprite_catalog.generated.hpp"
 
@@ -70,55 +69,35 @@ def generate(rom:bytes,preview=False)->str:
             cel_raw=read_resource(celpack,i)
             cel_source=rle_decompress(cel_raw)
             if cel_source is None:raise ValueError("invalid compressed NCER cell")
-            isolated_chr,isolated_cel=isolate_selected_cells(src,cel_source,spec.get("edits",[]))
-            dest=edit_ncer_title(isolated_chr,pal,isolated_cel,spec.get("edits",[]))
-            if any("region" in edit for edit in spec.get("edits",[])):
-                from probe_dusk_sprite_cells import get_cell_groups,render_one
-                orig_cells,orig_mode=get_cell_groups(cel_source)
-                new_cells,new_mode=get_cell_groups(isolated_cel)
-                if len(orig_cells)!=len(new_cells) or orig_mode!=new_mode:
-                    raise ValueError("animation cell count or mapping mode changed")
-                colors=palette(pal)
-                original_chars=graphics(src)[1]
-                localized_chars=graphics(dest)[1]
-                for edit in spec["edits"]:
-                    if "region" not in edit:continue
-                    idx=edit["cell"]
-                    before=render_one(original_chars,colors,orig_cells[idx],orig_mode)
-                    after=render_one(localized_chars,colors,new_cells[idx],new_mode)
-                    if before is None or after is None or before.size!=after.size:
-                        raise ValueError("original Digivice animation cell was altered")
-                    x,y,w,h=edit["region"]
-                    changed=0
-                    bp=before.load();ap=after.load()
-                    for py in range(before.height):
-                        for px in range(before.width):
-                            if bp[px,py]!=ap[px,py]:
-                                if not (x<=px<x+w and y<=py<y+h):
-                                    raise ValueError("original button icon/frame changed outside label area")
-                                changed+=1
-                    if changed<12:raise ValueError("translation did not update sufficient glyph pixels")
+            edits=spec.get("edits",[])
+            dest=replace_labels(src,pal,cel_source,edits)
+            assert_frames(src,pal,cel_source,dest,edits)
             packed=rle_compress(dest)
             rows.append((locale,i,26,zlib.crc32(raw)&0xffffffff,packed))
-            if isolated_cel!=cel_source:
-                rows.append((locale,i,25,zlib.crc32(cel_raw)&0xffffffff,rle_compress(isolated_cel)))
             if preview:
                 print("EDITED_SPRITE",locale,i,"oldbytes",len(raw),"newbytes",len(packed))
                 if locale=="pt-BR":
-                    from probe_dusk_sprite_cells import get_cell_groups,render_one
-                    cells,mode=get_cell_groups(cel_source)
-                    translated_cells,_=get_cell_groups(isolated_cel)
-                    original_image=render_one(graphics(src)[1],palette(pal),cells[0],mode)
-                    translated_image=render_one(graphics(dest)[1],palette(pal),translated_cells[0],mode)
-                    if original_image is None or translated_image is None:
-                        raise ValueError("could not visualize real OAM cell")
-                    w=max(original_image.width,translated_image.width)
-                    h=original_image.height+translated_image.height+4
-                    side=Image.new("RGB",(w,h),(30,25,46))
-                    side.paste(original_image,(0,0))
-                    side.paste(translated_image,(0,original_image.height+4))
-                    side=side.resize((side.width*4,side.height*4),Image.Resampling.NEAREST)
-                    buf=io.BytesIO();side.save(buf,"PNG",optimize=True)
+                    from PIL import ImageDraw
+                    # Each action state is validated independently, rather
+                    # than previewing a swizzled NCGR texture atlas.
+                    images=[]
+                    for k in range(min(4,len(edits))):
+                        cell=edits[k]["cell"]
+                        old_image=extract_cell(src,pal,cel_source,cell).image
+                        new_image=extract_cell(dest,pal,cel_source,cell).image
+                        images.append((cell,old_image,new_image))
+                    width=max(im.width for _,old,new in images for im in (old,new))
+                    height=sum(max(old.height,new.height)+6 for _,old,new in images)
+                    canvas=Image.new("RGB",(width*2,height),(24,20,45))
+                    pen=ImageDraw.Draw(canvas)
+                    y=0
+                    for cell,old,new in images:
+                        canvas.paste(old,(0,y))
+                        canvas.paste(new,(width,y))
+                        pen.text((0,y+max(old.height,new.height)),f"animation {cell}",fill="white")
+                        y+=max(old.height,new.height)+6
+                    canvas=canvas.resize((canvas.width*3,canvas.height*3),Image.Resampling.NEAREST)
+                    buf=io.BytesIO();canvas.save(buf,"PNG",optimize=True)
                     print("TRANSLATED_SPRITE_ID",i)
                     print("TRANSLATED_SPRITE64 "+base64.b64encode(buf.getvalue()).decode("ascii"))
 

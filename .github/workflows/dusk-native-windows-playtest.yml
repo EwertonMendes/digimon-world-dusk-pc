@@ -58,6 +58,7 @@ jobs:
         run: |
           python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Translated sprite generation failed' }
+          New-Item -ItemType Directory -Force .private | Out-Null
           clang++ -std=c++20 -O2 -Itools/native-ui tests/sprite_ui_runtime_probe.cpp -o .private/sprite-ui-probe.exe
           if ($LASTEXITCODE -ne 0) { throw 'Sprite localization runtime build failed' }
           & .private/sprite-ui-probe.exe 'Digimon World - Dusk (USA).nds'

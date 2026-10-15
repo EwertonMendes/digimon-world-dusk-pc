@@ -1,0 +1,48 @@
+diff --git a/runner/src/frontend.cpp b/runner/src/frontend.cpp
+--- a/runner/src/frontend.cpp
++++ b/runner/src/frontend.cpp
+@@ -1720,1 +1720,3 @@
++// New, self-contained host UI; legacy menu renderer remains as fallback.
++#include "dusk_modern_ui.hpp"
+ static bool dusk_handle_mouse(FrontendPresentation& p, SDL_Event& ev) {
+@@ -2510,5 +2510,5 @@
+-            dusk_pip_chrome(renderer,presentation,geo);
+-            dusk_corner_options(renderer,presentation,geo);
++            dusk_material::pip(renderer,presentation,geo);
++            dusk_material::corner(renderer,presentation,geo);
+             if(presentation.dusk.menu_open) {
+-                dusk_menu(renderer,presentation,geo);
++                dusk_material::panel(renderer,presentation,geo);
+                 if(presentation.dusk.quit_confirm)
+@@ -3640,2 +3640,4 @@
+ #if defined(NDS_HAVE_SDL3)
++            // Unified host input (keyboard, mouse, finger and gamepad).
++            if (dusk_modern::input(presentation,event)) continue;
+             if(dusk_handle_mouse(presentation,event)) {
+@@ -4300,10 +4300,18 @@
+                     } else {
+-                        if(navigation==dusk_native::MenuDirection::Up)
+-                            d.selected=(d.selected+9)%10;
+-                        else if(navigation==dusk_native::MenuDirection::Down)
+-                            d.selected=(d.selected+1)%10;
+-                        else if(navigation==dusk_native::MenuDirection::Left ||
+-                                navigation==dusk_native::MenuDirection::Right)
+-                            dusk_menu_action(presentation,d.selected,
+-                                navigation==dusk_native::MenuDirection::Left?-1:1);
++                        const auto geo=dusk_geometry(presentation);
++                        if(navigation==dusk_native::MenuDirection::Up)
++                            dusk_modern::navigate(geo,presentation,0,-1);
++                        else if(navigation==dusk_native::MenuDirection::Down)
++                            dusk_modern::navigate(geo,presentation,0,1);
++                        else if(navigation==dusk_native::MenuDirection::Left ||
++                                navigation==dusk_native::MenuDirection::Right){
++                            const int delta=navigation==dusk_native::MenuDirection::Left?-1:1;
++                            const auto view=dusk_modern::calculate(geo,presentation);
++                            if(view.count && dusk_modern::state.tab==0 && dusk_modern::state.focus<6)
++                                dusk_modern::navigate(geo,presentation,delta,0);
++                            else if(view.count && view.items[dusk_modern::state.focus].kind==1)
++                                dusk_modern::choose(presentation,geo,view.items[dusk_modern::state.focus],delta);
++                            else dusk_modern::choose_tab(geo,presentation,
++                                (dusk_modern::state.tab+4+delta)%4);
++                        }
+                     }

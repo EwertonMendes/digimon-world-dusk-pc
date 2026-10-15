@@ -9,7 +9,7 @@ menus ou campanha em linguagem de alto nível.
 - **v0.23**: versão integrada anterior, com ícone de janela e EXE sem cantos
   pretos, interface SDL3 nativa, salvamento EEPROM estável e gameplay em
   acompanhamento pelo responsável.
-- **v0.26 (candidata de testes)**: nome **Digimon World Dusk Recompiled**,
+- **v0.29 (candidata de testes)**: nome **Digimon World Dusk Recompiled**,
   versão nos metadados e artefatos, splash host SDL3 de 2,6 segundos
   **“RECOMPILED BY TBLACK”**, pulável por teclado, mouse ou controle.
   A ROM, o áudio, a emulação ARM e os saves não são modificados.
@@ -74,7 +74,7 @@ Documentos: [arquitetura](docs/architecture.md),
 O ícone oficial e a nova tela de abertura reutilizam uma única [arte aprovada](assets/icons/dusk-icon-master.webp)
 para Windows, Linux, macOS e Android por `tools/generate_icons.py`.
 O launcher Windows e a janela SDL3 do jogo recebem seus respectivos ícones
-nas builds privadas; a splash é gerada por `tools/generate_splash.py` e integrada na **v0.26**. Os ports Linux/macOS/Android ainda exigem
+nas builds privadas; a splash é gerada por `tools/generate_splash.py` e integrada na **v0.29**. Os ports Linux/macOS/Android ainda exigem
 integração e compilação próprias. Consulte [recursos e instruções](docs/icon-assets.md).
 
 ## Desenvolvimento e testes

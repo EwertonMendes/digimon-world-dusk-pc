@@ -14,12 +14,13 @@ class IntegrationTests(unittest.TestCase):
         names = module.DESKTOP
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(names[0], "ndsrecomp-dusk-native-ui.patch")
-        self.assertEqual(names[-6], "ndsrecomp-dusk-pc-menu-input-capture.patch")
-        self.assertEqual(names[-5], "ndsrecomp-dusk-battle-frame-spikes.patch")
-        self.assertEqual(names[-4], "ndsrecomp-dusk-precise-pacing.patch")
-        self.assertEqual(names[-3], "ndsrecomp-dusk-window-icon.patch")
-        self.assertEqual(names[-2], "ndsrecomp-dusk-recompiled-splash.patch")
-        self.assertEqual(names[-1], "ndsrecomp-dusk-intro-crossfade-v026.patch")
+        self.assertEqual(names[-7], "ndsrecomp-dusk-pc-menu-input-capture.patch")
+        self.assertEqual(names[-6], "ndsrecomp-dusk-battle-frame-spikes.patch")
+        self.assertEqual(names[-5], "ndsrecomp-dusk-precise-pacing.patch")
+        self.assertEqual(names[-4], "ndsrecomp-dusk-window-icon.patch")
+        self.assertEqual(names[-3], "ndsrecomp-dusk-recompiled-splash.patch")
+        self.assertEqual(names[-2], "ndsrecomp-dusk-intro-crossfade-v026.patch")
+        self.assertEqual(names[-1], "ndsrecomp-dusk-adaptive-ui-v027.patch")
         for name in names:
             self.assertTrue((p.parent / "patches" / name).is_file(), name)
 
@@ -42,7 +43,7 @@ class IntegrationTests(unittest.TestCase):
                  "ndsrecomp-dusk-recompiled-splash.patch").read_text()
         self.assertIn("dusk_show_startup", patch)
         self.assertIn("SDL_LoadBMP(path)", patch)
-        self.assertIn("Digimon World Dusk Recompiled | v0.26", patch)
+        self.assertIn("Digimon World Dusk Recompiled | v0.29", patch)
         self.assertNotIn("scheduler_run_round", patch)
         self.assertNotIn("cartridge", patch)
 

@@ -50,11 +50,18 @@ jobs:
           name: Tblack-Splash-PREVIEW-PNG
           path: dusk-splash-preview.png
           retention-days: 30
+      - name: Compile modern SDL UI separately (no ARM or Windows runner)
+        if: runner.os == 'Linux'
+        run: |
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror -Itools/native-ui \
+            tests/material_ui_smoke.cpp -o /tmp/dusk-material-ui-smoke
+          /tmp/dusk-material-ui-smoke
       - name: Validate Python research tooling syntax
         if: runner.os == 'Linux'
         run: |
           python3 -m unittest discover -s tests -p test_icon_assets.py -v
           python3 -m unittest discover -s tests -p test_splash_assets.py -v
+          python3 -m unittest discover -s tests -p test_adaptive_ui_contract.py -v
           python3 -m unittest discover -s tests -p test_native_runtime_pin.py -v
           python3 -m unittest discover -s tests -p test_repack_verified_native_windows.py -v
           python3 -c 'import sys;sys.path.insert(0,"tools");from native_runtime_pin import runtime_fingerprint;print("NATIVE_RUNTIME_FINGERPRINT="+runtime_fingerprint())'

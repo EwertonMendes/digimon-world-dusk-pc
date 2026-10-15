@@ -22,6 +22,206 @@
           "text": "EQUIPE"
         }
       ]
+    },
+    {
+      "id": 479,
+      "source_sha256": "f53490e4cfb4ba1a0cc01a7778d64e6245c27cc68f2a4f12a84501291a13317d",
+      "edits": [
+        {
+          "cell": 0,
+          "region": [
+            6,
+            32,
+            53,
+            16
+          ],
+          "text": "Itens",
+          "color": "lime"
+        },
+        {
+          "cell": 1,
+          "region": [
+            6,
+            32,
+            53,
+            16
+          ],
+          "text": "Itens",
+          "color": "lime"
+        },
+        {
+          "cell": 2,
+          "region": [
+            6,
+            32,
+            53,
+            16
+          ],
+          "text": "Itens",
+          "color": "lime"
+        },
+        {
+          "cell": 3,
+          "region": [
+            6,
+            32,
+            53,
+            16
+          ],
+          "text": "Itens",
+          "color": "lime"
+        }
+      ]
+    },
+    {
+      "id": 480,
+      "source_sha256": "85f603fa5acf8a52ba419246e67376db65196f181640b86c37e27b86035b2da1",
+      "edits": [
+        {
+          "cell": 0,
+          "region": [
+            10,
+            32,
+            47,
+            16
+          ],
+          "text": "Salvar",
+          "color": "lime"
+        },
+        {
+          "cell": 1,
+          "region": [
+            10,
+            32,
+            47,
+            16
+          ],
+          "text": "Salvar",
+          "color": "lime"
+        },
+        {
+          "cell": 2,
+          "region": [
+            10,
+            32,
+            47,
+            16
+          ],
+          "text": "Salvar",
+          "color": "lime"
+        },
+        {
+          "cell": 3,
+          "region": [
+            10,
+            32,
+            47,
+            16
+          ],
+          "text": "Salvar",
+          "color": "lime"
+        }
+      ]
+    },
+    {
+      "id": 481,
+      "source_sha256": "998d46725f82b2fc91f1105a5c0305970b58c280497056bb5aee53501d39f436",
+      "edits": [
+        {
+          "cell": 0,
+          "region": [
+            6,
+            32,
+            54,
+            16
+          ],
+          "text": "Missões",
+          "color": "lime"
+        },
+        {
+          "cell": 1,
+          "region": [
+            6,
+            32,
+            54,
+            16
+          ],
+          "text": "Missões",
+          "color": "lime"
+        },
+        {
+          "cell": 2,
+          "region": [
+            6,
+            32,
+            54,
+            16
+          ],
+          "text": "Missões",
+          "color": "lime"
+        },
+        {
+          "cell": 3,
+          "region": [
+            6,
+            32,
+            54,
+            16
+          ],
+          "text": "Missões",
+          "color": "lime"
+        }
+      ]
+    },
+    {
+      "id": 482,
+      "source_sha256": "c98f053b435dccfa795929838e1138ecdec6b578c20dee6798675cfbb59f686b",
+      "edits": [
+        {
+          "cell": 0,
+          "region": [
+            6,
+            28,
+            54,
+            17
+          ],
+          "text": "Treinador",
+          "color": "lime"
+        },
+        {
+          "cell": 1,
+          "region": [
+            6,
+            28,
+            54,
+            17
+          ],
+          "text": "Treinador",
+          "color": "lime"
+        },
+        {
+          "cell": 2,
+          "region": [
+            6,
+            28,
+            54,
+            17
+          ],
+          "text": "Treinador",
+          "color": "lime"
+        },
+        {
+          "cell": 3,
+          "region": [
+            6,
+            28,
+            54,
+            17
+          ],
+          "text": "Treinador",
+          "color": "lime"
+        }
+      ]
     }
   ]
 }

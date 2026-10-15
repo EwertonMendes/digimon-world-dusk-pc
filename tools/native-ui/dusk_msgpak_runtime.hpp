@@ -135,7 +135,7 @@ inline bool apply(std::vector<uint8_t>& rom,std::string_view language,std::strin
     if(rom.size()!=67108864u || std::memcmp(rom.data()+12,"A6RE",4)!=0)
         return fail("unexpected cartridge identity");
     const uint32_t fat=read32(rom,0x48),fat_size=read32(rom,0x4c);
-    if(fat_size%8 || fat_size<24*8 || fat_size>65536 || uint64_t(fat)+fat_size>rom.size())
+    if(fat_size%8 || fat_size<24*8 || fat_size>1024*1024 || uint64_t(fat)+fat_size>rom.size())
         return fail("invalid cartridge file table");
     const size_t f23=fat+23*8;
     const uint32_t pak_begin=read32(rom,f23),pak_end=read32(rom,f23+4);

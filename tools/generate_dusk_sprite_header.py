@@ -102,17 +102,20 @@ def generate(rom:bytes,preview=False)->str:
                 assert_frames(src,pal,cel_source,dest,edits)
                 preview_cells=edits
             if i in (479,480,481,482) and artwork is not None:
-                from dusk_icon_pixel_guard import assert_icon_pixels_intact
+                from dusk_icon_pixel_guard import assert_icon_pixels_intact, original_icon_pixels
                 from probe_dusk_sprite_cells import get_cell_groups
                 source_groups,_=get_cell_groups(cel_source)
-                # Protect *every* original animated icon at the final NCGR
-                # level. A merely valid mask is not evidence that the icon
-                # survived overlapping caption tile writes.
-                for state in range(len(source_groups)):
+                before_views=[extract_cell(src,pal,cel_source,state)
+                              for state in range(len(source_groups))]
+                joint_mask=original_icon_pixels(before_views,i)
+                # A pixel that stays unchanged in the blue state may be
+                # selected white/green in another animation. Validate the
+                # union footprint against the *original* palette in every
+                # NCGR frame so no changed color can conceal a clipped icon.
+                for state,before in enumerate(before_views):
                     assert_icon_pixels_intact(
-                        extract_cell(src,pal,cel_source,state),
-                        extract_cell(dest,pal,cel_source,state),
-                        i,state
+                        before,extract_cell(dest,pal,cel_source,state),
+                        i,state,joint_mask
                     )
                 print("VERIFIED_ALL_ORIGINAL_ICON_PIXELS",locale,i,
                       "frames",len(source_groups))

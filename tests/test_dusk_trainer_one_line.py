@@ -28,7 +28,7 @@ class TrainerOneLineTests(unittest.TestCase):
         self.assertEqual({v for v in pixels.values()},{13,14,15})
 
     def test_every_letter_has_one_clear_separation_column(self):
-        pixels,width=layout_trainer_one_line(self.glyphs,49)
+        pixels,width=layout_trainer_one_line(self.glyphs,52)
         cursor=0
         for i,target in enumerate(TRAINER_PT_WIDTHS):
             self.assertTrue(any(cursor<=x<cursor+target for x,y in pixels))
@@ -46,7 +46,7 @@ class TrainerOneLineTests(unittest.TestCase):
         wrong=dict(self.glyphs)
         wrong["T"]=Glyph(2,((0,0,14),))
         with self.assertRaisesRegex(ValueError,"invalid width"):
-            layout_trainer_one_line(wrong,49)
+            layout_trainer_one_line(wrong,52)
 
 
 if __name__=="__main__":

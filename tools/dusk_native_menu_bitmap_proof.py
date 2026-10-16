@@ -139,6 +139,19 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         else:
             idx=view.mapping[(60,y)][2]
         out[x,y] = transparent if idx==0 else colors[bank*16+idx][:3]
+    if sprite==482 and word=="Treinador":
+        # Restore only the device's concealed immediate lower edge, using
+        # the adjacent original edge pixels of THIS selected animation.
+        # The edge must remain visually connected to the main body; a
+        # larger mirrored surface produced a rejected detached reflection.
+        for yy in (24,25,26):
+            source_y=23-(yy-24)
+            for xx in range(38,54):
+                if (xx,yy) in icon_mask:
+                    continue
+                _,_,idx,bank=view.mapping[(xx,source_y)]
+                if idx in (3,4,5,6,7,8,10,11,12,13,14,15):
+                    out[xx,yy]=colors[bank*16+idx][:3]
     # Transplant the authentic foreground palette indices for every
     # recovered letter. No synthesized lime-only rasterization: index 13
     # (green), 14 (yellow-green), and 15 (specular white) are copied from

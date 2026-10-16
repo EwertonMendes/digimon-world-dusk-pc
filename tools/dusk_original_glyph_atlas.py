@@ -80,6 +80,18 @@ def collect_original_glyphs(rom:bytes,fs:dict)->dict[str,Glyph]:
         max_ink=max(x for x,y,index in points)
         tight=tuple((x-min_ink,y,index) for x,y,index in points)
         out[letter]=Glyph(max_ink-min_ink+1,tight)
+    # The skinny captured lowercase 'r' loses a vertical stroke when the
+    # translated text is packed tightly (Salvar / Treinador). Restore a
+    # one-pixel inner stroke using the original glyph's own NCLR gradient,
+    # without changing the outer source bounding box or icon graphics.
+    r_source=out["r"]
+    r_ink={(x,y):shade for x,y,shade in r_source.pixels}
+    r_thick=dict(r_ink)
+    for (x,y),shade in r_ink.items():
+        if 3<=y<=9 and x+1<r_source.width and (x+1,y) not in r_ink:
+            r_thick[(x+1,y)]=shade
+    out["r"]=Glyph(r_source.width,
+                   tuple((x,y,shade) for (x,y),shade in sorted(r_thick.items())))
     for char,shape in MISSING.items():out[char]=handmade(shape)
     # The original game's lower-case 'o' and its authentic shading anchor
     # Portuguese nasal vowels; add the 3-pixel accent in the empty top rows.
@@ -116,7 +128,10 @@ def layout_native_word(word:str,glyphs:dict[str,Glyph],max_width:int)->tuple[dic
 # Every character remains in the original DS palette and has a one-pixel
 # inter-letter gap; this is per-glyph horizontal pixel condensation, not a
 # two-line split, desktop font or global SDL scaling.
-TRAINER_PT_WIDTHS=(7,4,5,2,5,6,6,5,4)
+TRAINER_PT_WIDTHS=(7,5,5,2,4,5,5,5,5)
+# Two pixels between T and r prevent the native dark drop shadow from
+# visually merging those two letters. Every other glyph keeps 1px tracking.
+TRAINER_PT_GAPS=(2,1,1,1,1,1,1,1)
 
 
 def layout_trainer_one_line(glyphs:dict[str,Glyph], max_width:int=52)->tuple[dict[tuple[int,int],int],int]:
@@ -139,7 +154,7 @@ def layout_trainer_one_line(glyphs:dict[str,Glyph], max_width:int=52)->tuple[dic
             ink[key]=max(ink.get(key,0),index)
         cursor+=target_width
         if i<len(word)-1:
-            cursor+=1  # deliberate 1px gap at every glyph boundary
+            cursor+=TRAINER_PT_GAPS[i]
     if cursor>max_width:
         raise ValueError(f"Treinador caption is {cursor}px; available {max_width}px")
     if not ink or any(x<0 or x>=cursor or y<0 or y>=11 or col not in (13,14,15)

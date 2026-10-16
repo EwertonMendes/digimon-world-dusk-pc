@@ -101,6 +101,21 @@ def generate(rom:bytes,preview=False)->str:
                 dest=replace_labels(src,pal,cel_source,edits)
                 assert_frames(src,pal,cel_source,dest,edits)
                 preview_cells=edits
+            if i in (479,480,481,482) and artwork is not None:
+                from dusk_icon_pixel_guard import assert_icon_pixels_intact
+                from probe_dusk_sprite_cells import get_cell_groups
+                source_groups,_=get_cell_groups(cel_source)
+                # Protect *every* original animated icon at the final NCGR
+                # level. A merely valid mask is not evidence that the icon
+                # survived overlapping caption tile writes.
+                for state in range(len(source_groups)):
+                    assert_icon_pixels_intact(
+                        extract_cell(src,pal,cel_source,state),
+                        extract_cell(dest,pal,cel_source,state),
+                        i,state
+                    )
+                print("VERIFIED_ALL_ORIGINAL_ICON_PIXELS",locale,i,
+                      "frames",len(source_groups))
             packed=rle_compress(dest)
             rows.append((locale,i,26,zlib.crc32(raw)&0xffffffff,packed))
             if preview:

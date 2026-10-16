@@ -15,7 +15,7 @@ def sprite_view(color,english=False):
             index=2
             if 40<=x<48 and 19<=y<27:
                 index=color
-            elif english and 45<=x<49 and y==30:
+            elif english and 45<=x<49 and y==28:
                 index=14
             mapping[x,y]=(0,False,index,0)
     return SimpleNamespace(size=(64,64),mapping=mapping)
@@ -36,7 +36,7 @@ class OriginalAnimationMaskTests(unittest.TestCase):
         views=[sprite_view(c,True) for c in (4,6,14,15)]
         mask=original_icon_pixels(views,482)
         self.assertIn((44,26),mask)
-        self.assertNotIn((46,30),mask)
+        self.assertNotIn((46,28),mask)
 
     def test_all_four_original_frames_are_unchanged(self):
         views=[sprite_view(c) for c in (4,6,14,15)]

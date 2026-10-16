@@ -149,7 +149,7 @@ inline void menu_icon(SDL_Renderer* r, Rect b, int type, Rgb c){
         octagon(r,{cx-rr,cy-rr,rr*2,rr*2},rr/3,c);
         for(int i=-1;i<=1;i+=2){rect(r,{cx+i*(rr+1)-2,cy-t,t+3,t*2},c);
             rect(r,{cx-t,cy+i*(rr+1)-2,t*2,t+3},c);}
-        octagon(r,{cx-t*2,cy-t*2,t*4,t*4},t,{23,17,66},{23,17,66});
+        octagon(r,{cx-t*2,cy-t*2,t*4,t*4},t,{23,17,66});
     }else if(type==4){ // opposing arrows
         octagon(r,{x+2,y+s/2-3,6,6},2,c);
         octagon(r,{x+s-8,y+s/2-3,6,6},2,c);
@@ -218,10 +218,9 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
     const View v=dusk_modern::calculate(geo,p);
     const float s=std::clamp(float(v.panel.w)/1160.f,0.83f,1.22f);
     const int title_px=dp(27,s),body_px=dp(15,s),small_px=dp(13,s);
-    const int edge=dp(12,s);
-    const Rgb bg{9,12,40},base{17,23,66},side{15,20,58},tile{27,33,86},
+    const Rgb bg{9,12,40},side{15,20,58},tile{27,33,86},
        lilac{171,153,238},ink2{231,228,255},gold{251,213,84},
-       violet{109,74,211},stroke2{81,82,162},bright{157,129,245};
+       stroke2{81,82,162},bright{157,129,245};
     rect(r,{0,0,geo.play.w,geo.play.h},{3,5,24,207});
     rect(r,{v.panel.x+dp(7,s),v.panel.y+dp(8,s),v.panel.w,v.panel.h},{0,0,0,70});
     bevel(r,v.panel,dp(19,s),bg,bright);

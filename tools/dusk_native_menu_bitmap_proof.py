@@ -121,8 +121,20 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         bank=view.mapping[(x,y)][3]
         if (x,y) in icon_mask:
             continue  # exact original icon pixel, including cyan contour/shadow
-        if sprite==482 and pristine is not None and x<34 and y<32:
-            idx=pristine.mapping[(x,y)][2]
+        if sprite==482:
+            if pristine is None:
+                raise ValueError("Tamer backdrop must use original Items plate")
+            # Sampling x=60 on sprite 482 is unsafe: it sometimes reads
+            # the selected clipboard's white/cyan ICON pixels and paints a
+            # horizontal white bar into the erased Tamer upper caption.
+            # Sprite 479 shares this exact Nintendo plate / NCLR palette.
+            # Its x=24 at y<33 is clear of BOTH the button caption and cube.
+            # Its x=60 at y>=33 is outside both cube and caption.
+            if y<33:
+                control_x=x if x<22 else 24
+            else:
+                control_x=60
+            idx=pristine.mapping[(control_x,y)][2]
         else:
             idx=view.mapping[(60,y)][2]
         out[x,y] = transparent if idx==0 else colors[bank*16+idx][:3]

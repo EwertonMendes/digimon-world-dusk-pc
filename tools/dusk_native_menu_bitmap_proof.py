@@ -20,7 +20,7 @@ from research_dusk_menu_strings import rle_decompress
 from dusk_sprite_inplace_editor import extract_cell
 from probe_dusk_sprite_cells import packed_resource
 from nitro_bg_preview import palette
-from dusk_original_glyph_atlas import collect_original_glyphs, layout_native_word
+from dusk_original_glyph_atlas import collect_original_glyphs, layout_native_word, layout_trainer_one_line
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,20 +55,26 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     rx,ry,rw,rh = rect
     if glyph_atlas is None:
         raise ValueError("must supply pixel-font glyphs extracted from source cartridge")
-    if sprite==482:
-        # The source Tamer / Info button uses TWO rows. Reuse this exact
-        # typographic structure for the longer localized word instead of
-        # crushing nine 11px-tall glyphs into one illegible row. The top
-        # row stays left of the hardware icon; the lower row spans the plate.
-        lines={"Treinador":("Trei","nador"),
-               "Entrenador":("Entr","enador")}
-        if word not in lines:
-            raise ValueError("unreviewed Trainer two-line translation")
+    if sprite==482 and word=="Treinador":
+        # Keep the PT-BR caption on ONE line, just like the other Digivice
+        # buttons. The original English Tamer/Info source occupies two
+        # rows; only its background is restored above this single label.
+        # Condense source glyph columns individually without modifying
+        # their NCLR highlights, contours or eleven-pixel height.
+        dots,width=layout_trainer_one_line(glyph_atlas,max_width=49)
+        if width>rw-2:
+            raise ValueError("Treinador exceeds the original title plate")
+        left=rx+(rw-width)//2
+        baseline=33
+        lettering={(left+gx,baseline+gy):idx for (gx,gy),idx in dots.items()}
+        if any(not (rx+1<=x<rx+rw-1 and ry<=y<ry+rh)
+               for x,y in lettering):
+            raise ValueError("Treinador overlaps the original icon or border")
+    elif sprite==482 and word=="Entrenador":
+        # Preserve the existing Spanish animation artwork until its
+        # separate locale has been visually approved for one-line layout.
         lettering={}
-        for line,row_y,row_x,row_width in (
-            (lines[word][0],23,10,23),
-            (lines[word][1],34,9,51),
-        ):
+        for line,row_y,row_x,row_width in (("Entr",23,10,23),("enador",34,9,51)):
             dots,width=layout_native_word(line,glyph_atlas,row_width)
             if width>row_width:
                 raise ValueError(f"{line!r} exceeds original Nintendo text band")
@@ -76,7 +82,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
             for (gx,gy),idx in dots.items():
                 key=(left+gx,row_y+gy)
                 if key in lettering:
-                    raise ValueError("native two-row lettering overlap")
+                    raise ValueError("native Spanish two-row lettering overlap")
                 lettering[key]=idx
     else:
         dots,width=layout_native_word(word,glyph_atlas,rw-3)

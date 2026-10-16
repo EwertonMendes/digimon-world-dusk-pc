@@ -15,7 +15,7 @@ inline bool SDL_SetTextureColorMod(SDL_Texture*,uint8_t,uint8_t,uint8_t){return 
 inline void SDL_RenderTexture(SDL_Renderer*,SDL_Texture*,SDL_FRect*,SDL_FRect*){};
 inline void SDL_SetRenderClipRect(SDL_Renderer*,const SDL_Rect*){};
 namespace dusk_native {struct Rect{int x,y,w,h;};struct Geometry{Rect play, pip_bar,pip_restore,pip_swap,pip_minimize,settings;};enum class Layout{Focus=5};}
-struct FrontendPresentation{struct {struct {dusk_native::Layout layout=dusk_native::Layout::Focus;bool focus_top=false;} cfg;bool menu_open=false;} dusk;};
+struct FrontendPresentation{struct {struct {dusk_native::Layout layout=dusk_native::Layout::Focus;bool focus_top=false,auxiliary=true,fill_wide=false,fullscreen=true,half_present=false;int float_percent=25,float_corner=0;} cfg;bool menu_open=false;} dusk;};
 const char* dusk_label(int){return "Screen layout";}std::string dusk_value(const FrontendPresentation&,int){return "25%";}
 namespace dusk_modern {
 using Rect=dusk_native::Rect;

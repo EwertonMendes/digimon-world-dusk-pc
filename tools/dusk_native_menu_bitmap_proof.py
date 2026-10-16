@@ -190,6 +190,12 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
             source_views=[extract_cell(source,palette_data,cell_data,k) for k in range(4)]
             icon_mask=original_icon_pixels(source_views,sid)
             print("UNION_ANIMATED_ICON_MASK",locale,sid,len(icon_mask))
+            if locale=="pt-BR" and sid==482 and preview:
+                for k,view0 in enumerate(source_views):
+                    for yy in range(15,38):
+                        print("TAMER_SOURCE_MAP",k,yy,
+                              "".join("0123456789abcdef"[view0.mapping[(xx,yy)][2]]
+                                      for xx in range(24,64)))
             for state in range(4):
                 original=extract_cell(source,palette_data,cell_data,state).image
                 pristine=extract_cell(clean_chr,clean_pal,clean_cel,state) if sid==482 else None

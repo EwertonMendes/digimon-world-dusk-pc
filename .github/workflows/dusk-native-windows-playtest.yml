@@ -413,6 +413,7 @@ jobs:
           python tools/apply_dusk_patches.py --upstream upstream --component desktop
           cp tools/native-ui/dusk_modern_ui.hpp upstream/runner/src/dusk_modern_ui.hpp
           cp tools/native-ui/dusk_material_renderer.hpp upstream/runner/src/dusk_material_renderer.hpp
+          cp tools/native-ui/dusk_console_skin.hpp upstream/runner/src/dusk_console_skin.hpp
           cp tools/native-ui/dusk_ui_font.hpp upstream/runner/src/dusk_ui_font.hpp
           cp tools/native-ui/dusk_localization.hpp upstream/runner/src/dusk_localization.hpp
           cp tools/native-ui/dusk_msgpak_runtime.hpp upstream/runner/src/dusk_msgpak_runtime.hpp

@@ -60,68 +60,74 @@ inline const char* tab_name(int index) {
 inline void append(View& v, Rect r, int kind, int value) {
     if (v.count<int(v.items.size())) v.items[v.count++]={r,kind,value};
 }
-inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation& p) {
+inline View calculate(const dusk_native::Geometry& g,const FrontendPresentation& p) {
     dusk_localization::load_preference(p.dusk.config_path);
     View out{};
     const int w=std::max(1,g.play.w), h=std::max(1,g.play.h);
-    // Breakpoints operate on the actual SDL output viewport, not desktop assumptions.
-    const bool narrow=w<730 || w<h;
-    const float ui=std::clamp(std::min(float(w)/1280.f,float(h)/720.f),0.83f,1.30f);
-    const auto dp=[ui](float v){return std::max(1,int(std::lround(v*ui)));};
-    const int pad=narrow?8:dp(22);
-    const int pw=std::max(1,std::min(w-2*pad,narrow?w-2*pad:dp(900)));
-    const int ph=std::max(1,std::min(h-2*pad,narrow?h-2*pad:dp(715)));
+    const bool narrow=w<905 || w<h;
+    // Match the approved 1670x942 game screenshot: 1250x823 chrome.
+    // The same logical proportions scale without clipping on real mobile viewports.
+    const float ui=narrow
+        ?std::clamp(std::min(float(w)/390.f,float(h)/750.f),0.70f,1.15f)
+        :std::clamp(std::min(float(w)/1660.f,float(h)/940.f),0.68f,1.40f);
+    const auto px=[ui](float n){return std::max(1,int(std::lround(n*ui)));};
+    const int margin=std::min(px(20),std::max(4,std::min(w,h)/45));
+    const int pw=std::max(1,std::min(w-2*margin,px(1250)));
+    const int ph=std::max(1,std::min(h-2*margin,px(823)));
     out.panel={(w-pw)/2,(h-ph)/2,pw,ph};
-    const Rect panel=out.panel;
-    out.title={panel.x+dp(20),panel.y+dp(13),std::max(1,panel.w-dp(40)),dp(59)};
-    const int tab_y=panel.y+dp(76);
-    const int tab_margin=dp(16);
-    const int tab_gap=dp(6);
-    const int tw=std::max(1,(panel.w-tab_margin*2-tab_gap*3)/4);
-    for(int i=0;i<4;i++)
-        out.tabs[i]={panel.x+tab_margin+i*(tw+tab_gap),tab_y,tw,dp(48)};
-    const int top=tab_y+dp(60);
-    const int footer_h=dp(64);
-    const int content_pad=dp(16);
-    out.content={panel.x+content_pad,top,std::max(1,panel.w-2*content_pad),
-                 std::max(1,panel.y+panel.h-footer_h-top)};
-    out.footer={panel.x+content_pad,panel.y+panel.h-footer_h,
-                std::max(1,panel.w-2*content_pad),footer_h-dp(8)};
-    out.close={panel.x+panel.w-dp(67),panel.y+dp(15),dp(48),dp(46)};
-    int y=out.content.y+8;
-    const int cw=out.content.w;
-    if(state.tab==0) {
-        const int gap=dp(10);
-        const int columns=cw>=690?3:(cw>=296?2:1);
-        const int cellw=(cw-gap*(columns-1))/columns;
-        const int cellh=dp(148);
-        for(int i=0;i<6;i++) {
-            const int row=i/columns, col=i%columns;
-            append(out,{out.content.x+col*(cellw+gap),y+row*(cellh+gap)-state.scroll,
-                        cellw,cellh},0,i);
-        }
-        y+=(6+columns-1)/columns*(cellh+gap)+dp(12);
-        const int itemh=dp(79);
-        for(int id : {1,2,3,7}) {
-            append(out,{out.content.x,y-state.scroll,cw,itemh-7},1,id);
-            y+=itemh;
-        }
-    } else if(state.tab==1) {
-        const int itemh=dp(79);
-        for(int id:{4,5,6}) {
-            append(out,{out.content.x,y-state.scroll,cw,itemh-9},1,id);
-            y+=itemh;
-        }
-    } else if(state.tab==3) {
-        int itemh=dp(79);
-        append(out,{out.content.x,y-state.scroll,cw,itemh},1,10);
-        y+=itemh+12;
-        append(out,{out.content.x,y-state.scroll,cw,itemh},2,8);
-        y+=itemh+12;
-        append(out,{out.content.x,y-state.scroll,cw,itemh},2,9);
-        y+=itemh+12;
+    const Rect b=out.panel;
+    out.title={b.x+px(125),b.y+px(15),std::max(1,b.w-px(220)),px(67)};
+    out.close={b.x+b.w-px(76),b.y+px(12),px(55),px(52)};
+    const int footer_h=px(65),pad=px(19);
+    out.footer={b.x+pad,b.y+b.h-footer_h,b.w-2*pad,footer_h};
+    if(!narrow){
+        for(int i=0;i<4;i++)out.tabs[i]={b.x+px(25),b.y+px(113)+i*px(88),px(287),px(72)};
+        const int cx=b.x+px(347),cy=b.y+px(104);
+        out.content={cx,cy,std::max(1,b.x+b.w-px(26)-cx),std::max(1,out.footer.y-px(11)-cy)};
+    }else{
+        const int gap=px(5),left=b.x+pad,ty=b.y+px(91);
+        const int width=std::max(1,(b.w-2*pad-3*gap)/4);
+        for(int i=0;i<4;i++)out.tabs[i]={left+i*(width+gap),ty,width,px(61)};
+        const int cy=ty+px(69);
+        out.content={left,cy,std::max(1,b.w-2*pad),std::max(1,out.footer.y-px(10)-cy)};
     }
-    out.content_height=std::max(0,y-out.content.y+10);
+    const int cw=out.content.w;
+    int y=out.content.y+px(57);
+    if(state.tab==0){
+        const int columns=!narrow&&cw>=px(640)?3:(cw>=px(285)?2:1);
+        const int gap=px(15),bw=std::max(1,(cw-gap*(columns-1))/columns);
+        const int bh=px(137);
+        for(int i=0;i<6;i++) {
+            const int row=i/columns,col=i%columns;
+            append(out,{out.content.x+col*(bw+gap),
+                        y+row*(bh+px(15))-state.scroll,bw,bh},0,i);
+        }
+        y+=((6+columns-1)/columns)*(bh+px(15))+px(43);
+        const int row_h=px(47);
+        for(int id:{1,2,3,7}){
+            append(out,{out.content.x,y-state.scroll,cw,row_h},1,id);
+            y+=row_h+px(4);
+        }
+    }else if(state.tab==1){
+        const int row_h=px(65);
+        for(int id:{4,5,6}){
+            append(out,{out.content.x,y-state.scroll,cw,row_h},1,id);
+            y+=row_h+px(13);
+        }
+    }else if(state.tab==2){
+        // Controls are informational cards; they must still be scrollable on
+        // short landscape touch devices (there is no selectable item row).
+        y=out.content.y+px(57)+3*px(85)+px(75)+px(12);
+    }else if(state.tab==3){
+        const int row_h=px(72);
+        append(out,{out.content.x,y-state.scroll,cw,row_h},1,10);
+        y+=row_h+px(14);
+        append(out,{out.content.x,y-state.scroll,cw,row_h},2,8);
+        y+=row_h+px(14);
+        append(out,{out.content.x,y-state.scroll,cw,row_h},2,9);
+        y+=row_h+px(14);
+    }
+    out.content_height=std::max(0,y-out.content.y+px(9));
     return out;
 }
 inline int max_scroll(const View& v) {
@@ -154,18 +160,27 @@ inline void navigate(const dusk_native::Geometry& g,const FrontendPresentation& 
         if(dx)choose_tab(g,p,(state.tab+4+(dx>0?1:-1))%4);
         return;
     }
-    if(state.tab==0 && state.focus<6 && dx!=0) {
-        const int col=v.content.w>=690?3:(v.content.w>=296?2:1);
-        const int i=state.focus+dx;
-        if(i>=0&&i<6 && i/col==state.focus/col)state.focus=i;
-    } else if(dx) {
-        // Value adjustment is handled by the host action.
-        return;
+    const bool narrow=g.play.w<905||g.play.w<g.play.h;
+    const float u=narrow
+      ?std::clamp(std::min(float(std::max(1,g.play.w))/390.f,
+                           float(std::max(1,g.play.h))/750.f),0.70f,1.15f)
+      :std::clamp(std::min(float(std::max(1,g.play.w))/1660.f,
+                           float(std::max(1,g.play.h))/940.f),0.68f,1.40f);
+    const int cols=!narrow&&v.content.w>=int(640*u)?3:(v.content.w>=int(285*u)?2:1);
+    const int at=std::clamp(state.focus,0,v.count-1);
+    int target=at;
+    if(state.tab==0 && at<6) {
+        if(dx){
+            const int next=at+dx;
+            if(next>=0&&next<6 && next/cols==at/cols)target=next;
+        }
+        if(dy<0)target=std::max(0,at-cols);
+        if(dy>0)target=std::min(v.count-1,at+cols);
+    }else if(dy){
+        if(state.tab==0 && at==6 && dy<0)target=std::max(0,6-cols);
+        else target=std::clamp(at+dy,0,v.count-1);
     }
-    if(dy) {
-        const int next=state.focus+dy;
-        state.focus=std::clamp(next,0,v.count-1);
-    }
+    state.focus=target;
     focus_visible(g,p);
 }
 inline bool choose(FrontendPresentation& p,const dusk_native::Geometry& g,Item item,int direction=1) {
@@ -356,6 +371,12 @@ inline bool coordinate(FrontendPresentation& p,const SDL_Event& ev,float& x,floa
     else {x=ev.button.x;y=ev.button.y;}
     return SDL_RenderCoordinatesFromWindow(p.renderers[0],x,y,&x,&y);
 }
+inline int pointer_direction(Rect row,float x){
+    // The left chevron uses the initial portion of the value region.
+    // A tap on the row's title itself still advances as an ordinary selection.
+    if(x>=row.x+row.w*0.66f && x<row.x+row.w*0.77f)return -1;
+    return 1;
+}
 inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     if(!p.dusk.enabled || p.separate)return false;
     const auto geo=dusk_geometry(p);
@@ -420,6 +441,11 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     }
     if(p.dusk.quit_confirm)return false; // Existing confirmed quit modal stays authoritative.
     if(has_pos) {
+        if(ev.type==SDL_EVENT_MOUSE_MOTION){
+            const auto hover=calculate(geo,p);
+            if(hit_test(hover.content,x,y))for(int i=0;i<hover.count;i++)
+                if(hit_test(hover.items[i].rect,x,y)){state.focus=i;break;}
+        }
         if(finger) {
             const auto v=calculate(geo,p);
             if(down) {
@@ -451,7 +477,7 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
                     if(state.pending_item<current.count &&
                        hit_test(current.items[state.pending_item].rect,x,y)) {
                         state.focus=state.pending_item;
-                        choose(p,geo,current.items[state.pending_item]);
+                        choose(p,geo,current.items[state.pending_item],pointer_direction(current.items[state.pending_item].rect,x));
                     }
                 }
                 state.finger_active=false;
@@ -468,7 +494,7 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
             if(hit_test(v.content,x,y)) {
                 for(int i=0;i<v.count;i++)if(hit_test(v.items[i].rect,x,y)) {
                     state.focus=i;
-                    choose(p,geo,v.items[i]);
+                    choose(p,geo,v.items[i],pointer_direction(v.items[i].rect,x));
                     return true;
                 }
             }

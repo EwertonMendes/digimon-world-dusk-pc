@@ -103,7 +103,7 @@ inline void preview(SDL_Renderer* r,Rect b,int i,bool active,float s){
     }
     if(active)round(r,{b.x+b.w-dp(20,s),b.y+dp(9,s),dp(9,s),dp(9,s)},dp(5,s),cyan);
 }
-inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
+inline void legacy_panel(SDL_Renderer* r,const FrontendPresentation& p,
                   const dusk_native::Geometry& geo){
     View v=dusk_modern::calculate(geo,p);
     float s=scale(v);
@@ -256,3 +256,5 @@ inline void corner(SDL_Renderer* r,const FrontendPresentation& p,
     gear_icon(r,g.settings,ink);
 }
 } // namespace dusk_material
+// Reference-calibrated Dusk sprite chrome; existing PiP and corner controls stay native.
+#include "dusk_console_skin.hpp"

@@ -154,16 +154,20 @@ inline void frame(SDL_Renderer* r,const dusk_modern::View& v,
     for(int i=0;i<7;i++)
         block(r,{header.x+header.w-P(164,s)+i*P(12,s),
                  header.y+P(61,s),P(5,s),P(5,s)},{120,72,193,75});
-    // Main field, rail and indented separator are independent areas.
-    Rect content_area{b.x+P(326,s),b.y+P(97,s),
-                      b.w-P(338,s),b.h-P(166,s)};
+    // Wide screen: narrow rail with watermark. Mobile: one continuous content field.
+    const bool vertical=v.tabs[0].y!=v.tabs[1].y;
+    Rect content_area=vertical
+        ?Rect{b.x+P(326,s),b.y+P(97,s),b.w-P(338,s),b.h-P(166,s)}
+        :Rect{b.x+P(13,s),b.y+P(91,s),b.w-P(26,s),b.h-P(160,s)};
     block(r,content_area,{6,8,36});
     digital_grid(r,content_area,s);
-    Rect left{b.x+P(15,s),b.y+P(97,s),P(311,s),b.h-P(164,s)};
-    block(r,left,rail);digital_grid(r,left,s);
-    block(r,{left.x+left.w-P(2,s),left.y,P(2,s),left.h},{69,47,166});
-    if(left.h>P(350,s))
-        watermark(r,{left.x+P(5,s),left.y+left.h-P(242,s),P(278,s),P(216,s)},s);
+    if(vertical){
+        Rect left{b.x+P(15,s),b.y+P(97,s),P(311,s),b.h-P(164,s)};
+        block(r,left,rail);digital_grid(r,left,s);
+        block(r,{left.x+left.w-P(2,s),left.y,P(2,s),left.h},{69,47,166});
+        if(left.h>P(350,s))
+            watermark(r,{left.x+P(5,s),left.y+left.h-P(242,s),P(278,s),P(216,s)},s);
+    }
     // Metallic framed footer rail aligned to screenshot (~65px tall).
     Rect foot{b.x+P(6,s),v.footer.y,b.w-P(12,s),P(65,s)};
     bezel(r,foot,P(13,s),{148,104,236},{55,26,129},{30,18,93},s);
@@ -396,7 +400,8 @@ inline void render(SDL_Renderer* r,const FrontendPresentation& p,
                     v.content.w,"Sistema",s);
         }
         for(int i=0;i<v.count;i++){
-            const dusk_modern::Item item=v.items[i],b=item.rect;
+            const dusk_modern::Item item=v.items[i];
+            const Rect b=item.rect;
             if(b.y+b.h<=v.content.y||b.y>=v.content.y+v.content.h)continue;
             const bool focus=dusk_modern::state.focus==i;
             const bool chosen=item.kind==0&&int(p.dusk.cfg.layout)==item.value;

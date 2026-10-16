@@ -40,6 +40,15 @@ def original_icon_pixels(views, sprite_id:int)->set[tuple[int,int]]:
     mask={(xx,yy) for x,y in seeds
           for xx in range(max(left,x-2),min(64,x+3))
           for yy in range(max(ICON_SCAN_Y[0],y-2),min(ICON_SCAN_Y[1],y+3))}
+    if sprite_id==482:
+        # The source English "Tamer" label overlaps the clipboard's base.
+        # Its static lime/white glyphs are NOT part of the moving icon, even
+        # where the two-pixel contour halo touches them. Otherwise a few
+        # old English letter fragments survive above "Treinador".
+        mask={key for key in mask
+              if not (22<=key[1]<33 and
+                      len({v.mapping[key][2] for v in views})==1 and
+                      views[0].mapping[key][2] in (13,14,15))}
     return mask
 
 

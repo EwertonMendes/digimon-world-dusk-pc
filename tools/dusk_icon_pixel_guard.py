@@ -1,48 +1,55 @@
-"""Guard the complete authentic Nintendo DS Digivice icon on every NCER frame.
+"""Protect the *whole moving icon* across all four original NCER states.
 
-The four original buttons carry colored artwork above and, on some frames,
-slightly over the first caption scanline. Their distinctive cyan/blue indices
-(3-8, 10-12) are not used by the lime letter glyphs (13-15). Source icon
-pixels plus their bordering indigo/transparent pixels must be immutable.
+Each DS button reuses native NCGR character tiles but the colored highlight
+cycles through palette indexes including white (15) and lime (13/14). Looking
+for blue indexes in one frame is insufficient: translated text may erase a
+green/white frame's outline and cause the visible icon to blink or truncate.
+This module derives a union mask from ORIGINAL source animation states only.
 """
 from __future__ import annotations
 
 CORE_INDICES=frozenset((3,4,5,6,7,8,10,11,12))
 MENU_ICON_IDS=frozenset((479,480,481,482))
 ICON_SCAN_X={479:29,480:27,481:27,482:31}
-ICON_SCAN_Y=(7,37)
+ICON_SCAN_Y=(7,39)
 
 
-def original_icon_pixels(view, sprite_id:int)->set[tuple[int,int]]:
+def original_icon_pixels(views, sprite_id:int)->set[tuple[int,int]]:
     if sprite_id not in MENU_ICON_IDS:
         raise ValueError("not an audited Digivice button")
-    width,height=view.size
+    if not isinstance(views,(tuple,list)):
+        views=(views,)
+    if not views or any(v.size!=(64,64) for v in views):
+        raise ValueError("unexpected Digivice cell size")
     left=ICON_SCAN_X[sprite_id]
-    if width!=64 or height!=64:
-        raise ValueError("unexpected original Digivice cell size")
-    seeds={
-        (x,y)
-        for y in range(ICON_SCAN_Y[0],min(ICON_SCAN_Y[1],height))
-        for x in range(left,width)
-        if view.mapping[(x,y)][2] in CORE_INDICES
-    }
-    if not seeds:
-        raise ValueError(f"no original icon source palette pixels: sprite {sprite_id}")
-    # The seed color core includes the native cyan outline and the
-    # animation-specific highlight; an exact 1-pixel corona guards the
-    # dark outline and its transparent antialias-free neighboring tiles.
+    # Include every coordinate where the authentic animation changes palette
+    # index, not just blue pixels. This keeps selected white/green highlights.
+    # Detect differences only in the icon's upper-right footprint; original
+    # letters and cyan plate borders are static across all four states.
+    seeds=set()
+    for y in range(*ICON_SCAN_Y):
+        for x in range(left,64):
+            indices=[v.mapping[(x,y)][2] for v in views]
+            if len(set(indices))>1 or any(i in CORE_INDICES for i in indices):
+                seeds.add((x,y))
+    if len(seeds)<12:
+        raise ValueError(f"not enough original animated icon pixels: {sprite_id}")
+    # Two-pixel safety envelope covers colored highlights, dark contour and
+    # transparency around moving sprites. It must never be regenerated as
+    # text background. This mask does NOT infer from translated artwork.
     mask={(xx,yy) for x,y in seeds
-          for xx in range(max(0,x-1),min(width,x+2))
-          for yy in range(max(0,y-1),min(height,y+2))}
+          for xx in range(max(left,x-2),min(64,x+3))
+          for yy in range(max(ICON_SCAN_Y[0],y-2),min(ICON_SCAN_Y[1],y+3))}
     return mask
 
 
-def assert_icon_pixels_intact(before,after,sprite_id:int,cell:int)->None:
+def assert_icon_pixels_intact(before,after,sprite_id:int,cell:int,mask=None)->None:
     if before.size!=after.size:
         raise ValueError("sprite dimensions changed")
-    mask=original_icon_pixels(before,sprite_id)
+    if mask is None:
+        mask=original_icon_pixels((before,),sprite_id)
     differences=[(x,y) for x,y in mask
                  if before.mapping[(x,y)][2]!=after.mapping[(x,y)][2]]
     if differences:
-        raise ValueError(f"sprite {sprite_id} cell {cell} cut original icon pixels: "
-                         f"{len(differences)}, first {differences[:5]}")
+        raise ValueError(f"sprite {sprite_id} cell {cell} clipped original "
+                         f"animated icon pixels: {len(differences)}, first {differences[:5]}")

@@ -32,6 +32,14 @@ def inspect(rom):
                 "0123456789ABCDEF"[v.mapping[(x,y)][2]]
                 for x in range(8,64))
             print("TAMER_ROW",c,y,encoded)
+    for c,v in enumerate(views):
+        for y in range(11,36):
+            print("TAMER_RAW",c,y,
+                  "".join("0123456789ABCDEF"[v.mapping[(x,y)][2]]
+                          for x in range(28,64)))
+    print("TAMER_ICON_SOURCE_PALETTE")
+    from nitro_bg_preview import palette
+    print([(i,c[:3]) for i,c in enumerate(palette(pal)[:16])])
     zoom=Image.new("RGB",(64*8,64*4*8),(19,20,30))
     for c,v in enumerate(views):
         zoom.paste(v.image.resize((512,512),Image.Resampling.NEAREST),(0,c*512))

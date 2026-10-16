@@ -381,7 +381,6 @@ inline void render(SDL_Renderer* r,const FrontendPresentation& p,
     frame(r,v,geo,s);
     header(r,v,s);
     nav(r,v,s);
-    const bool narrow=v.tabs[0].y==v.tabs[1].y;
     if(dusk_modern::state.tab!=2){
         const SDL_Rect clip{v.content.x,v.content.y,v.content.w,v.content.h};
         SDL_SetRenderClipRect(r,&clip);

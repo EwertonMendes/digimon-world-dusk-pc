@@ -36,18 +36,22 @@ def restored_digivice_pixels(source_view,cell:int,protected:set[tuple[int,int]])
                 continue
             # The outer indigo outline and cyan bezel reproduce the colors
             # seen in the unobstructed top/side of the same NCER frame.
-            if y==31 or x==left or x==right:
-                index=2
-            elif y==30 or x==left+1:
-                index=3
-            elif y==29 or x==left+2:
-                index=5
-            elif y in (25,26) and x<right-2:
-                index=shine if (x+y)%5==0 else bright
+            if y==31 or x==right:
+                index=2  # continuous dark lower/right contour
+            elif x==left:
+                index=3  # teal leading edge, follows the icon slope
+            elif y==30:
+                index=5  # single connected cyan underside, not teeth
+            elif y==29:
+                index=4  # medium-blue lower panel behind the rim
             elif y==28:
-                index=9
+                index=3  # full dark frame immediately under the screen
+            elif y==26 and left+2<=x<=left+5:
+                index=shine if x==left+3 else bright
+            elif y==27 and left+2<=x<=left+5:
+                index=bright
             else:
-                index=bright if (x+y)%4==0 else 9
+                index=9  # uniform native teal: avoid flickering pixel specks
             dest[(x,y)]=index
     if len(dest)<15:
         raise ValueError("original text/icon collision left no reconstructable lower shell")

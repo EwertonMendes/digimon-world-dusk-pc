@@ -22,6 +22,7 @@ from probe_dusk_sprite_cells import packed_resource
 from nitro_bg_preview import palette
 from dusk_original_glyph_atlas import collect_original_glyphs, layout_native_word, layout_trainer_one_line
 from dusk_icon_pixel_guard import original_icon_pixels
+from dusk_digivice_icon_restore import restored_digivice_pixels
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -139,6 +140,14 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         else:
             idx=view.mapping[(60,y)][2]
         out[x,y] = transparent if idx==0 else colors[bank*16+idx][:3]
+    if sprite==482 and word=="Treinador":
+        rebuilt=restored_digivice_pixels(view,cell,icon_mask)
+        for (x,y),idx in rebuilt.items():
+            bank=view.mapping[(x,y)][3]
+            out[x,y]=colors[bank*16+idx][:3]
+        print("REBUILT_TRAINER_DIGIVICE_ICON",cell,
+              "new_pixels",len(rebuilt),
+              "row_bounds",min(y for x,y in rebuilt),max(y for x,y in rebuilt))
     # Transplant the authentic foreground palette indices for every
     # recovered letter. No synthesized lime-only rasterization: index 13
     # (green), 14 (yellow-green), and 15 (specular white) are copied from

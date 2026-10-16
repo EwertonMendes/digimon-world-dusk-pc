@@ -17,9 +17,10 @@ class AdaptiveUiTests(unittest.TestCase):
         self.assertNotIn('cartridge',HEADER)
         self.assertIn('dusk_save(p)',HEADER)
         self.assertIn('hit_test(',HEADER)
+        self.assertIn('},1,10)', HEADER)
         self.assertNotIn('contains(',HEADER)
     def test_responsive_and_touch_gestures(self):
-        for item in ('w<730 || w<h','SDL_SetRenderClipRect','state.scroll',
+        for item in ('const bool narrow=w<905 || w<h','SDL_SetRenderClipRect','state.scroll',
                      'SDL_EVENT_FINGER_DOWN','SDL_EVENT_FINGER_MOTION',
                      'SDL_EVENT_FINGER_UP','finger_moved','finger_start_scroll',
                      'g.pip_restore','g.pip_swap','g.pip_minimize',
@@ -56,6 +57,7 @@ class AdaptiveUiTests(unittest.TestCase):
     def test_no_debug_font_in_new_renderer(self):
         self.assertNotIn('SDL_RenderDebugText',MATERIAL+FONT)
         self.assertIn('SDL_RenderGeometry',MATERIAL)
+        self.assertIn('#include "dusk_console_skin.hpp"',MATERIAL)
         self.assertIn('SDL_SetRenderClipRect',MATERIAL)
         self.assertIn('SDL_RenderTexture',FONT)
         self.assertIn('max_width',MATERIAL)

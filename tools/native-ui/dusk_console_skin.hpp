@@ -211,15 +211,19 @@ inline void nav(SDL_Renderer* r,const dusk_modern::View& v,float s){
 inline void header(SDL_Renderer* r,const dusk_modern::View& v,float s){
     Rect b=v.panel;
     // Header's mechanical gear is drawn from a repeatable 16x16 asset stencil.
-    Rect seal{b.x+P(29,s),b.y+P(18,s),P(63,s),P(58,s)};
+    const bool compact=v.tabs[0].y==v.tabs[1].y;
+    Rect seal{b.x+P(compact?15:29,s),b.y+P(18,s),P(compact?49:63,s),P(compact?49:58,s)};
     bezel(r,seal,P(14,s),{132,110,240},{38,18,101},{13,8,54},s);
-    glyph(r,seal.x+P(7,s),seal.y+P(7,s),3,P(3,s),{198,173,255});
+    glyph(r,seal.x+P(7,s),seal.y+P(7,s),3,P(compact?2:3,s),{198,173,255});
     const auto language=dusk_localization::active_language;
     const char* t=language==dusk_localization::Language::portuguese?"CONFIGURAÇÕES":
                    language==dusk_localization::Language::spanish?"CONFIGURACIÓN":
                    "SETTINGS";
-    caption(r,b.x+P(135,s),b.y+P(27,s),t,P(35,s),ivory,true,
-            std::max(60,v.close.x-b.x-P(148,s)));
+    const bool narrow=v.tabs[0].y==v.tabs[1].y;
+    caption(r,b.x+P(narrow?82:135,s),b.y+P(narrow?31:27,s),
+            narrow?dusk_localization::ui("settings",language):t,
+            P(narrow?23:35,s),ivory,true,
+            std::max(60,v.close.x-b.x-P(narrow?90:148,s)));
     bezel(r,v.close,P(9,s),{191,171,251},{49,33,121},{16,13,70},s);
     midcaption(r,v.close,"X",P(28,s),ivory,true);
 }
@@ -376,7 +380,11 @@ inline void footer(SDL_Renderer* r,const dusk_modern::View& v,float s){
 inline void render(SDL_Renderer* r,const FrontendPresentation& p,
                    const dusk_native::Geometry& geo){
     const dusk_modern::View v=dusk_modern::calculate(geo,p);
-    const float s=float(v.panel.w)/1250.f;
+    const bool narrow=v.tabs[0].y==v.tabs[1].y;
+    const float s=narrow
+       ?std::clamp(std::min(float(std::max(1,geo.play.w))/390.f,
+                            float(std::max(1,geo.play.h))/750.f),0.70f,1.15f)
+       :float(v.panel.w)/1250.f;
     if(v.panel.w<120||v.panel.h<150)return;
     frame(r,v,geo,s);
     header(r,v,s);

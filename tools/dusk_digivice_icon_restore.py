@@ -1,61 +1,60 @@
-"""Reconstruct the Digivice's obscured lower shell in the Tamer button.
+"""Conservatively restore the authentic Digivice's occluded lower edge.
 
-The original game's two-line Tamer/Info letters are baked *over* the icon.
-Erasing English therefore removes the icon's lower cyan bezel as well. Unlike
-a preservation mask, this original-palette reconstruction restores the
-missing bezel in all four original animated NCER states. No icon resizing,
-partial-state substitutions or SDL overlays.
+The English source has its two-line Tamer/Info caption baked across the icon's
+lower-left underside. Do not treat that text as part of the game icon, or paint
+a large artificial white/cyan highlight across its bezel. Only the original
+four-color indigo/teal casing is extended into the gap. The original display,
+moving highlights, dark outline and right endcap remain pixel-exact.
 """
 from __future__ import annotations
 
-# Original 64x64 cell coordinates, not PC-screen coordinates. Rows follow
-# the authentic icon's downward-right slope. The last 2 pixels join the
-# surviving, animated NCLR-colored right-hand hardware tip.
-_LOWER_SHELL={
-    24:(36,47),
-    25:(36,49),
-    26:(37,51),
-    27:(38,53),
-    28:(39,55),
-    29:(41,55),
-    30:(43,53),
-    31:(46,51),
+# Manually reviewed Nintendo-DS 64x64 sprite coordinates. These are the
+# *obscured underside*, not the complete icon silhouette. The true upper
+# icon and right-hand casing are retained verbatim in all original frames.
+_LOWER_UNDERSIDE = {
+    26: (37, 46),
+    27: (38, 49),
+    28: (40, 51),
+    29: (43, 53),
+    30: (47, 54),
 }
 
 
-def restored_digivice_pixels(source_view,cell:int,protected:set[tuple[int,int]])->dict[tuple[int,int],int]:
-    """Return missing source-palette indices, never change authentic pixels."""
-    if source_view.size!=(64,64) or cell not in (0,1,2,3):
+def restored_digivice_pixels(
+    source_view, cell: int, protected: set[tuple[int, int]]
+) -> dict[tuple[int, int], int]:
+    """Supply a small casing-edge repair without recoloring the animated icon.
+
+    Only source NCLR indexes 2/3/4/9 are allowed in the extension. White,
+    yellow and green belong to the *original moving display*; synthesizing
+    those colors underneath the hardware produces detached blinking specks.
+    """
+    if source_view.size != (64, 64) or cell not in (0, 1, 2, 3):
         raise ValueError("unexpected original Digivice sprite animation")
-    bright=(6,10,13,13)[cell]
-    shine=(7,15,15,15)[cell]
-    dest={}
-    for y,(left,right) in _LOWER_SHELL.items():
-        for x in range(left,right+1):
-            if (x,y) in protected:
+
+    repaired = {}
+    for y, (left, right) in _LOWER_UNDERSIDE.items():
+        for x in range(left, right + 1):
+            if (x, y) in protected:
                 continue
-            # The outer indigo outline and cyan bezel reproduce the colors
-            # seen in the unobstructed top/side of the same NCER frame.
-            if y==31 or x==right:
-                index=2  # continuous dark lower/right contour
-            elif x==left:
-                index=3  # teal leading edge, follows the icon slope
-            elif y==30:
-                index=5  # single connected cyan underside, not teeth
-            elif y==29:
-                index=4  # medium-blue lower panel behind the rim
-            elif y==28:
-                index=3  # full dark frame immediately under the screen
-            elif y==26 and left+2<=x<=left+5:
-                index=shine if x==left+3 else bright
-            elif y==27 and left+2<=x<=left+5:
-                index=bright
+            if y == 30 or x == right:
+                index = 2  # original indigo external outline
+            elif x == left:
+                index = 3  # native blue-cyan leading edge
+            elif y == 29:
+                index = 4  # subdued cyan bottom edge
             else:
-                index=9  # uniform native teal: avoid flickering pixel specks
-            dest[(x,y)]=index
-    if len(dest)<15:
-        raise ValueError("original text/icon collision left no reconstructable lower shell")
-    if any((x,y) in protected or not 35<=x<=56 or not 24<=y<=31 or v not in
-           (2,3,4,5,6,7,9,10,13,15) for (x,y),v in dest.items()):
-        raise ValueError("icon restoration escaped its original graphics footprint")
-    return dest
+                index = 9  # deep teal body, matches original hardware casing
+            repaired[(x, y)] = index
+
+    if len(repaired) < 8:
+        raise ValueError("source icon mask left no safe underside pixels to rebuild")
+    if any(
+        (x, y) in protected
+        or not (37 <= x <= 54 and 26 <= y <= 30)
+        or value not in (2, 3, 4, 9)
+        for (x, y), value in repaired.items()
+    ):
+        raise ValueError("Digivice reconstruction escaped original dark casing")
+
+    return repaired

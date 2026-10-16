@@ -116,10 +116,10 @@ def layout_native_word(word:str,glyphs:dict[str,Glyph],max_width:int)->tuple[dic
 # Every character remains in the original DS palette and has a one-pixel
 # inter-letter gap; this is per-glyph horizontal pixel condensation, not a
 # two-line split, desktop font or global SDL scaling.
-TRAINER_PT_WIDTHS=(7,3,5,2,5,6,5,5,3)
+TRAINER_PT_WIDTHS=(7,4,5,2,5,6,6,5,4)
 
 
-def layout_trainer_one_line(glyphs:dict[str,Glyph], max_width:int=49)->tuple[dict[tuple[int,int],int],int]:
+def layout_trainer_one_line(glyphs:dict[str,Glyph], max_width:int=52)->tuple[dict[tuple[int,int],int],int]:
     word="Treinador"
     if len(word)!=len(TRAINER_PT_WIDTHS):
         raise ValueError("invalid hand-tuned Trainer glyph configuration")

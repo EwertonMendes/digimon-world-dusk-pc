@@ -42,6 +42,19 @@ inline void polygon(SDL_Renderer* r,Rect b,int cut,Rgb tint) {
 }
 // An asymmetric 3-level bevel adds the missing metallic depth in the prior
 // flat "software" version, including consistently trimmed diagonal corners.
+inline void gradient(SDL_Renderer* r,Rect b,Rgb top,Rgb bottom){
+    if(b.w<=0||b.h<=0)return;
+    const SDL_FColor a{top.r/255.f,top.g/255.f,top.b/255.f,top.a/255.f};
+    const SDL_FColor z{bottom.r/255.f,bottom.g/255.f,bottom.b/255.f,bottom.a/255.f};
+    const float x=float(b.x),y=float(b.y),w=float(b.w),h=float(b.h);
+    const SDL_FPoint points[4]={{x,y},{x+w,y},{x+w,y+h},{x,y+h}};
+    const SDL_Vertex triangles[6]={
+        {points[0],a,{0,0}},{points[1],a,{0,0}},{points[2],z,{0,0}},
+        {points[0],a,{0,0}},{points[2],z,{0,0}},{points[3],z,{0,0}}
+    };
+    SDL_SetRenderDrawBlendMode(r,SDL_BLENDMODE_BLEND);
+    SDL_RenderGeometry(r,nullptr,triangles,6,nullptr,0);
+}
 inline void bezel(SDL_Renderer* r,Rect b,int cut,Rgb outer,Rgb mid,Rgb inner,float s){
     polygon(r,b,cut,outer);
     int k=P(2,s);
@@ -144,6 +157,8 @@ inline void frame(SDL_Renderer* r,const dusk_modern::View& v,
     // Header band intentionally differs from content, like DS-era game menus.
     Rect header{b.x+P(9,s),b.y+P(7,s),b.w-P(18,s),P(85,s)};
     bezel(r,header,P(14,s),{157,116,246},{53,25,125},{27,16,88},s);
+    gradient(r,{header.x+P(18,s),header.y+P(6,s),header.w-P(36,s),header.h-P(12,s)},
+             {56,27,138,105},{27,10,76,75});
     block(r,{header.x+P(115,s),header.y+P(8,s),P(4,s),header.h-P(16,s)},{126,80,224,100});
     block(r,{header.x+P(121,s),header.y+P(11,s),P(480,s),P(2,s)},{116,84,211});
     block(r,{header.x+P(631,s),header.y+P(20,s),P(468,s),P(2,s)},{65,49,157});
@@ -189,6 +204,9 @@ inline void nav(SDL_Renderer* r,const dusk_modern::View& v,float s){
         const Rgb border=active?Rgb{255,228,109}:Rgb{97,82,195};
         const Rgb inner=active?Rgb{83,48,185}:Rgb{16,17,65};
         bezel(r,b,P(9,s),border,active?Rgb{92,55,202}:Rgb{39,31,104},inner,s);
+        gradient(r,{b.x+P(14,s),b.y+P(8,s),b.w-P(28,s),b.h-P(16,s)},
+                 active?Rgb{115,67,230,170}:Rgb{28,29,99,160},
+                 active?Rgb{74,34,159,180}:Rgb{12,16,52,165});
         gloss(r,b,s);
         if(active){
             block(r,{b.x+P(4,s),b.y+P(9,s),P(10,s),b.h-P(18,s)},gold);
@@ -244,6 +262,8 @@ inline void monitor(SDL_Renderer* r,Rect b,float s){
     polygon(r,b,P(4,s),{122,173,255});
     polygon(r,{b.x+P(3,s),b.y+P(3,s),b.w-P(6,s),b.h-P(6,s)},P(3,s),{20,44,118});
     polygon(r,{b.x+P(6,s),b.y+P(6,s),b.w-P(12,s),b.h-P(12,s)},P(2,s),blue);
+    gradient(r,{b.x+P(9,s),b.y+P(9,s),b.w-P(18,s),b.h-P(18,s)},
+             {105,166,255},{73,116,222});
     block(r,{b.x+P(7,s),b.y+P(7,s),std::max(1,b.w-P(14,s)),P(3,s)},{175,192,255,160});
     block(r,{b.x+P(7,s),b.y+b.h-P(12,s),std::max(1,b.w-P(14,s)),P(3,s)},{27,84,175,150});
 }
@@ -284,6 +304,8 @@ inline void layout_card(SDL_Renderer* r,Rect b,int preset,bool focused,
                         bool chosen,float s){
     const Rgb rim=focused?gold:(chosen?Rgb{145,120,253}:Rgb{75,75,162});
     bezel(r,b,P(11,s),rim,{38,36,118},{24,28,87},s);
+    gradient(r,{b.x+P(8,s),b.y+P(7,s),b.w-P(16,s),b.h-P(17,s)},
+             {31,31,103,130},{15,17,63,145});
     block(r,{b.x+P(4,s),b.y+b.h-P(32,s),b.w-P(8,s),P(26,s)},{26,25,78});
     Rect screen{b.x+P(18,s),b.y+P(13,s),
                 b.w-P(36,s),std::max(24,b.h-P(53,s))};
@@ -323,6 +345,8 @@ inline void option_row(SDL_Renderer* r,Rect b,const FrontendPresentation& p,
                        const dusk_modern::Item& item,bool focus,float s){
     const Rgb rim=focus?gold:Rgb{81,81,165};
     bezel(r,b,P(6,s),rim,{32,33,112},{19,23,81},s);
+    gradient(r,{b.x+P(7,s),b.y+P(5,s),b.w-P(14,s),b.h-P(10,s)},
+             {42,44,136,130},{20,23,82,128});
     gloss(r,b,s);
     if(item.kind==1){
         const int value_x=b.x+int(float(b.w)*0.66f);

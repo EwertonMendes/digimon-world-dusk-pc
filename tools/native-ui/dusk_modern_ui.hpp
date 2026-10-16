@@ -64,7 +64,7 @@ inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation
     View out{};
     const int w=std::max(1,g.play.w), h=std::max(1,g.play.h);
     const bool stacked = w < 910 || w < h;
-    const float ui=std::clamp(std::min(float(w)/1280.f,float(h)/720.f),0.73f,1.36f);
+    const float ui=std::clamp(std::min(float(w)/1280.f,float(h)/720.f),stacked?0.94f:0.73f,1.36f);
     const auto dp=[ui](float v){return std::max(1,int(std::lround(v*ui)));};
     const int margin=std::min(dp(26),std::max(5,std::min(w,h)/35));
     const int pw=std::max(1,std::min(w-2*margin,dp(1240)));

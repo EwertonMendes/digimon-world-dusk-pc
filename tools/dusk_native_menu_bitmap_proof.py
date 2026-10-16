@@ -76,7 +76,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         # Preserve the existing Spanish animation artwork until its
         # separate locale has been visually approved for one-line layout.
         lettering={}
-        for line,row_y,row_x,row_width in (("Entr",23,10,23),("enador",34,9,51)):
+        for line,row_y,row_x,row_width in (("Ent",23,10,23),("renador",34,9,51)):
             dots,width=layout_native_word(line,glyph_atlas,row_width)
             if width>row_width:
                 raise ValueError(f"{line!r} exceeds original Nintendo text band")
@@ -91,7 +91,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         scale_x=min(1.0,(rw-3)/width)
         scaled_width=max(1,int(width*scale_x))
         xbase=rx+(rw-scaled_width)//2
-        ybase=ry+(rh-11)//2
+        ybase=36 if sprite==480 and word=="Guardar" else ry+(rh-11)//2
         if xbase<rx or ybase<ry or xbase+scaled_width>rx+rw or ybase+11>ry+rh:
             raise ValueError(f"{word!r}: original DS glyph outside caption")
         lettering={(xbase+min(scaled_width-1,int(gx*scale_x)),ybase+gy):idx

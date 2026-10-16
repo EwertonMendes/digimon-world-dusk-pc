@@ -56,6 +56,6 @@ def restored_digivice_pixels(source_view,cell:int,protected:set[tuple[int,int]])
     if len(dest)<15:
         raise ValueError("original text/icon collision left no reconstructable lower shell")
     if any((x,y) in protected or not 35<=x<=56 or not 24<=y<=31 or v not in
-           (2,3,5,6,7,9,10,13,15) for (x,y),v in dest.items()):
+           (2,3,4,5,6,7,9,10,13,15) for (x,y),v in dest.items()):
         raise ValueError("icon restoration escaped its original graphics footprint")
     return dest

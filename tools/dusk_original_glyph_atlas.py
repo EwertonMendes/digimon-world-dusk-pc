@@ -79,6 +79,16 @@ def collect_original_glyphs(rom:bytes,fs:dict)->dict[str,Glyph]:
         min_ink=min(x for x,y,index in points)
         max_ink=max(x for x,y,index in points)
         tight=tuple((x-min_ink,y,index) for x,y,index in points)
+        if letter=="T":
+            # "Tamer" source crop includes three left-edge pixels from the
+            # following 'a': they sit at the far right of the T at y=6..8.
+            # They produced the stray green '-' between T and r in PT-BR.
+            # Assert their exact form, then remove ONLY these intrusions.
+            stray={(x,y,idx) for x,y,idx in tight
+                   if x==max_ink-min_ink and y in (6,7,8)}
+            if len(stray)!=3 or any(ix!=13 for _,_,ix in stray):
+                raise ValueError("original Tamer T/source overlap changed")
+            tight=tuple(t for t in tight if t not in stray)
         out[letter]=Glyph(max_ink-min_ink+1,tight)
     # The skinny captured lowercase 'r' loses a vertical stroke when the
     # translated text is packed tightly (Salvar / Treinador). Restore a
@@ -129,9 +139,9 @@ def layout_native_word(word:str,glyphs:dict[str,Glyph],max_width:int)->tuple[dic
 # inter-letter gap; this is per-glyph horizontal pixel condensation, not a
 # two-line split, desktop font or global SDL scaling.
 TRAINER_PT_WIDTHS=(7,5,5,2,4,5,5,5,5)
-# Two pixels between T and r prevent the native dark drop shadow from
-# visually merging those two letters. Every other glyph keeps 1px tracking.
-TRAINER_PT_GAPS=(2,1,1,1,1,1,1,1)
+# Exact native one-pixel tracking throughout. The spurious source-'a'
+# pixels are cleaned from T instead of separating the word artificially.
+TRAINER_PT_GAPS=(1,1,1,1,1,1,1,1)
 
 
 def layout_trainer_one_line(glyphs:dict[str,Glyph], max_width:int=52)->tuple[dict[tuple[int,int],int],int]:

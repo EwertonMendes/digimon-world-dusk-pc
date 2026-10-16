@@ -52,6 +52,7 @@ jobs:
         shell: pwsh
         run: |
           python -m unittest discover -s tests -p test_dusk_trainer_one_line.py -v
+          python -m unittest discover -s tests -p test_dusk_icon_pixel_guard.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Native Trainer one-line layout regression failed' }
       - name: Locate original title PUSH START native glyphs and preview candidate cells
         shell: pwsh
@@ -157,6 +158,7 @@ jobs:
         shell: pwsh
         run: |
           python -m unittest discover -s tests -p test_dusk_trainer_one_line.py -v
+          python -m unittest discover -s tests -p test_dusk_icon_pixel_guard.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Native Trainer geometry failed before packaging' }
           python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale pt-BR --outdir translations/sprites/pt-BR/art
           if ($LASTEXITCODE -ne 0) { throw 'Original palette bitmap proof failed for PT-BR' }

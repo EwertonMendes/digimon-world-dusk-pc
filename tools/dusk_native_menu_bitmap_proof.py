@@ -21,6 +21,7 @@ from dusk_sprite_inplace_editor import extract_cell
 from probe_dusk_sprite_cells import packed_resource
 from nitro_bg_preview import palette
 from dusk_original_glyph_atlas import collect_original_glyphs, layout_native_word, layout_trainer_one_line
+from dusk_icon_pixel_guard import original_icon_pixels
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -36,7 +37,7 @@ REGIONS = {
     479:(6,32,53,16),
     480:(10,32,47,16),
     481:(6,32,54,16),
-    482:(9,33,51,12),
+    482:(6,33,55,13),
 }
 # Only source-caption fragments known from the ROM mapping, outside the new
 # text band. These masks deliberately avoid the character's original icon.
@@ -49,7 +50,7 @@ def _regions(sprite: int):
 
 
 def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str,
-               pristine=None, icon_mask=None, glyph_atlas=None) -> Image.Image:
+               pristine=None, glyph_atlas=None) -> Image.Image:
     view = extract_cell(src,nclr,ncer,cell)
     rect = REGIONS[sprite]
     rx,ry,rw,rh = rect
@@ -61,11 +62,11 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         # rows; only its background is restored above this single label.
         # Condense source glyph columns individually without modifying
         # their NCLR highlights, contours or eleven-pixel height.
-        dots,width=layout_trainer_one_line(glyph_atlas,max_width=49)
+        dots,width=layout_trainer_one_line(glyph_atlas,max_width=52)
         if width>rw-2:
             raise ValueError("Treinador exceeds the original title plate")
         left=rx+(rw-width)//2
-        baseline=33
+        baseline=34
         lettering={(left+gx,baseline+gy):idx for (gx,gy),idx in dots.items()}
         if any(not (rx+1<=x<rx+rw-1 and ry<=y<ry+rh)
                for x,y in lettering):
@@ -100,6 +101,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     arr=Image.new("RGB",view.size)
     out=arr.load()
     orig=view.image.load()
+    icon_mask=original_icon_pixels(view,sprite)
     for yy in range(view.size[1]):
         for xx in range(view.size[0]):
             out[xx,yy]=orig[xx,yy]
@@ -116,8 +118,8 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     transparent=(22,26,40)
     for x,y in affected:
         bank=view.mapping[(x,y)][3]
-        if sprite==482 and icon_mask is not None and (x,y) in icon_mask:
-            continue  # preserve hardware/clipboard icon exactly
+        if (x,y) in icon_mask:
+            continue  # exact original icon pixel, including cyan contour/shadow
         if sprite==482 and pristine is not None and x<34 and y<32:
             idx=pristine.mapping[(x,y)][2]
         else:
@@ -138,9 +140,12 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
              for dx,dy in ((-1,0),(1,0),(0,-1),(0,1),(1,1))
              if (x+dx,y+dy) not in bright}
     for x,y in shadows:
-        if (x,y) not in affected:continue
+        if (x,y) not in affected or (x,y) in icon_mask:continue
         bank=view.mapping[(x,y)][3]
         out[x,y]=colors[bank*16+2][:3]
+    collisions=sorted(set(bright).intersection(icon_mask))
+    if collisions:
+        raise ValueError(f"sprite {sprite}, cell {cell}, translated text overlaps original icon: {collisions[:12]}")
     for (x,y),idx in bright.items():
         if (x,y) not in affected:raise ValueError("original pixel glyph outside text mask")
         bank=view.mapping[(x,y)][3]
@@ -166,22 +171,10 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
         cell_data=packed_resource(rom,fs,"dat/SPR_CEL.PAK",sid)
         if sid in (479,480,481,482):
             images=[]
-            icon_mask=None
-            if sid==482:
-                original_icon=extract_cell(source,palette_data,cell_data,0)
-                seeds={(x,y) for y in range(10,32) for x in range(32,64)
-                       if original_icon.mapping[(x,y)][2] in (3,4,5,6,7,10,11)
-                       or (y<23 and original_icon.mapping[(x,y)][2]==15)}
-                # Dilate a single pixel to preserve the native dark outline
-                # around all three color phases of the original hardware icon.
-                icon_mask={(u,v) for x,y in seeds
-                           for u in range(max(32,x-1),min(64,x+2))
-                           for v in range(max(10,y-1),min(32,y+2))}
-
             for state in range(4):
                 original=extract_cell(source,palette_data,cell_data,state).image
                 pristine=extract_cell(clean_chr,clean_pal,clean_cel,state) if sid==482 else None
-                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,icon_mask,glyph_atlas)
+                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,glyph_atlas)
                 output=outdir/f"{sid}-state{state}.png"
                 art.save(output,optimize=True)
                 images.append((original,art))

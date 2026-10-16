@@ -171,7 +171,7 @@ inline void navigate(const dusk_native::Geometry& g,const FrontendPresentation& 
         if(dy<0) next=std::max(0,at-cols);
         if(dy>0) next=(at+cols<6)?at+cols:6;
     } else if(dy) {
-        if(state.tab==0 && at==6 && dy<0) next=std::min(cols-1,5);
+        if(state.tab==0 && at==6 && dy<0) next=std::max(0,6-cols);
         else next=std::clamp(at+dy,0,v.count-1);
     }
     state.focus=next;
@@ -364,8 +364,10 @@ inline bool coordinate(FrontendPresentation& p,const SDL_Event& ev,float& x,floa
 // Click/tap on the left or right selector arrow changes values in that direction.
 // Clicking the row label follows the usual confirm/next behavior.
 inline int pointer_direction(Rect b,float x) {
-    const float control_start=float(b.x)+float(b.w)*0.62f;
-    const float middle=control_start+float(b.w)*0.19f;
+    // Match both the desktop and narrow/mobile selector positions.
+    // Left arrow lives in the first part of the value pane, right arrow at the end.
+    const float control_start=float(b.x)+float(b.w)*0.45f;
+    const float middle=float(b.x)+float(b.w)*0.72f;
     if(x>=control_start && x<middle)return -1;
     return 1;
 }

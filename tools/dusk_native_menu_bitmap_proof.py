@@ -139,22 +139,6 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         else:
             idx=view.mapping[(60,y)][2]
         out[x,y] = transparent if idx==0 else colors[bank*16+idx][:3]
-    if sprite==482 and word=="Treinador":
-        # In the English cartridge, the two-line "Tamer" title occupies
-        # several lower-left pixels of the handheld icon. With a one-line
-        # translation those pixels would leave a visibly unfinished edge.
-        # Rebuild the concealed lower facet from the icon's OWN upper facet
-        # in the same animation state. No new color or NCGR tile is added:
-        # mirror the source native Nintendo palette rows inside the occluded
-        # area, leaving every existing original icon pixel untouched.
-        for yy in range(24,30):
-            source_y=23-(yy-24)
-            for xx in range(36,55):
-                if (xx,yy) in icon_mask:
-                    continue
-                _,_,idx,bank=view.mapping[(xx,source_y)]
-                if idx in (3,4,5,6,7,8,10,11,12,13,14,15):
-                    out[xx,yy]=colors[bank*16+idx][:3]
     # Transplant the authentic foreground palette indices for every
     # recovered letter. No synthesized lime-only rasterization: index 13
     # (green), 14 (yellow-green), and 15 (specular white) are copied from

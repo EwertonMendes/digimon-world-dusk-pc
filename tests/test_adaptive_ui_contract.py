@@ -19,7 +19,7 @@ class AdaptiveUiTests(unittest.TestCase):
         self.assertIn('hit_test(',HEADER)
         self.assertNotIn('contains(',HEADER)
     def test_responsive_and_touch_gestures(self):
-        for item in ('w<730 || w<h','SDL_SetRenderClipRect','state.scroll',
+        for item in ('const bool stacked = w < 910 || w < h','SDL_SetRenderClipRect','state.scroll',
                      'SDL_EVENT_FINGER_DOWN','SDL_EVENT_FINGER_MOTION',
                      'SDL_EVENT_FINGER_UP','finger_moved','finger_start_scroll',
                      'g.pip_restore','g.pip_swap','g.pip_minimize',
@@ -44,7 +44,10 @@ class AdaptiveUiTests(unittest.TestCase):
                          'dusk_ui_font.hpp','dusk_font_atlas.hpp'):
             self.assertIn('cp tools/native-ui/'+filename+' upstream/runner/src/',BUILD)
     def test_settings_title_and_overlay_controls(self):
-        self.assertEqual(MATERIAL.count('"Settings"'), 1)
+        self.assertEqual(MATERIAL.count('"CONFIGURACOES"'), 1)
+        self.assertIn('menu_icon(r,',MATERIAL)
+        self.assertIn('option_title(',MATERIAL)
+        self.assertIn('focused?gold:(chosen?bright:stroke2)',MATERIAL)
         self.assertNotIn('DUSK  /  PC EDITION', MATERIAL)
         self.assertIn('center_label(r,g.pip_restore,"Show",14,ink,true)', MATERIAL)
         self.assertNotIn('label(r,g.pip_restore.x+8', MATERIAL)

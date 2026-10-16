@@ -67,7 +67,9 @@ inline View calculate(const dusk_native::Geometry& g,const FrontendPresentation&
     const bool narrow=w<905 || w<h;
     // Match the approved 1670x942 game screenshot: 1250x823 chrome.
     // The same logical proportions scale without clipping on real mobile viewports.
-    const float ui=std::clamp(std::min(float(w)/1660.f,float(h)/940.f),0.52f,1.40f);
+    const float ui=narrow
+        ?std::clamp(std::min(float(w)/390.f,float(h)/750.f),0.70f,1.15f)
+        :std::clamp(std::min(float(w)/1660.f,float(h)/940.f),0.68f,1.40f);
     const auto px=[ui](float n){return std::max(1,int(std::lround(n*ui)));};
     const int margin=std::min(px(20),std::max(4,std::min(w,h)/45));
     const int pw=std::max(1,std::min(w-2*margin,px(1250)));
@@ -92,7 +94,7 @@ inline View calculate(const dusk_native::Geometry& g,const FrontendPresentation&
     const int cw=out.content.w;
     int y=out.content.y+px(57);
     if(state.tab==0){
-        const int columns=cw>=px(640)?3:(cw>=px(285)?2:1);
+        const int columns=!narrow&&cw>=px(640)?3:(cw>=px(285)?2:1);
         const int gap=px(15),bw=std::max(1,(cw-gap*(columns-1))/columns);
         const int bh=px(137);
         for(int i=0;i<6;i++) {
@@ -154,9 +156,13 @@ inline void navigate(const dusk_native::Geometry& g,const FrontendPresentation& 
         if(dx)choose_tab(g,p,(state.tab+4+(dx>0?1:-1))%4);
         return;
     }
-    const float u=std::clamp(std::min(float(std::max(1,g.play.w))/1660.f,
-                                        float(std::max(1,g.play.h))/940.f),0.52f,1.40f);
-    const int cols=v.content.w>=int(640*u)?3:(v.content.w>=int(285*u)?2:1);
+    const bool narrow=g.play.w<905||g.play.w<g.play.h;
+    const float u=narrow
+      ?std::clamp(std::min(float(std::max(1,g.play.w))/390.f,
+                           float(std::max(1,g.play.h))/750.f),0.70f,1.15f)
+      :std::clamp(std::min(float(std::max(1,g.play.w))/1660.f,
+                           float(std::max(1,g.play.h))/940.f),0.68f,1.40f);
+    const int cols=!narrow&&v.content.w>=int(640*u)?3:(v.content.w>=int(285*u)?2:1);
     const int at=std::clamp(state.focus,0,v.count-1);
     int target=at;
     if(state.tab==0 && at<6) {

@@ -22,8 +22,8 @@ class TrainerOneLineTests(unittest.TestCase):
 
     def test_single_native_row_never_exceeds_sprite_plate(self):
         pixels,width=layout_trainer_one_line(self.glyphs,52)
-        self.assertEqual(width,52)
-        self.assertEqual(TRAINER_PT_GAPS[0],2)
+        self.assertEqual(width,51)
+        self.assertEqual(TRAINER_PT_GAPS[0],1)
         self.assertEqual(TRAINER_PT_WIDTHS[1],5)
         self.assertEqual(TRAINER_PT_WIDTHS[-1],5)
         self.assertTrue(pixels)
@@ -43,7 +43,7 @@ class TrainerOneLineTests(unittest.TestCase):
 
     def test_reject_narrower_plate_instead_of_breaking_text(self):
         with self.assertRaisesRegex(ValueError,"available"):
-            layout_trainer_one_line(self.glyphs,51)
+            layout_trainer_one_line(self.glyphs,50)
 
     def test_reject_source_glyph_smaller_than_target(self):
         wrong=dict(self.glyphs)

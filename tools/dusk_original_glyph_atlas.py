@@ -109,3 +109,40 @@ def layout_native_word(word:str,glyphs:dict[str,Glyph],max_width:int)->tuple[dic
     width=x-spacer
     if width<=0:raise ValueError("empty title")
     return positions,width
+
+
+# Deliberately authored widths for the sole PT-BR Digivice caption whose
+# native eleven-pixel-tall glyphs cannot fit as one line at full width.
+# Every character remains in the original DS palette and has a one-pixel
+# inter-letter gap; this is per-glyph horizontal pixel condensation, not a
+# two-line split, desktop font or global SDL scaling.
+TRAINER_PT_WIDTHS=(7,3,5,2,5,6,5,5,3)
+
+
+def layout_trainer_one_line(glyphs:dict[str,Glyph], max_width:int=49)->tuple[dict[tuple[int,int],int],int]:
+    word="Treinador"
+    if len(word)!=len(TRAINER_PT_WIDTHS):
+        raise ValueError("invalid hand-tuned Trainer glyph configuration")
+    ink={}
+    cursor=0
+    for i,(char,target_width) in enumerate(zip(word,TRAINER_PT_WIDTHS)):
+        source=glyphs[char]
+        if not 1<=target_width<=source.width:
+            raise ValueError(f"invalid width for original DS glyph {char!r}")
+        for x,y,index in source.pixels:
+            # Preserve the original 11 DS scanlines and shade INDEX; map
+            # pixel columns individually instead of compressing the image,
+            # since RGB resampling corrupts NCLR palette indices and the
+            # font's 1px indigo contour.
+            mapped=min(target_width-1,((2*x+1)*target_width)//(2*source.width))
+            key=(cursor+mapped,y)
+            ink[key]=max(ink.get(key,0),index)
+        cursor+=target_width
+        if i<len(word)-1:
+            cursor+=1  # deliberate 1px gap at every glyph boundary
+    if cursor>max_width:
+        raise ValueError(f"Treinador caption is {cursor}px; available {max_width}px")
+    if not ink or any(x<0 or x>=cursor or y<0 or y>=11 or col not in (13,14,15)
+                      for (x,y),col in ink.items()):
+        raise ValueError("condensed Trainer pixels exceed original DS glyph palette")
+    return ink,cursor

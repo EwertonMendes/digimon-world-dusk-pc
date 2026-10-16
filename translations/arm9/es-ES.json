@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "language": "es-ES",
+  "description": "Dusk USA ARM9 UI data-only strings; offsets require ROM identity gate",
+  "messages": {
+    "1012836": {
+      "source": "Check Digimon progress",
+      "text": "Ver progreso Digimon"
+    },
+    "1012882": {
+      "source": "Check inventory",
+      "text": "Ver inventario"
+    },
+    "1012914": {
+      "source": "Check quest content",
+      "text": "Ver misiones"
+    },
+    "1012954": {
+      "source": "Check DigiFarm status",
+      "text": "Estado DigiFarm"
+    },
+    "1012998": {
+      "source": "Check info for [PLAYER_NAME]",
+      "text": "Ver datos de [PLAYER_NAME]"
+    },
+    "1013032": {
+      "source": "Save your game progress",
+      "text": "Guardar progreso"
+    },
+    "1079304": {
+      "source": "Money",
+      "text": "Saldo"
+    },
+    "1079316": {
+      "source": "Stock",
+      "text": "Pzas."
+    },
+    "1079338": {
+      "source": "What would you like to do?",
+      "text": "Que deseas hacer?"
+    },
+    "1079392": {
+      "source": "Select equipment category.",
+      "text": "Elige la categoria."
+    },
+    "1130990": {
+      "source": "Inventory full!",
+      "text": "Bolsa llena!"
+    },
+    "1131082": {
+      "source": "Not enough Bits!",
+      "text": "Faltan Bits!"
+    }
+  }
+}

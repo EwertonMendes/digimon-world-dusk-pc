@@ -1,0 +1,29 @@
+name: Dusk localization resource research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-msgpak:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image inspection dependency
+        run: python -m pip install Pillow==11.3.0
+      - name: Inspect original sprite text atlases without modifying ROM
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 120 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 180 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 240 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 300 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 360 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 420 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 480 --count 60 --min-pixels 2048 --max-pixels 16384
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite index scan failed' }

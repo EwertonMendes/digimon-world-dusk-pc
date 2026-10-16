@@ -2,6 +2,7 @@
 // Material-inspired, DPI-aware, native SDL3 UI: no pixel-font rendering, no OS fonts.
 // Uses the already established Dusk input/geometry model and does not touch guest state.
 #include "dusk_ui_font.hpp"
+#include "dusk_localization.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -71,7 +72,8 @@ inline const char* layout_name(int i){
     return i>=0&&i<6?n[i]:"";
 }
 inline const char* tab_name(int i){
-    constexpr const char* t[]={"Screens","Video","Controls","System"};return i>=0&&i<4?t[i]:"";
+    constexpr const char* k[]={"screens","video","controls","system"};
+    return i>=0&&i<4 ? dusk_localization::ui(k[i],dusk_localization::active_language):"";
 }
 inline void mini_display(SDL_Renderer* r,Rect b,Rgb tone) {
     rr(r,b,dp(6,1.f),tone);
@@ -112,7 +114,7 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
     // Accent is confined to header and is never behind text.
     rr(r,{v.panel.x+dp(18,s),v.panel.y+dp(18,s),dp(5,s),dp(37,s)},dp(3,s),accent);
     // One clear heading; align it vertically with the left accent bar.
-    label(r,v.title.x+dp(11,s),v.title.y+dp(17,s),"Settings",hpx,ink,true,
+    label(r,v.title.x+dp(11,s),v.title.y+dp(17,s),dusk_localization::ui("settings",dusk_localization::active_language),hpx,ink,true,
           std::max(20,v.close.x-v.title.x-dp(40,s)));
     rr(r,v.close,dp(13,s),elevated);
     center_label(r,v.close,"X",bpx,ink,true);
@@ -143,11 +145,27 @@ inline void panel(SDL_Renderer* r,const FrontendPresentation& p,
         } else {
             const char *caption="",*value="";
             std::string backing;
-            if(item.kind==1){caption=dusk_label(item.value);backing=dusk_value(p,item.value);value=backing.c_str();}
-            else{caption=item.value==8?"Resume game":"Quit game";
-                 value=item.value==8?"Return to your adventure":"Ask before closing";}
+            if(item.kind==1){
+                if(item.value==10) {
+                    caption=dusk_localization::ui("language",dusk_localization::active_language);
+                    backing=std::string(dusk_localization::name(dusk_localization::active_language));
+                } else {
+                    caption=dusk_label(item.value);
+                    backing=dusk_value(p,item.value);
+                }
+                value=backing.c_str();
+            } else {
+                const auto language=dusk_localization::active_language;
+                caption=dusk_localization::ui(item.value==8?"resume":"quit",language);
+                value=dusk_localization::ui(item.value==8?"return":"confirm_quit",language);
+            }
             label(r,b.x+dp(17,s),b.y+dp(11,s),caption,bpx,ink,true,b.w-dp(62,s));
             label(r,b.x+dp(17,s),b.y+dp(39,s),value,mpx,secondary,false,b.w-dp(68,s));
+            if(item.kind==1 && item.value==10 &&
+               dusk_localization::active_language!=dusk_localization::Language::english)
+                label(r,b.x+dp(17,s),b.y+dp(61,s),
+                      dusk_localization::ui("bridge_notice",dusk_localization::active_language),
+                      std::max(9,mpx-3),secondary,false,b.w-dp(68,s));
             if(item.kind==1)center_label(r,{b.x+b.w-dp(43,s),b.y+dp(7,s),dp(32,s),b.h-dp(14,s)},">",bpx,accent,true);
         }
     }

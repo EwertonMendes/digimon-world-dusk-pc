@@ -12,18 +12,291 @@ on:
         required: false
         type: boolean
         default: false
+      research_only:
+        description: 'Run read-only localization resource probe (no game bundle)'
+        required: false
+        type: boolean
+        default: false
+      direct_exe_release:
+        description: 'Publish a private owner playtest release with direct standalone .exe asset'
+        required: false
+        type: boolean
+        default: false
+      sprite_scan_only:
+        description: 'Quick owner-ROM sprite atlas research only'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: dusk-recompiled-v029-${{ github.ref }}-${{ inputs.fast_repack }}
+  group: dusk-recompiled-v029-${{ github.ref }}-${{ inputs.fast_repack }}-${{ inputs.research_only }}
   cancel-in-progress: true
 
 jobs:
+  quick-sprite-scan:
+    if: inputs.sprite_scan_only == true
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Pillow for original game atlas analysis
+        run: python -m pip install Pillow==11.3.0
+      - name: Verify the one-line Treinador glyph geometry and palette
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p test_dusk_trainer_one_line.py -v
+          python -m unittest discover -s tests -p test_dusk_icon_pixel_guard.py -v
+          python -m unittest discover -s tests -p test_dusk_digivice_icon_restore.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native Trainer one-line layout regression failed' }
+      - name: Locate original title PUSH START native glyphs and preview candidate cells
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_prompt.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title prompt source asset scan failed' }
+      - name: Analyze original shaded Nintendo Digivice label pixels
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_text_style.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original DS font palette scan failed' }
+      - name: Inspect original DS title screen background maps and tile atlases
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_backgrounds.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title screen Nitro graphic source inspection failed' }
+      - name: Map the original Dusk pixel-font letters in native OAM frames
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_menu_glyphs.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original pixel font sampling failed' }
+      - name: Inspect remaining small and alternate-frame sprites for PUSH START
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_remaining_sprites.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Narrow DS sprite source inventory failed' }
+      - name: Inspect large Nintendo sprite resources used by title and logo
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_large_sprites.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Large OAM title graphic inventory failed' }
+      - name: Search original ARM9 overlay table for title PUSH START
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_overlays.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM9 title overlay scan failed' }
+      - name: Match unknown native title font character numbering
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_ordinal.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title ordinal text encoding scan failed' }
+      - name: Check alternative PUSH and START glyph encoding in original ARM9 and overlays
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_short_glyphs.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title short glyph encoding probe failed' }
+      - name: Inventory 8bpp and uncompressed sprite assets excluded from earlier scans
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_all_graphic_formats.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite graphic-format coverage inspection failed' }
+      - name: Examine 8bpp title and small HUD sprites omitted from previous probes
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_8bpp.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw '8bpp sprite audit failed' }
+      - name: Inspect title screen sprite IDs neighboring logo and character art
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 620,621,622,625,626,633,634 --count 8
+          if ($LASTEXITCODE -ne 0) { throw 'Title neighbors sprite audit failed' }
+      - name: Decode authentic PUSH START title sprite 620 with proper OAM mapping
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_prompt_exact.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Title logo prompt exact OAM decode failed' }
+      - name: Decode original title PUSH START glyph shapes and color indices
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_letter_grid.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original title glyph geometry probe failed' }
+      - name: Validate real native title sprite translation and all four animation frames
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_title_translation.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Native APERTE START title artwork failed integrity assertions' }
+      - name: Identify original shop option and item-action cells
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprite_cells.py --rom 'Digimon World - Dusk (USA).nds' --ids 477,478,479,480,481,482 --count 1
+          if ($LASTEXITCODE -ne 0) { throw 'DS sprite-cell inspection failed' }
+      - name: Inventory six original main-menu label graphics and SHA identities
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --ids 477,478,479,480,481,482
+          if ($LASTEXITCODE -ne 0) { throw 'Original Digivice graphics could not be inspected' }
+      - name: Locate original Equipment Shop action labels by exact game encoding
+        shell: pwsh
+        run: |
+          python tools/research_dusk_shop_options.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Shop text source inventory failed' }
+      - name: Inspect exact ARM9 shop action string capacities
+        shell: pwsh
+        run: |
+          python tools/research_dusk_arm9_shop_context.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 shop text source inspection failed' }
+      - name: Probe safe ARM9 shop text relocation targets
+        shell: pwsh
+        run: |
+          python tools/research_dusk_shop_pointer_map.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Shop label pointer mapping failed' }
+      - name: Render custom Nintendo-native pixel glyphs for side-by-side quality review
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p test_dusk_trainer_one_line.py -v
+          python -m unittest discover -s tests -p test_dusk_icon_pixel_guard.py -v
+          python -m unittest discover -s tests -p test_dusk_digivice_icon_restore.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native Trainer geometry failed before packaging' }
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale pt-BR --outdir translations/sprites/pt-BR/art
+          if ($LASTEXITCODE -ne 0) { throw 'Original palette bitmap proof failed for PT-BR' }
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale es-ES --outdir translations/sprites/es-ES/art
+          if ($LASTEXITCODE -ne 0) { throw 'Original palette bitmap proof failed for Spanish' }
+      - name: Generate genuine translated Nitro sprite graphics and test ROM relocation
+        shell: pwsh
+        run: |
+          python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Translated sprite generation failed' }
+          New-Item -ItemType Directory -Force .private | Out-Null
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/sprite_ui_runtime_probe.cpp -o .private/sprite-ui-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite localization runtime build failed' }
+          & .private/sprite-ui-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original ROM sprite integration test failed' }
+
+  research-localization:
+    if: inputs.research_only == true && inputs.sprite_scan_only != true
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify and inspect MSG.PAK resource offsets
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_strings.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-msgpak-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK probe failed' }
+      - name: Discover frequently accessible in-game message IDs
+        shell: pwsh
+        run: |
+          python tools/find_dusk_common_text.py --rom 'Digimon World - Dusk (USA).nds' --limit 35 --inspect 124:45,125:33,70:31,70:32,70:33,70:34,71:19,66:90,69:67,69:35,72:26,64:88,63:36,67:49,67:52,67:55,61:18,61:21,61:24
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to discover common text' }
+      - name: Map shop and system menus across all ROM resources
+        shell: pwsh
+        run: |
+          python tools/research_dusk_ui_sources.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to scan text origins' }
+      - name: Classify DS-encoded menu labels outside the message pack
+        shell: pwsh
+        run: |
+          python tools/research_dusk_ui_encoding.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to locate UI data' }
+      - name: Inspect ARM9 shop and main menu string boundaries
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_arm9_ui.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 menu source inspection failed' }
+      - name: Validate generated language catalogs and source synchrony
+        shell: pwsh
+        run: |
+          python tools/generate_dusk_msgpak_header.py --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid translation catalog' }
+          python tools/generate_dusk_arm9_header.py --check
+          python tools/generate_dusk_graphics_header.py --rom 'Digimon World - Dusk (USA).nds' --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or malformed game-native graphic assets' }
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 UI catalog' }
+      - name: Inventory graphics, palettes and font containers for localization
+        shell: pwsh
+        run: |
+          python tools/research_dusk_graphics.py --rom 'Digimon World - Dusk (USA).nds' --out .private/dusk-graphics-inventory.json
+          if ($LASTEXITCODE -ne 0) { throw 'Graphics inventory failed' }
+      - name: Locate Nitro background assets for untranslated menus
+        shell: pwsh
+        run: |
+          python tools/research_dusk_tile_names.py --rom 'Digimon World - Dusk (USA).nds'
+          python tools/localization_coverage.py --rom 'Digimon World - Dusk (USA).nds' --out .private/locale-coverage.json
+          if ($LASTEXITCODE -ne 0) { throw 'Localization coverage audit failed' }
+      - name: Preview original menu and shop tilemaps without patching
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/mshp00
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/mtsin_bt00
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_00 --tiles
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_01 --tiles
+          python tools/nitro_bg_preview.py --rom 'Digimon World - Dusk (USA).nds' --base dat/bg/m_win_2 --tiles
+      - name: Identify all baked-in menu labels from tiled backgrounds
+        shell: pwsh
+        run: |
+          python tools/nitro_bg_contact_sheet.py --rom 'Digimon World - Dusk (USA).nds' --prefix dat/bg/m --start 48 --count 24
+          if ($LASTEXITCODE -ne 0) { throw 'Original graphical UI research failed' }
+      - name: Detect precise menu text IDs in compressed Nintendo DS files
+        shell: pwsh
+        run: |
+          python tools/research_dusk_menu_strings.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'NitroFS option search failed' }
+      - name: Diagnose sprite-backed menu button resources
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprite_paks.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite research failed' }
+      - name: Decode original UI sprite artwork sheets for localization
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --index
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 0 --count 60 --min-pixels 2048 --max-pixels 16384
+          python tools/probe_dusk_sprites_visual.py --rom 'Digimon World - Dusk (USA).nds' --begin 60 --count 60 --min-pixels 2048 --max-pixels 16384
+          if ($LASTEXITCODE -ne 0) { throw 'Failed sprite UI visual analysis' }
+      - name: Compile and run live-resource relocation assertions (no ROM export)
+        shell: pwsh
+        run: |
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/msgpak_runtime_probe.cpp -o .private/msgpak-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK C++ test compilation failed' }
+          & .private/msgpak-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'MSG.PAK RAM relocation proof failed' }
+      - name: Verify in-memory ARM9 UI data-only patches
+        shell: pwsh
+        run: |
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/arm9_ui_runtime_probe.cpp -o .private/arm9-ui-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 UI probe failed to compile' }
+          & .private/arm9-ui-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'ARM9 UI data patch validation failed' }
+
+      - name: Verify native graphics CRCs and no-op resource fallback
+        shell: pwsh
+        run: |
+          clang++ -std=c++20 -O2 -Itools/native-ui tests/nitro_graphics_runtime_probe.cpp -o .private/nitro-probe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Nitro graphics code failed to compile' }
+          & .private/nitro-probe.exe 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Nitro graphics resource guard failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dusk-msgpak-structure-only
+          path: .private/dusk-msgpak-report.json
+          retention-days: 7
+
   build-dusk-native-game:
-    if: inputs.approve_game_bundle == true && inputs.fast_repack != true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack != true && inputs.research_only != true
+    permissions:
+      contents: write
+      actions: read
     runs-on: windows-latest
     timeout-minutes: 120
     env:
@@ -103,6 +376,25 @@ jobs:
         with:
           go-version: '1.23'
           cache: false
+      - name: Generate native sprite-menu localization from authenticated cartridge
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale pt-BR --outdir translations/sprites/pt-BR/art --no-preview
+          if ($LASTEXITCODE -ne 0) { throw 'PT-BR custom Nintendo sprite artwork failed' }
+          python tools/dusk_native_menu_bitmap_proof.py --rom 'Digimon World - Dusk (USA).nds' --locale es-ES --outdir translations/sprites/es-ES/art --no-preview
+          if ($LASTEXITCODE -ne 0) { throw 'Spanish custom Nintendo sprite artwork failed' }
+          python tools/generate_dusk_sprite_header.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Sprite translation catalog generation failed' }
+      - name: Validate localization catalogs before compiling the game
+        shell: pwsh
+        run: |
+          python tools/generate_dusk_msgpak_header.py --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid locale resources' }
+          python tools/generate_dusk_arm9_header.py --check
+          python tools/generate_dusk_graphics_header.py --rom 'Digimon World - Dusk (USA).nds' --check
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or malformed game-native graphic assets' }
+          if ($LASTEXITCODE -ne 0) { throw 'Stale or invalid ARM9 resources' }
       - name: Checkout pinned NDSRecomp and recomp-ui
         shell: msys2 {0}
         run: |
@@ -122,6 +414,15 @@ jobs:
           cp tools/native-ui/dusk_modern_ui.hpp upstream/runner/src/dusk_modern_ui.hpp
           cp tools/native-ui/dusk_material_renderer.hpp upstream/runner/src/dusk_material_renderer.hpp
           cp tools/native-ui/dusk_ui_font.hpp upstream/runner/src/dusk_ui_font.hpp
+          cp tools/native-ui/dusk_localization.hpp upstream/runner/src/dusk_localization.hpp
+          cp tools/native-ui/dusk_msgpak_runtime.hpp upstream/runner/src/dusk_msgpak_runtime.hpp
+          cp tools/native-ui/dusk_msgpak_catalog.generated.hpp upstream/runner/src/dusk_msgpak_catalog.generated.hpp
+          cp tools/native-ui/dusk_arm9_runtime.hpp upstream/runner/src/dusk_arm9_runtime.hpp
+          cp tools/native-ui/dusk_arm9_catalog.generated.hpp upstream/runner/src/dusk_arm9_catalog.generated.hpp
+          cp tools/native-ui/dusk_graphics_runtime.hpp upstream/runner/src/dusk_graphics_runtime.hpp
+          cp tools/native-ui/dusk_graphics_catalog.generated.hpp upstream/runner/src/dusk_graphics_catalog.generated.hpp
+          cp tools/native-ui/dusk_sprite_runtime.hpp upstream/runner/src/dusk_sprite_runtime.hpp
+          cp tools/native-ui/dusk_sprite_catalog.generated.hpp upstream/runner/src/dusk_sprite_catalog.generated.hpp
           cp tools/native-ui/dusk_font_atlas.hpp upstream/runner/src/dusk_font_atlas.hpp
           git -C upstream apply ../tools/patches/ndsrecomp-freebios-diagnostic.patch
           git -C upstream apply ../tools/patches/ndsrecomp-libslirp-win32.patch
@@ -275,6 +576,18 @@ jobs:
           "$sha  $env:RELEASE_FILENAME" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
           "Digimon World Dusk Recompiled v0.29 - Recompiled by Tblack. 4K Lunamon splash with five-second hold and host-only 800ms crossfade, verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
+      - name: Publish standalone Windows EXE (direct download, never zip)
+        if: inputs.direct_exe_release == true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $asset = "dist/$env:RELEASE_FILENAME"
+          if (!(Test-Path -LiteralPath $asset)) { throw 'No verified standalone EXE exists' }
+          $tag = "l10n-playtest-$env:GITHUB_RUN_ID"
+          gh release create $tag $asset --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "Dusk Localization Playtest $env:GITHUB_RUN_NUMBER" --notes "Experimental localization work from PR #27. Standalone Windows x64 executable. Original verified game bundle and saves preserved. This is not yet a certified 100% translation." --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Failed publishing direct EXE to prerelease' }
+          Write-Host "DIRECT_EXE=https://github.com/$env:GITHUB_REPOSITORY/releases/download/$tag/$env:RELEASE_FILENAME"
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
@@ -286,7 +599,7 @@ jobs:
 
 
   fast-cosmetic-repack:
-    if: inputs.approve_game_bundle == true && inputs.fast_repack == true
+    if: inputs.approve_game_bundle == true && inputs.fast_repack == true && inputs.research_only != true
     runs-on: windows-latest
     timeout-minutes: 20
     env:

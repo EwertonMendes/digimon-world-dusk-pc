@@ -1,0 +1,267 @@
+{
+  "schema": 1,
+  "language": "es-ES",
+  "description": "Verified original-NCLR native pixel artwork, generated at build time from owner ROM and hand-designed bitmap glyphs; no desktop font renderer.",
+  "sprites": [
+    {
+      "id": 388,
+      "source_sha256": "a05ebdf4945dac32d5536b4cb5040e3ec3454115eb40fab97e7c05066cffeb3c",
+      "edits": [
+        {
+          "cell": 0,
+          "text": "OBJETOS"
+        }
+      ]
+    },
+    {
+      "id": 389,
+      "source_sha256": "ca1d17dc602165bf267c22d4c97d8a9c102bb46e66844041cb4295c4c8dc53c6",
+      "edits": [
+        {
+          "cell": 0,
+          "text": "EQUIPO"
+        }
+      ]
+    },
+    {
+      "id": 479,
+      "source_sha256": "f53490e4cfb4ba1a0cc01a7778d64e6245c27cc68f2a4f12a84501291a13317d",
+      "artwork": [
+        {
+          "cell": 0,
+          "png": "art/479-state0.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 1,
+          "png": "art/479-state1.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 2,
+          "png": "art/479-state2.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 3,
+          "png": "art/479-state3.png",
+          "regions": [
+            [
+              6,
+              32,
+              53,
+              16
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": 480,
+      "source_sha256": "85f603fa5acf8a52ba419246e67376db65196f181640b86c37e27b86035b2da1",
+      "artwork": [
+        {
+          "cell": 0,
+          "png": "art/480-state0.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 1,
+          "png": "art/480-state1.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 2,
+          "png": "art/480-state2.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 3,
+          "png": "art/480-state3.png",
+          "regions": [
+            [
+              10,
+              32,
+              47,
+              16
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": 481,
+      "source_sha256": "998d46725f82b2fc91f1105a5c0305970b58c280497056bb5aee53501d39f436",
+      "artwork": [
+        {
+          "cell": 0,
+          "png": "art/481-state0.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 1,
+          "png": "art/481-state1.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 2,
+          "png": "art/481-state2.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
+        },
+        {
+          "cell": 3,
+          "png": "art/481-state3.png",
+          "regions": [
+            [
+              6,
+              32,
+              54,
+              16
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": 482,
+      "source_sha256": "c98f053b435dccfa795929838e1138ecdec6b578c20dee6798675cfbb59f686b",
+      "artwork": [
+        {
+          "cell": 0,
+          "png": "art/482-state0.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
+            [
+              10,
+              22,
+              50,
+              11
+            ]
+          ]
+        },
+        {
+          "cell": 1,
+          "png": "art/482-state1.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
+            [
+              10,
+              22,
+              50,
+              11
+            ]
+          ]
+        },
+        {
+          "cell": 2,
+          "png": "art/482-state2.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
+            [
+              10,
+              22,
+              50,
+              11
+            ]
+          ]
+        },
+        {
+          "cell": 3,
+          "png": "art/482-state3.png",
+          "regions": [
+            [
+              9,
+              33,
+              51,
+              12
+            ],
+            [
+              10,
+              22,
+              50,
+              11
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

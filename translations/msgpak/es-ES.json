@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "language": "es-ES",
+  "description": "Digimon World Dusk — Spanish",
+  "messages": {
+    "0/0": "El equipo de [PLAYER_NAME]\nfue derrotado...",
+    "0/1": "El equipo de [PLAYER_NAME]\nintentó escapar...",
+    "1/0": "[PLAYER_NAME], ¿qué tipo de\nprogramas de TV te gustan?[END]",
+    "1/1": "Veo comedias en la TV\ntodos los días.[END]",
+    "3/2": "Hoy es mi día\nde suerte![END]",
+    "124/45": "Nuevo\nContinuar\nConexion Wi-Fi Nintendo\nVolver[END]",
+    "125/33": "¿Estás seguro?[END]",
+    "70/31": "¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]",
+    "70/32": "¡Hola!\n¿Quieres comprar\n[GREEN]Consumibles[GREEN]?[END]",
+    "70/33": "¡Hola!\n¿Quieres comprar\n[GREEN]Objetos de granja[GREEN]?[END]",
+    "70/34": "¡Hola!\n¿Quieres remodelar\ntu [RED]Isla Granja[RED]?[END]",
+    "71/19": "¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]",
+    "69/67": "¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]",
+    "63/36": "¡Hola! ¿Quieres ver\n[GREEN]Equipamiento[GREEN]?[END]",
+    "64/88": "¡Hola!\n¿Quieres comprar\n[GREEN]Consumibles[GREEN]?[END]",
+    "66/90": "Hola, [PLAYER_NAME].\nEsta es la [RED]Plaza Oscura[RED].[END]",
+    "69/35": "Hola, [PLAYER_NAME]. Esta es la\n[RED]Plaza Oscura[RED].[END]",
+    "72/26": "¿Quieres tomar\nel ascensor?[END]",
+    "61/18": "Bienvenido.\nQuieres ver [GREEN]Equipo[GREEN]?[END]",
+    "61/21": "Bienvenido.\nQuieres comprar\n[GREEN]Consumibles[GREEN]?[END]",
+    "61/24": "Bienvenido.\nQuieres ver\n[GREEN]Objetos de granja[GREEN]?[END]",
+    "67/49": "Bienvenido.\nQuieres ver [GREEN]Equipo[GREEN]?[END]",
+    "67/52": "Bienvenido.\nTenemos [GREEN]Consumibles[GREEN].[END]",
+    "67/55": "Bienvenido.\nQuieres ver\n[GREEN]Objetos de granja[GREEN]?[END]"
+  }
+}

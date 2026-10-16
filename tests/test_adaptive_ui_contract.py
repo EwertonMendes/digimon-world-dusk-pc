@@ -41,10 +41,12 @@ class AdaptiveUiTests(unittest.TestCase):
         self.assertIn('if (dusk_modern::input(presentation,event)) continue;',PATCH)
     def test_native_header_must_be_copied_into_real_runner(self):
         for filename in ('dusk_modern_ui.hpp','dusk_material_renderer.hpp',
-                         'dusk_ui_font.hpp','dusk_font_atlas.hpp'):
+                         'dusk_ui_font.hpp','dusk_font_atlas.hpp','dusk_localization.hpp','dusk_msgpak_runtime.hpp'):
             self.assertIn('cp tools/native-ui/'+filename+' upstream/runner/src/',BUILD)
     def test_settings_title_and_overlay_controls(self):
-        self.assertEqual(MATERIAL.count('"Settings"'), 1)
+        self.assertIn('dusk_localization::ui("settings",dusk_localization::active_language)', MATERIAL)
+        catalog=(ROOT/'tools/native-ui/dusk_localization.hpp').read_text(encoding='utf-8')
+        self.assertIn('"Settings","Configurações","Configuración"', catalog)
         self.assertNotIn('DUSK  /  PC EDITION', MATERIAL)
         self.assertIn('center_label(r,g.pip_restore,"Show",14,ink,true)', MATERIAL)
         self.assertNotIn('label(r,g.pip_restore.x+8', MATERIAL)

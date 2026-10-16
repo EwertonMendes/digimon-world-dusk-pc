@@ -60,64 +60,76 @@ inline void append(View& v, Rect r, int kind, int value) {
     if (v.count<int(v.items.size())) v.items[v.count++]={r,kind,value};
 }
 inline View calculate(const dusk_native::Geometry& g, const FrontendPresentation& p) {
+    (void)p;
     View out{};
     const int w=std::max(1,g.play.w), h=std::max(1,g.play.h);
-    // Breakpoints operate on the actual SDL output viewport, not desktop assumptions.
-    const bool narrow=w<730 || w<h;
-    const float ui=std::clamp(std::min(float(w)/1280.f,float(h)/720.f),0.83f,1.30f);
+    const bool stacked = w < 910 || w < h;
+    const float ui=std::clamp(std::min(float(w)/1280.f,float(h)/720.f),0.73f,1.36f);
     const auto dp=[ui](float v){return std::max(1,int(std::lround(v*ui)));};
-    const int pad=narrow?8:dp(22);
-    const int pw=std::max(1,std::min(w-2*pad,narrow?w-2*pad:dp(900)));
-    const int ph=std::max(1,std::min(h-2*pad,narrow?h-2*pad:dp(715)));
+    const int margin=std::min(dp(26),std::max(5,std::min(w,h)/35));
+    const int pw=std::max(1,std::min(w-2*margin,dp(1240)));
+    const int ph=std::max(1,std::min(h-2*margin,dp(755)));
     out.panel={(w-pw)/2,(h-ph)/2,pw,ph};
     const Rect panel=out.panel;
-    out.title={panel.x+dp(20),panel.y+dp(13),std::max(1,panel.w-dp(40)),dp(59)};
-    const int tab_y=panel.y+dp(76);
-    const int tab_margin=dp(16);
-    const int tab_gap=dp(6);
-    const int tw=std::max(1,(panel.w-tab_margin*2-tab_gap*3)/4);
-    for(int i=0;i<4;i++)
-        out.tabs[i]={panel.x+tab_margin+i*(tw+tab_gap),tab_y,tw,dp(48)};
-    const int top=tab_y+dp(60);
-    const int footer_h=dp(64);
-    const int content_pad=dp(16);
-    out.content={panel.x+content_pad,top,std::max(1,panel.w-2*content_pad),
-                 std::max(1,panel.y+panel.h-footer_h-top)};
-    out.footer={panel.x+content_pad,panel.y+panel.h-footer_h,
-                std::max(1,panel.w-2*content_pad),footer_h-dp(8)};
-    out.close={panel.x+panel.w-dp(67),panel.y+dp(15),dp(48),dp(46)};
-    int y=out.content.y+8;
+    out.title={panel.x+dp(30),panel.y+dp(12),
+               std::max(1,panel.w-dp(110)),dp(62)};
+    out.close={panel.x+panel.w-dp(69),panel.y+dp(15),dp(46),dp(44)};
+    const int side=stacked?0:std::clamp(panel.w/4,dp(206),dp(278));
+    const int inner=dp(18);
+    const int nav_top=panel.y+dp(102);
+    const int footer_h=dp(57);
+    out.footer={panel.x+inner,panel.y+panel.h-footer_h,
+                std::max(1,panel.w-2*inner),footer_h-dp(8)};
+    if(stacked){
+        const int tabgap=dp(5);
+        const int tabw=std::max(1,(panel.w-2*inner-3*tabgap)/4);
+        const int ty=panel.y+dp(86);
+        for(int i=0;i<4;i++)
+            out.tabs[i]={panel.x+inner+i*(tabw+tabgap),ty,tabw,dp(51)};
+        const int top=ty+dp(58);
+        out.content={panel.x+inner,top,std::max(1,panel.w-2*inner),
+            std::max(1,out.footer.y-dp(10)-top)};
+    }else{
+        for(int i=0;i<4;i++)
+            out.tabs[i]={panel.x+inner,nav_top+i*dp(70),
+                         side-dp(28),dp(58)};
+        const int cx=panel.x+side+dp(4);
+        const int cy=panel.y+dp(94);
+        out.content={cx,cy,std::max(1,panel.x+panel.w-inner-cx),
+                     std::max(1,out.footer.y-dp(12)-cy)};
+    }
+    int y=out.content.y+dp(45);
     const int cw=out.content.w;
     if(state.tab==0) {
         const int gap=dp(10);
-        const int columns=cw>=690?3:(cw>=296?2:1);
-        const int cellw=(cw-gap*(columns-1))/columns;
-        const int cellh=dp(148);
+        const int cols=cw>=600?3:(cw>=310?2:1);
+        const int cellw=std::max(1,(cw-gap*(cols-1))/cols);
+        const int cellh=dp(stacked?130:134);
         for(int i=0;i<6;i++) {
-            const int row=i/columns, col=i%columns;
+            const int row=i/cols, col=i%cols;
             append(out,{out.content.x+col*(cellw+gap),y+row*(cellh+gap)-state.scroll,
                         cellw,cellh},0,i);
         }
-        y+=(6+columns-1)/columns*(cellh+gap)+dp(12);
-        const int itemh=dp(79);
+        y+=((6+cols-1)/cols)*(cellh+gap)+dp(41);
+        const int itemh=dp(55),rowgap=dp(7);
         for(int id : {1,2,3,7}) {
-            append(out,{out.content.x,y-state.scroll,cw,itemh-7},1,id);
-            y+=itemh;
+            append(out,{out.content.x,y-state.scroll,cw,itemh},1,id);
+            y+=itemh+rowgap;
         }
     } else if(state.tab==1) {
-        const int itemh=dp(79);
-        for(int id:{4,5,6}) {
-            append(out,{out.content.x,y-state.scroll,cw,itemh-9},1,id);
-            y+=itemh;
+        const int itemh=dp(62);
+        for(int id : {4,5,6}) {
+            append(out,{out.content.x,y-state.scroll,cw,itemh},1,id);
+            y+=itemh+dp(12);
         }
     } else if(state.tab==3) {
-        int itemh=dp(79);
+        const int itemh=dp(73);
         append(out,{out.content.x,y-state.scroll,cw,itemh},2,8);
-        y+=itemh+12;
+        y+=itemh+dp(12);
         append(out,{out.content.x,y-state.scroll,cw,itemh},2,9);
-        y+=itemh+12;
+        y+=itemh+dp(12);
     }
-    out.content_height=std::max(0,y-out.content.y+10);
+    out.content_height=std::max(0,y-out.content.y+dp(12));
     return out;
 }
 inline int max_scroll(const View& v) {
@@ -146,22 +158,23 @@ inline void focus_visible(const dusk_native::Geometry& g,const FrontendPresentat
 }
 inline void navigate(const dusk_native::Geometry& g,const FrontendPresentation& p,int dx,int dy) {
     const auto v=calculate(g,p);
-    if(v.count==0) {
+    if(v.count==0){
         if(dx)choose_tab(g,p,(state.tab+4+(dx>0?1:-1))%4);
         return;
     }
-    if(state.tab==0 && state.focus<6 && dx!=0) {
-        const int col=v.content.w>=690?3:(v.content.w>=296?2:1);
-        const int i=state.focus+dx;
-        if(i>=0&&i<6 && i/col==state.focus/col)state.focus=i;
-    } else if(dx) {
-        // Value adjustment is handled by the host action.
-        return;
+    const int cols=v.content.w>=600?3:(v.content.w>=310?2:1);
+    const int at=std::clamp(state.focus,0,v.count-1);
+    int next=at;
+    if(state.tab==0 && at<6) {
+        if(dx && at+dx>=0 && at+dx<6 && (at+dx)/cols==at/cols)
+            next=at+dx;
+        if(dy<0) next=std::max(0,at-cols);
+        if(dy>0) next=(at+cols<6)?at+cols:6;
+    } else if(dy) {
+        if(state.tab==0 && at==6 && dy<0) next=std::min(cols-1,5);
+        else next=std::clamp(at+dy,0,v.count-1);
     }
-    if(dy) {
-        const int next=state.focus+dy;
-        state.focus=std::clamp(next,0,v.count-1);
-    }
+    state.focus=next;
     focus_visible(g,p);
 }
 inline bool choose(FrontendPresentation& p,const dusk_native::Geometry& g,Item item,int direction=1) {
@@ -348,6 +361,14 @@ inline bool coordinate(FrontendPresentation& p,const SDL_Event& ev,float& x,floa
     else {x=ev.button.x;y=ev.button.y;}
     return SDL_RenderCoordinatesFromWindow(p.renderers[0],x,y,&x,&y);
 }
+// Click/tap on the left or right selector arrow changes values in that direction.
+// Clicking the row label follows the usual confirm/next behavior.
+inline int pointer_direction(Rect b,float x) {
+    const float control_start=float(b.x)+float(b.w)*0.62f;
+    const float middle=control_start+float(b.w)*0.19f;
+    if(x>=control_start && x<middle)return -1;
+    return 1;
+}
 inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     if(!p.dusk.enabled || p.separate)return false;
     const auto geo=dusk_geometry(p);
@@ -412,6 +433,12 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
     }
     if(p.dusk.quit_confirm)return false; // Existing confirmed quit modal stays authoritative.
     if(has_pos) {
+        if(ev.type==SDL_EVENT_MOUSE_MOTION && !state.finger_active) {
+            const auto hover=calculate(geo,p);
+            if(hit_test(hover.content,x,y))
+                for(int i=0;i<hover.count;i++)
+                    if(hit_test(hover.items[i].rect,x,y)){state.focus=i;break;}
+        }
         if(finger) {
             const auto v=calculate(geo,p);
             if(down) {
@@ -443,7 +470,7 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
                     if(state.pending_item<current.count &&
                        hit_test(current.items[state.pending_item].rect,x,y)) {
                         state.focus=state.pending_item;
-                        choose(p,geo,current.items[state.pending_item]);
+                        choose(p,geo,current.items[state.pending_item],pointer_direction(current.items[state.pending_item].rect,x));
                     }
                 }
                 state.finger_active=false;
@@ -460,7 +487,7 @@ inline bool input(FrontendPresentation& p,const SDL_Event& ev) {
             if(hit_test(v.content,x,y)) {
                 for(int i=0;i<v.count;i++)if(hit_test(v.items[i].rect,x,y)) {
                     state.focus=i;
-                    choose(p,geo,v.items[i]);
+                    choose(p,geo,v.items[i],pointer_direction(v.items[i].rect,x));
                     return true;
                 }
             }

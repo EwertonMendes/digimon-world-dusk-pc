@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
-from dusk_original_glyph_atlas import Glyph,TRAINER_PT_WIDTHS,layout_trainer_one_line
+from dusk_original_glyph_atlas import Glyph,TRAINER_PT_WIDTHS,TRAINER_PT_GAPS,layout_trainer_one_line
 
 
 class TrainerOneLineTests(unittest.TestCase):
@@ -23,6 +23,9 @@ class TrainerOneLineTests(unittest.TestCase):
     def test_single_native_row_never_exceeds_sprite_plate(self):
         pixels,width=layout_trainer_one_line(self.glyphs,52)
         self.assertEqual(width,52)
+        self.assertEqual(TRAINER_PT_GAPS[0],2)
+        self.assertEqual(TRAINER_PT_WIDTHS[1],5)
+        self.assertEqual(TRAINER_PT_WIDTHS[-1],5)
         self.assertTrue(pixels)
         self.assertTrue(all(0<=x<52 and 0<=y<11 for x,y in pixels))
         self.assertEqual({v for v in pixels.values()},{13,14,15})
@@ -35,7 +38,7 @@ class TrainerOneLineTests(unittest.TestCase):
             cursor+=target
             if i<len(TRAINER_PT_WIDTHS)-1:
                 self.assertFalse(any(x==cursor for x,y in pixels))
-                cursor+=1
+                cursor+=TRAINER_PT_GAPS[i]
         self.assertEqual(cursor,width)
 
     def test_reject_narrower_plate_instead_of_breaking_text(self):

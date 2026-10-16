@@ -51,7 +51,7 @@ def _regions(sprite: int, word: str):
 
 
 def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str,
-               pristine=None, glyph_atlas=None) -> Image.Image:
+               pristine=None, glyph_atlas=None, icon_mask=None) -> Image.Image:
     view = extract_cell(src,nclr,ncer,cell)
     rect = _regions(sprite,word)[0]
     rx,ry,rw,rh = rect
@@ -102,7 +102,8 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
     arr=Image.new("RGB",view.size)
     out=arr.load()
     orig=view.image.load()
-    icon_mask=original_icon_pixels(view,sprite)
+    if icon_mask is None:
+        raise ValueError("all original animation states must inform the icon guard")
     for yy in range(view.size[1]):
         for xx in range(view.size[0]):
             out[xx,yy]=orig[xx,yy]
@@ -184,10 +185,15 @@ def generate(rom: bytes, locale: str, outdir:Path, preview:bool=True):
         cell_data=packed_resource(rom,fs,"dat/SPR_CEL.PAK",sid)
         if sid in (479,480,481,482):
             images=[]
+            # Original selected and unselected icons use different palette
+            # indices and sometimes move; freeze their collective footprint.
+            source_views=[extract_cell(source,palette_data,cell_data,k) for k in range(4)]
+            icon_mask=original_icon_pixels(source_views,sid)
+            print("UNION_ANIMATED_ICON_MASK",locale,sid,len(icon_mask))
             for state in range(4):
                 original=extract_cell(source,palette_data,cell_data,state).image
                 pristine=extract_cell(clean_chr,clean_pal,clean_cel,state) if sid==482 else None
-                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,glyph_atlas)
+                art=draft_cell(source,palette_data,cell_data,sid,state,word,pristine,glyph_atlas,icon_mask)
                 output=outdir/f"{sid}-state{state}.png"
                 art.save(output,optimize=True)
                 images.append((original,art))

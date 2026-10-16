@@ -44,15 +44,16 @@ REGIONS = {
 EXTRA = {482:((10,22,50,11),)}
 
 
-def _regions(sprite: int):
-    region = REGIONS[sprite]
+def _regions(sprite: int, word: str):
+    # Spanish retained its earlier two-line layout and original caption bounds.
+    region=(9,33,51,12) if sprite==482 and word=="Entrenador" else REGIONS[sprite]
     return (region,*EXTRA.get(sprite,()))
 
 
 def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, word: str,
                pristine=None, glyph_atlas=None) -> Image.Image:
     view = extract_cell(src,nclr,ncer,cell)
-    rect = REGIONS[sprite]
+    rect = _regions(sprite,word)[0]
     rx,ry,rw,rh = rect
     if glyph_atlas is None:
         raise ValueError("must supply pixel-font glyphs extracted from source cartridge")
@@ -106,7 +107,7 @@ def draft_cell(src: bytes, nclr: bytes, ncer: bytes, sprite: int, cell: int, wor
         for xx in range(view.size[0]):
             out[xx,yy]=orig[xx,yy]
     affected=set()
-    for x,y,w,h in _regions(sprite):
+    for x,y,w,h in _regions(sprite,word):
         for yy in range(y,y+h):
             for xx in range(x,x+w):
                 affected.add((xx,yy))

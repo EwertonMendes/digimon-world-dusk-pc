@@ -114,6 +114,10 @@ inline View calculate(const dusk_native::Geometry& g,const FrontendPresentation&
             append(out,{out.content.x,y-state.scroll,cw,row_h},1,id);
             y+=row_h+px(13);
         }
+    }else if(state.tab==2){
+        // Controls are informational cards; they must still be scrollable on
+        // short landscape touch devices (there is no selectable item row).
+        y=out.content.y+px(57)+3*px(85)+px(75)+px(12);
     }else if(state.tab==3){
         const int row_h=px(72);
         append(out,{out.content.x,y-state.scroll,cw,row_h},1,10);

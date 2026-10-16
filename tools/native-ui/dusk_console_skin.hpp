@@ -48,7 +48,7 @@ inline void gradient(SDL_Renderer* r,Rect b,Rgb top,Rgb bottom){
     const SDL_FColor z{bottom.r/255.f,bottom.g/255.f,bottom.b/255.f,bottom.a/255.f};
     const float x=float(b.x),y=float(b.y),w=float(b.w),h=float(b.h);
     const SDL_FPoint points[4]={{x,y},{x+w,y},{x+w,y+h},{x,y+h}};
-    const SDL_Vertex triangles[6]={
+    SDL_Vertex triangles[6]={
         {points[0],a,{0,0}},{points[1],a,{0,0}},{points[2],z,{0,0}},
         {points[0],a,{0,0}},{points[2],z,{0,0}},{points[3],z,{0,0}}
     };

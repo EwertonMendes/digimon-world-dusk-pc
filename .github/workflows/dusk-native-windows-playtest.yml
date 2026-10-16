@@ -53,6 +53,11 @@ jobs:
         run: |
           python tools/probe_dusk_trainer_source.py --rom 'Digimon World - Dusk (USA).nds'
           if ($LASTEXITCODE -ne 0) { throw 'Original Digivice sprite audit failed' }
+      - name: Find alternate unoccluded Digivice icons in the original Nitro graphics
+        shell: pwsh
+        run: |
+          python tools/probe_dusk_digivice_other_instances.py --rom 'Digimon World - Dusk (USA).nds'
+          if ($LASTEXITCODE -ne 0) { throw 'Original icon reference analysis failed' }
       - name: Verify the one-line Treinador glyph geometry and palette
         shell: pwsh
         run: |

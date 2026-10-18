@@ -81,18 +81,18 @@ def generate(source: Path = SOURCE, out: Path = OUT) -> None:
     # unlike BMP/RGB, the alpha channel survives all the way to the taskbar.
     (windows / "window-icon.rgba").write_bytes(
         art.resize((128, 128), Image.Resampling.LANCZOS).tobytes())
-    major, minor = (int(part) for part in APP_VERSION.removeprefix("v").split("."))
+    major, minor, patch = (int(part) for part in APP_VERSION.removeprefix("v").split("."))
     rc = (
         '1 ICON "assets/icons/generated/windows/dusk.ico"\n'
         '1 VERSIONINFO\n'
-        f' FILEVERSION {major},{minor},0,0\n'
-        f' PRODUCTVERSION {major},{minor},0,0\n'
+        f' FILEVERSION {major},{minor},{patch},0\n'
+        f' PRODUCTVERSION {major},{minor},{patch},0\n'
         ' FILEFLAGSMASK 0x3f\n FILEFLAGS 0x0\n FILEOS 0x40004\n FILETYPE 0x1\n'
         ' BEGIN\n  BLOCK "StringFileInfo"\n   BEGIN\n    BLOCK "040904B0"\n'
         '     BEGIN\n'
         f'      VALUE "FileDescription", "{APP_NAME}"\n'
         f'      VALUE "ProductName", "{APP_NAME}"\n'
-        f'      VALUE "FileVersion", "{major}.{minor}.0.0"\n'
+        f'      VALUE "FileVersion", "{major}.{minor}.{patch}.0"\n'
         f'      VALUE "ProductVersion", "{APP_VERSION}"\n'
         '     END\n   END\n  BLOCK "VarFileInfo"\n   BEGIN\n'
         '    VALUE "Translation", 0x409, 1200\n   END\n END\n'

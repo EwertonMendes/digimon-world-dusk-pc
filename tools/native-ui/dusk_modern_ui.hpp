@@ -324,6 +324,9 @@ inline void draw_panel(SDL_Renderer* r,const FrontendPresentation& p,
          "ESC / B  BACK        ENTER / A  APPLY",1.17f);
     if(v.footer.w>660)text(r,v.footer.x+v.footer.w-210,v.footer.y+17,
                            "SELECT  SETTINGS",1.12f);
+    // Display the current release in the menu without changing the ROM.
+    if(const char* version=std::getenv("NDS_DUSK_SPLASH_VERSION"); version && version[0])
+        text(r,v.footer.x+v.footer.w-104,v.footer.y+39,version,1.1f);
 }
 inline void draw_pip(SDL_Renderer* r,const FrontendPresentation& p,
                      const dusk_native::Geometry& g) {

@@ -4,12 +4,21 @@ Projeto de recompilação estática do **Digimon World Dusk (Nintendo DS)**,
 preservando o código ARM9/ARM7 original. Não é uma reescrita de batalhas,
 menus ou campanha em linguagem de alto nível.
 
-## Estado verificável — 14/10/2026
+## Versão pública de testes — 17/10/2026
+
+**v0.1.0 (Windows x64, playtest)** é a primeira identificação pública do projeto.
+O jogo e o launcher apresentam `v0.1.0` na splash, nas configurações,
+no título da janela, no nome do executável e nos metadados do Windows.
+A tradução ainda é parcial e a campanha completa não foi certificada;
+esta versão é destinada à coleta de feedback dos testadores.
+O perfil de salvamento original permanece compartilhado entre versões.
+
+## Histórico de desenvolvimento — 14/10/2026
 
 - **v0.23**: versão integrada anterior, com ícone de janela e EXE sem cantos
   pretos, interface SDL3 nativa, salvamento EEPROM estável e gameplay em
   acompanhamento pelo responsável.
-- **v0.29 (candidata de testes)**: nome **Digimon World Dusk Recompiled**,
+- **v0.29 (identificação interna anterior)**: nome **Digimon World Dusk Recompiled**,
   versão nos metadados e artefatos, splash host SDL3 de 2,6 segundos
   **“RECOMPILED BY TBLACK”**, pulável por teclado, mouse ou controle.
   A ROM, o áudio, a emulação ARM e os saves não são modificados.
@@ -18,10 +27,10 @@ menus ou campanha em linguagem de alto nível.
   estabilidade; consulte o histórico de PRs e os relatórios em `docs/research/`.
 - O `dusk_pc.exe` produzido no CI público é **somente a demonstração
   gráfica sintética**, não o jogo completo.
-- O GitHub público não publica o executável com ROM nem código ARM derivado.
-  A ferramenta de empacotamento privada cria um **Windows EXE de um clique**,
-  com runtime SDL3 e ROM verificada já incluídos, sem WSL ou compilação no
-  computador de quem joga.
+- A distribuição de testes `v0.1.0` disponibiliza um **Windows EXE de um clique**
+  como asset de um pré-lançamento no GitHub, contendo runtime SDL3 e a ROM
+  previamente validada pelo responsável. Não requer WSL, compiladores nem
+  configuração manual de ROM no computador de quem joga.
 
 ## Como jogar uma build privada Windows
 

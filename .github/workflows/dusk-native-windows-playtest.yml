@@ -1,4 +1,4 @@
-name: Digimon World Dusk Recompiled - Windows v0.29
+name: Digimon World Dusk Recompiled - Windows v0.1.0
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +18,7 @@ on:
         type: boolean
         default: false
       direct_exe_release:
-        description: 'Publish a private owner playtest release with direct standalone .exe asset'
+        description: 'Publish public v0.1.0 playtest with a direct standalone .exe asset'
         required: false
         type: boolean
         default: false
@@ -33,7 +33,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: dusk-recompiled-v029-${{ github.ref }}-${{ inputs.fast_repack }}-${{ inputs.research_only }}
+  group: dusk-recompiled-v0100-${{ github.ref }}-${{ inputs.fast_repack }}-${{ inputs.research_only }}
   cancel-in-progress: true
 
 jobs:
@@ -305,7 +305,7 @@ jobs:
       CCACHE_MAXSIZE: 1536M
       CCACHE_COMPILERCHECK: content
       CCACHE_BASEDIR: ${{ github.workspace }}
-      RELEASE_FILENAME: Digimon-World-Dusk-Recompiled-v0.29-Windows.exe
+      RELEASE_FILENAME: Digimon-World-Dusk-Recompiled-v0.1.0-Windows.exe
     steps:
       - uses: actions/checkout@v4
         with:
@@ -570,12 +570,12 @@ jobs:
           $meta = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
           if ($meta.ProductName -ne 'Digimon World Dusk Recompiled' -or
               $meta.FileDescription -ne 'Digimon World Dusk Recompiled' -or
-              $meta.ProductVersion -ne 'v0.29') {
+              $meta.ProductVersion -ne 'v0.1.0') {
             throw "Windows PE branding incorrect: $($meta.ProductName) / $($meta.FileDescription) / $($meta.ProductVersion)"
           }
           $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$sha  $env:RELEASE_FILENAME" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
-          "Digimon World Dusk Recompiled v0.29 - Recompiled by Tblack. 4K Lunamon splash with five-second hold and host-only 800ms crossfade, verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
+          "Digimon World Dusk Recompiled v0.1.0 - Recompiled by Tblack. 4K Lunamon splash with five-second hold and host-only 800ms crossfade, verified SDL3 icon and original game presentation. Source: $env:GITHUB_SHA. ARM9/ARM7 page-verified dispatch, safe overlay AOT and fallback Tier3 unchanged. EEPROM stays in %LOCALAPPDATA%/DuskNativePC/userdata/A6RE/saves/dusk.sav. Shift + double click opens save management. This is an owner playtest build; full-campaign compatibility is not certified." | Set-Content -Encoding utf8 dist/README-PLAYTEST.txt
           Get-ChildItem dist | Select-Object Name, Length
       - name: Publish standalone Windows EXE (direct download, never zip)
         if: inputs.direct_exe_release == true
@@ -585,14 +585,14 @@ jobs:
         run: |
           $asset = "dist/$env:RELEASE_FILENAME"
           if (!(Test-Path -LiteralPath $asset)) { throw 'No verified standalone EXE exists' }
-          $tag = "l10n-playtest-$env:GITHUB_RUN_ID"
-          gh release create $tag $asset --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "Dusk Localization Playtest $env:GITHUB_RUN_NUMBER" --notes "Experimental localization work from PR #27. Standalone Windows x64 executable. Original verified game bundle and saves preserved. This is not yet a certified 100% translation." --prerelease
+          $tag = "v0.1.0"
+          gh release create $tag $asset --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "Digimon World Dusk Recompiled v0.1.0 - Windows Playtest" --notes "First public test version (Windows x64). Standalone one-click EXE. Localization is partial and full-campaign compatibility is not certified. Please share bugs and feedback. Existing save data stays in the shared A6RE profile." --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Failed publishing direct EXE to prerelease' }
           Write-Host "DIRECT_EXE=https://github.com/$env:GITHUB_REPOSITORY/releases/download/$tag/$env:RELEASE_FILENAME"
       - name: Upload actual Windows game with original ROM and SDL3
         uses: actions/upload-artifact@v4
         with:
-          name: Digimon-World-Dusk-Recompiled-v0.29-Windows-NATIVE-GAME
+          name: Digimon-World-Dusk-Recompiled-v0.1.0-Windows-NATIVE-GAME
           path: dist/*
           if-no-files-found: error
           retention-days: 7
